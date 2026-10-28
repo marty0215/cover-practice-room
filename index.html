@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>커버 연습실</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one long page, sticky nav; 업로드 흐름 → 연습·채보·가이드 세 작업 패널 → 요금. Light paper with slight blue bias; parts keep fixed colors everywhere. */
+:root{
+  --bg:#f6f7fa; --panel:#ffffff; --fg:#1b1f2a; --muted:#5d6475; --line:#d9dde6;
+  --accent:#2451d6; --accent-fg:#ffffff; --soft:#e8edfb;
+  --bass:#4b3fd1; --keys:#c98a12; --drums:#9a5a6b; --guitar:#13876f;
+  --ok:#1d8a4a; --warn:#b9700c;
+  --display:"Gowun Batang",Georgia,"Apple SD Gothic Neo",serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141720; --panel:#1c2030; --fg:#e8eaf1; --muted:#9ba3b8; --line:#2d3346;
+  --accent:#7d9bff; --accent-fg:#0f1322; --soft:#232a45;
+  --bass:#8f85ff; --keys:#e6b24a; --drums:#d08aa0; --guitar:#3ccba9;
+  --ok:#4fc77f; --warn:#e0a24a; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#141720; --panel:#1c2030; --fg:#e8eaf1; --muted:#9ba3b8; --line:#2d3346;
+  --accent:#7d9bff; --accent-fg:#0f1322; --soft:#232a45;
+  --bass:#8f85ff; --keys:#e6b24a; --drums:#d08aa0; --guitar:#3ccba9;
+  --ok:#4fc77f; --warn:#e0a24a; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.25;text-wrap:balance;margin:0}
+h1{font-size:clamp(1.9rem,4vw,2.8rem)}
+h2{font-size:1.5rem}
+h3{font-size:1.05rem}
+p{margin:0}
+a{color:var(--accent)}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.45}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+nav .in{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;padding-block:.6rem}
+nav .brand{font-family:var(--display);font-weight:700;font-size:1.1rem;margin-right:auto}
+nav a{color:var(--fg);text-decoration:none;font-size:.9rem;padding:.2rem .1rem;border-bottom:2px solid transparent}
+nav a:hover{border-color:var(--accent)}
+.in{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+section{padding-block:3rem}
+section+section{border-top:1px solid var(--line)}
+.hero .in{display:grid;gap:1.2rem;max-width:760px}
+.hero p.lead{font-size:1.1rem;max-width:40em}
+.cta{display:flex;gap:.6rem;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:.55rem 1rem;font-weight:500;text-decoration:none;display:inline-block}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.sm{padding:.3rem .7rem;font-size:.85rem}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.head{display:grid;gap:.4rem;margin-bottom:1.4rem;max-width:40em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1rem}
+.grid{display:grid;gap:1rem}
+@media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--fg);padding:.4rem .8rem;font-size:.88rem}
+.seg button[aria-pressed=true]{background:var(--fg);color:var(--bg)}
+.seg button+button{border-left:1px solid var(--line)}
+
+/* upload flow */
+.drop{border:2px dashed var(--line);border-radius:12px;padding:1.6rem 1rem;text-align:center;display:grid;gap:.5rem;justify-items:center;background:var(--panel)}
+.drop.over{border-color:var(--accent);background:var(--soft)}
+.drop input{display:none}
+.steps{display:grid;gap:.5rem;margin-top:1rem}
+.step{display:grid;grid-template-columns:22px 1fr auto;gap:.6rem;align-items:center;font-size:.92rem}
+.step i{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:block}
+.step.run i{border-color:var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
+.step.done i{border-color:var(--ok);background:var(--ok)}
+.step .t{color:var(--muted);font-family:var(--mono);font-size:.8rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:.8rem}
+.bar b{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.result{border-left:4px solid var(--ok);padding:.8rem 1rem;background:var(--soft);border-radius:0 10px 10px 0;display:grid;gap:.5rem;margin-top:1rem}
+.flow{display:grid;gap:.6rem;font-size:.9rem}
+.flow div{display:grid;grid-template-columns:auto 1fr;gap:.6rem;align-items:start}
+.flow .k{font-family:var(--mono);color:var(--muted);font-size:.8rem;padding-top:.2rem}
+
+/* player */
+.transport{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.play{width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--accent-fg);border:0;font-size:1.3rem;flex:none}
+.now{display:grid;gap:.1rem;min-width:0}
+.now .chord{font-family:var(--display);font-size:2.2rem;line-height:1}
+.now .pos{color:var(--muted)}
+.beats{display:flex;gap:.35rem;margin-left:auto}
+.beats i{width:14px;height:14px;border-radius:50%;background:var(--line);display:block}
+.beats i.on{background:var(--accent)}
+.controls{display:grid;gap:.9rem;margin-top:1.1rem}
+@media(min-width:760px){.controls{grid-template-columns:1.2fr 1fr 1fr}}
+.ctl{display:grid;gap:.35rem}
+.ctl label{font-size:.82rem;color:var(--muted);display:flex;justify-content:space-between}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+select,input[type=text],input[type=email]{font:inherit;padding:.4rem .5rem;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+.chk{display:flex;align-items:center;gap:.35rem;font-size:.9rem}
+.chk input{accent-color:var(--accent)}
+.stems{display:grid;gap:.6rem;margin-top:1.1rem}
+@media(min-width:620px){.stems{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}}
+.stems.off{opacity:.45;pointer-events:none}
+.stem{border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem;display:grid;gap:.4rem;border-left:5px solid var(--c)}
+.stem .top{display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.stem .name{font-weight:600}
+.stem .mute{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;padding:.15rem .5rem;font-size:.8rem}
+.stem .mute[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.stem input[type=range]{width:100%;accent-color:var(--c)}
+.stem .sub{display:flex;gap:.6rem;font-size:.8rem;flex-wrap:wrap}
+.songbar{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:1rem}
+.note{font-size:.82rem;color:var(--muted);margin-top:.6rem}
+
+/* score */
+.rollwrap{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+canvas{display:block;width:100%;height:auto;max-width:100%}
+.legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.85rem;margin-top:.6rem}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:.35rem;vertical-align:-1px}
+.bardetail{margin-top:1rem}
+.bardetail table{width:100%;border-collapse:collapse;font-size:.9rem}
+.bardetail th,.bardetail td{text-align:left;padding:.45rem .4rem;border-top:1px solid var(--line);vertical-align:top}
+.bardetail th{color:var(--muted);font-weight:500;white-space:nowrap;width:5.5em}
+.dgrid{display:grid;grid-template-columns:4.5em repeat(16,1fr);gap:2px;font-size:.78rem;align-items:center;margin-top:.6rem}
+.dgrid i{height:16px;border-radius:3px;background:var(--line);display:block}
+.dgrid i.hit{background:var(--drums)}
+.dgrid i.q{box-shadow:inset 2px 0 0 var(--muted)}
+
+/* guide */
+.prog{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+.prog .cell{border:1px solid var(--line);border-radius:8px;padding:.5rem .55rem;display:grid;gap:.1rem;min-width:0}
+.prog .cell.cur{border-color:var(--accent);background:var(--soft)}
+.prog .cell .c{font-family:var(--display);font-size:1.15rem}
+.prog .cell .r{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.prog .cell .b{font-size:.7rem;color:var(--muted)}
+.role{border-top:4px solid var(--c);display:grid;gap:.5rem}
+.role .stat{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.85rem}
+.role .stat b{font-family:var(--mono);font-weight:500}
+.tips{display:grid;gap:.7rem}
+.tip{display:grid;grid-template-columns:auto 1fr;gap:.7rem;align-items:start}
+.tip .k{font-family:var(--mono);font-size:.8rem;color:var(--muted);padding-top:.2rem;white-space:nowrap}
+
+/* plans */
+.plan{display:grid;gap:.6rem}
+.plan .price{font-family:var(--display);font-size:1.6rem}
+.plan ul{margin:0;padding-left:1.1em;font-size:.9rem;display:grid;gap:.2rem}
+.plan.hi{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.notice{border-left:4px solid var(--warn);padding:.7rem 1rem;background:var(--panel);border-radius:0 10px 10px 0;font-size:.92rem}
+form.wait{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+form.wait input{flex:1 1 220px}
+.msg{font-size:.88rem;color:var(--ok);min-height:1.3em;margin-top:.4rem}
+footer{padding-block:2rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<nav><div class="in">
+  <span class="brand">커버 연습실</span>
+  <a href="#upload">곡 올리기</a><a href="#practice">연습 반주</a><a href="#score">채보</a><a href="#guide">편곡 가이드</a><a href="#plans">요금</a>
+</div></nav>
+
+<section class="hero"><div class="in">
+  <span class="eyebrow">시안 · 데모 2곡 탑재</span>
+  <h1>내 노래에 맞춘 반주, 채보, 편곡 힌트를 한 화면에서</h1>
+  <p class="lead">곡을 올리면 베이스·드럼·건반·기타를 새로 연주한 반주를 만들어 드립니다. 파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행과 각 파트의 역할을 읽어 내 편곡의 출발점으로 쓰세요.</p>
+  <div class="cta"><a class="btn primary" href="#practice">One Dream 후렴으로 바로 들어보기</a><a class="btn" href="#upload">곡 올리기 흐름 보기</a></div>
+  <p class="muted small">데모 곡은 이 프로젝트에서 실제로 만든 반주(One Dream 후렴 4마디, T-0014 30초)입니다. "실제 렌더"는 Logic·SFZ로 렌더한 음원이고 "브라우저 합성"은 채보 데이터를 즉석 합성한 소리입니다.</p>
+</div></section>
+
+<section id="upload"><div class="in">
+  <div class="head"><span class="eyebrow">0 · 곡 올리기</span><h2>파일 하나로 시작합니다</h2><p class="muted">아래는 처리 흐름 시안입니다. 파일은 이 브라우저 밖으로 나가지 않고, 처리 단계는 실제 서비스의 순서를 흉내만 냅니다. 완료 후에는 데모 곡이 연습실에 열립니다.</p></div>
+  <div class="grid g2">
+    <div>
+      <label class="drop" id="drop" for="file"><input type="file" id="file" accept="audio/*"><b>MP3·WAV를 끌어다 놓거나 눌러서 선택</b><span class="muted small">보컬이 들어 있어도 됩니다. 분리 단계에서 반주만 추출합니다.</span></label>
+      <div class="panel" id="fileinfo" hidden style="margin-top:.8rem"><div class="row" style="justify-content:space-between"><div><b id="fname"></b><div class="muted small" id="fmeta"></div></div><button class="btn primary sm" id="start">처리 시작</button></div>
+        <div class="bar"><b id="prog"></b></div>
+        <div class="steps" id="steps"></div>
+        <div class="result" id="result" hidden><b>4파트 반주가 준비됐습니다 (시안)</b><span class="small">실제 서비스에서는 여기서 30초 미리듣기가 열리고, 결제 후 전곡 WAV·스템·MIDI를 받습니다.</span><div class="row"><a class="btn primary sm" href="#practice" id="openDemo">연습실에서 열기</a><a class="btn sm" href="#score">채보 보기</a><a class="btn sm" href="#guide">편곡 가이드</a></div></div>
+      </div>
+    </div>
+    <div class="panel flow">
+      <h3>실제 서비스의 처리 순서</h3>
+      <div><span class="k">1 분리</span><span>Demucs로 보컬·드럼·베이스·기타·기타 악기 스템을 나눕니다. 약 1~2분.</span></div>
+      <div><span class="k">2 채보</span><span>Basic Pitch·pYIN으로 각 스템의 음을 MIDI로 옮기고 배음·옥타브 오류를 보정합니다.</span></div>
+      <div><span class="k">3 분석</span><span>마디별 코드, 키, 구간(벌스·후렴), 원곡의 악기 구성을 추정합니다.</span></div>
+      <div><span class="k">4 편곡</span><span>베이스·드럼·건반·기타 4파트를 원곡 구성에 맞춰 새로 짭니다. 없던 악기는 넣지 않습니다.</span></div>
+      <div><span class="k">5 렌더</span><span>라이선스가 확인된 음원으로 렌더하고 레벨·저음·클릭 검사를 통과한 것만 내보냅니다.</span></div>
+      <p class="muted small">처리 시간 목표: 곡당 5분 이내. 검사에 걸린 결과는 자동 재시도 후 "사람 보정" 티어를 안내합니다.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="practice"><div class="in">
+  <div class="head"><span class="eyebrow">1 · 연습 반주</span><h2>파트를 빼고, 템포를 늦추고, 구간을 돌리기</h2><p class="muted">노래 연습이면 전 파트를 켜고, 베이스 연습이면 베이스만 끄고 따라 쳐 보세요. 키를 바꾸면 코드 이름도 같이 바뀝니다.</p></div>
+  <div class="panel">
+    <div class="songbar">
+      <div class="seg" id="songsel" role="group" aria-label="데모 곡"></div>
+      <div class="seg" id="modesel" role="group" aria-label="소리"><button aria-pressed="true" data-m="real">실제 렌더</button><button aria-pressed="false" data-m="synth">브라우저 합성</button></div>
+    </div>
+    <p class="muted small" id="songdesc" style="margin:-.4rem 0 1rem"></p>
+    <div class="transport">
+      <button class="play" id="play" aria-label="재생">▶</button>
+      <div class="now"><div class="chord mono" id="nowChord">–</div><div class="pos mono" id="nowPos">마디 1 · 박 1</div></div>
+      <div class="beats" aria-hidden="true"><i id="b1"></i><i id="b2"></i><i id="b3"></i><i id="b4"></i></div>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label for="tempo"><span>템포</span><span class="mono" id="tempoVal"></span></label><input type="range" id="tempo" min="50" max="110" value="100"></div>
+      <div class="ctl"><label for="transpose"><span>키 (반음)</span><span class="mono" id="transVal"></span></label><input type="range" id="transpose" min="-6" max="6" value="0"></div>
+      <div class="ctl"><label><span>구간 반복</span></label>
+        <div class="row"><label class="chk"><input type="checkbox" id="loopOn"> 반복</label>
+          <select id="loopA" aria-label="시작 마디"></select><span class="muted">~</span><select id="loopB" aria-label="끝 마디"></select></div>
+        <div class="row"><label class="chk"><input type="checkbox" id="countIn" checked> 카운트인 1마디</label><label class="chk"><input type="checkbox" id="click"> 메트로놈</label></div>
+      </div>
+    </div>
+    <div class="stems" id="stems"></div>
+    <p class="note" id="modeNote"></p>
+  </div>
+</div></section>
+
+<section id="score"><div class="in">
+  <div class="head"><span class="eyebrow">2 · 채보</span><h2>지금 들리는 음이 어떤 음인지</h2><p class="muted">재생 위치가 선 위를 따라 움직입니다. 마디를 누르면 그 마디의 음과 드럼 패턴이 아래에 풀려 나옵니다.</p></div>
+  <div class="rollwrap"><canvas id="roll" width="1200" height="420"></canvas></div>
+  <div class="legend" id="legend"></div>
+  <div class="panel bardetail" id="bardetail"></div>
+</div></section>
+
+<section id="guide"><div class="in">
+  <div class="head"><span class="eyebrow">3 · 편곡 가이드</span><h2>코드 진행과 파트 역할을 읽고, 내 식으로 바꾸기</h2><p class="muted">아래 수치는 모두 채보 데이터에서 계산한 값입니다. 청취 평가가 아니라 신호 기반 분석입니다.</p></div>
+  <div class="grid g2">
+    <div class="panel"><h3>코드 진행 <span class="muted mono" id="keyName" style="font-size:.85rem;font-weight:400"></span></h3><p class="muted small" style="margin:.3rem 0 .8rem">각 마디의 베이스·화성 파트 음으로 추정한 코드와 로마숫자 기능.</p><div class="prog" id="prog"></div><p class="muted small" id="inventory" style="margin-top:.8rem"></p></div>
+    <div class="panel"><h3>이렇게 바꿔볼 수 있어요</h3><div class="tips" style="margin-top:.8rem" id="tips"></div></div>
+  </div>
+  <div class="grid g4" style="margin-top:1rem" id="roles"></div>
+</div></section>
+
+<section id="plans"><div class="in">
+  <div class="head"><span class="eyebrow">요금 (안)</span><h2>곡 하나부터, 매주 올리는 분까지</h2><p class="muted">아직 가정값입니다. 베타 결제 결과로 조정합니다.</p></div>
+  <div class="grid g4">
+    <div class="panel plan"><span class="eyebrow">무료</span><div class="price">0원</div><ul><li>30초 미리듣기</li><li>워터마크 전곡 1회</li><li>채보·코드 보기</li></ul></div>
+    <div class="panel plan"><span class="eyebrow">곡당</span><div class="price">7,900원</div><ul><li>전곡 WAV + 4파트 스템</li><li>MIDI 다운로드</li><li>키·템포 변경</li></ul></div>
+    <div class="panel plan hi"><span class="eyebrow">구독</span><div class="price">월 14,900원</div><ul><li>월 6곡</li><li>재생성 무제한</li><li>연습실 기능 전부</li><li>영상 설명란 크레딧 링크</li></ul></div>
+    <div class="panel plan"><span class="eyebrow">프리미엄</span><div class="price">곡당 39,000원</div><ul><li>AI 초안 + 사람 보정 1회</li><li>2~3일 소요</li><li>Logic 프로젝트 파일 제공</li></ul></div>
+  </div>
+  <div class="notice" style="margin-top:1rem"><b>저작권 안내.</b> 이 서비스는 사용자가 올린 곡으로 사용자가 쓸 반주를 만드는 도구입니다. 원곡 녹음물은 결과에 포함되지 않지만, 커버 반주는 편곡(2차적 저작물)에 해당할 수 있습니다. 유튜브 커버는 보통 Content ID로 원저작자에게 수익이 배분되는 방식으로 처리됩니다. 공개·판매 시 권리 확인은 사용자 책임입니다.</div>
+  <div class="panel" style="margin-top:1rem"><h3>베타 알림 받기</h3><p class="muted small">자동화 버전이 열리면 알려 드립니다.</p>
+    <form class="wait" id="wait"><input type="email" id="email" placeholder="이메일" required aria-label="이메일"><button class="btn primary" type="submit">알림 신청</button></form>
+    <div class="msg" id="waitMsg" role="status"></div></div>
+</div></section>
+
+<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤) · T-0014 MIDI와 T-0015 Logic 바운스(30초, 4파트, 120 BPM). 두 곡 모두 signal_only 검사만 통과했고 청취 평가는 아직입니다.</div></footer>
+
+<audio id="real" preload="auto"></audio>
+
+<script>
+const SONGS = {"onedream": {"bpm": 82, "bars": 4, "chords": ["A", "E", "B", "C#m"], "parts": {"bass": [[0.0, 0.75, 33, 100], [0.75, 0.212, 33, 100], [1.0, 0.463, 33, 100], [1.5, 0.463, 33, 100], [2.0, 0.212, 33, 100], [2.25, 0.212, 33, 100], [2.5, 1.212, 33, 100], [3.75, 0.212, 28, 100], [4.0, 0.963, 28, 100], [5.0, 1.962, 28, 100], [7.5, 0.463, 28, 100], [8.5, 0.963, 35, 100], [9.5, 0.963, 35, 100], [10.5, 0.463, 35, 100], [11.0, 0.463, 35, 100], [11.5, 0.463, 35, 100], [12.0, 0.5, 25, 100], [12.5, 0.212, 25, 100], [12.75, 0.713, 25, 100], [13.5, 0.713, 25, 100], [14.25, 0.463, 25, 100], [14.75, 1.212, 25, 100]], "drums": [[0.0, 0.125, 36, 100], [0.5, 0.062, 42, 88], [1.0, 0.062, 42, 100], [1.0, 0.125, 38, 95], [2.0, 0.125, 36, 100], [2.5, 0.062, 42, 88], [2.5, 0.125, 36, 100], [3.0, 0.062, 42, 100], [3.0, 0.125, 38, 95], [3.5, 0.062, 42, 88], [4.0, 0.062, 42, 100], [4.0, 0.125, 36, 100], [4.5, 0.062, 42, 88], [5.0, 0.062, 42, 100], [5.0, 0.125, 38, 95], [5.5, 0.062, 42, 88], [6.0, 0.125, 36, 100], [6.5, 0.062, 42, 88], [6.5, 0.125, 36, 100], [7.0, 0.062, 42, 100], [7.0, 0.125, 38, 95], [7.5, 0.062, 42, 88], [8.0, 0.125, 36, 100], [8.5, 0.062, 42, 88], [9.0, 0.062, 42, 100], [9.0, 0.125, 38, 95], [10.0, 0.125, 36, 100], [10.5, 0.062, 42, 88], [10.5, 0.125, 36, 100], [11.0, 0.062, 42, 100], [11.0, 0.125, 38, 95], [11.5, 0.062, 42, 88], [12.0, 0.062, 42, 100], [12.0, 0.125, 36, 100], [12.5, 0.062, 42, 88], [13.0, 0.062, 42, 100], [13.0, 0.125, 38, 95], [13.5, 0.062, 42, 88], [14.0, 0.125, 36, 100], [14.5, 0.062, 42, 88], [14.5, 0.125, 36, 100], [15.0, 0.062, 42, 100], [15.0, 0.125, 38, 95], [15.5, 0.062, 42, 88]], "guitar": [[0.0, 2.462, 57, 100], [0.0, 2.462, 64, 100], [2.5, 1.462, 57, 100], [2.5, 1.462, 64, 100], [4.0, 0.212, 52, 100], [4.0, 0.212, 59, 100], [4.0, 0.212, 68, 100], [4.25, 2.212, 52, 100], [4.25, 2.212, 59, 100], [4.25, 2.212, 68, 100], [6.5, 1.212, 52, 100], [6.5, 1.212, 59, 100], [6.5, 1.212, 68, 100], [7.75, 0.212, 52, 100], [7.75, 0.212, 59, 100], [7.75, 0.212, 68, 100], [8.0, 2.462, 59, 100], [8.0, 2.462, 63, 100], [8.0, 2.462, 66, 100], [10.5, 1.462, 59, 100], [10.5, 1.462, 63, 100], [10.5, 1.462, 66, 100], [12.0, 2.462, 49, 100], [12.0, 2.462, 64, 100], [14.5, 1.462, 49, 100], [14.5, 1.462, 64, 100]]}, "title": "One Dream 후렴 17–20", "desc": "One Dream 후렴 17–20마디 · 82 BPM · 드럼·베이스·기타 3층 (원곡 구성에 건반 없음) · S59 렌더 2026-10-27, 12초", "audio": "audio/onedream_s59.mp3", "inventory": "원곡 구성 추정(instrument-id): 드럼 킷 0.97 · 닫힌 햇 0.93 · 디스토션 기타 0.90 · 핑거 베이스 0.58(저신뢰) · 건반 없음. 그래서 이 반주에도 건반을 넣지 않았습니다."}, "t0014": {"bpm": 120, "bars": 15, "chords": ["A", "F#m", "A", "B", "E", "E", "A", "E", "B", "E", "A", "A", "C#m", "E", "A"], "parts": {"bass": [[0.835, 0.302, 33, 81], [1.137, 2.461, 33, 92], [3.716, 0.281, 45, 43], [3.599, 0.421, 33, 48], [4.182, 2.112, 30, 59], [6.644, 0.441, 30, 45], [7.294, 0.278, 33, 77], [7.596, 2.719, 33, 92], [10.501, 0.928, 33, 65], [11.824, 0.258, 45, 48], [12.477, 0.766, 45, 51], [13.661, 0.533, 35, 63], [14.195, 0.534, 35, 59], [14.45, 0.814, 47, 56], [15.007, 0.349, 35, 61], [15.264, 0.441, 47, 50], [15.379, 0.816, 35, 55], [16.148, 0.349, 47, 41], [16.195, 0.348, 35, 74], [16.52, 0.348, 47, 53], [16.543, 0.325, 35, 66], [17.077, 0.557, 28, 61], [16.845, 0.998, 40, 52], [17.843, 0.581, 40, 65], [18.562, 0.372, 46, 51], [19.004, 0.372, 44, 51], [19.214, 0.51, 47, 42], [19.724, 0.328, 33, 47], [19.446, 0.675, 40, 59], [19.817, 0.328, 45, 57], [20.052, 0.278, 33, 59], [20.585, 0.419, 45, 50], [20.54, 0.487, 33, 56], [21.05, 0.58, 40, 57], [21.305, 0.349, 33, 51], [22.257, 0.302, 35, 64], [22.652, 0.372, 42, 64], [22.582, 0.72, 35, 45], [23.047, 0.325, 47, 43], [23.558, 0.861, 28, 61], [23.604, 1.233, 40, 47], [25.488, 0.302, 44, 59], [25.047, 0.766, 47, 41], [26.137, 0.372, 40, 57], [26.254, 0.371, 45, 40], [26.254, 0.441, 33, 63], [27.044, 0.533, 45, 51], [27.09, 0.534, 33, 61], [27.531, 0.444, 40, 56], [27.812, 0.371, 33, 51], [29.066, 0.326, 42, 54], [28.81, 0.697, 35, 47], [29.507, 0.395, 35, 52], [29.925, 0.674, 28, 67], [30.18, 0.674, 40, 44], [32.018, 0.278, 44, 65], [32.807, 0.302, 33, 64], [33.434, 0.465, 33, 45], [33.712, 0.325, 40, 44], [34.456, 0.301, 45, 53], [35.059, 0.302, 47, 40], [35.222, 0.653, 35, 61], [35.407, 0.491, 42, 48], [35.875, 0.51, 35, 71], [36.618, 0.302, 40, 52], [36.432, 0.603, 28, 55], [37.965, 0.325, 46, 49], [38.267, 0.371, 44, 49], [39.334, 0.348, 33, 50], [40.033, 0.419, 33, 46], [41.497, 0.975, 35, 59], [42.263, 0.279, 42, 42], [42.472, 0.302, 35, 68], [42.936, 1.209, 37, 77], [44.146, 0.325, 37, 64], [45.516, 0.465, 33, 38], [49.28, 0.302, 37, 77], [49.605, 0.859, 37, 57], [50.465, 0.418, 37, 65], [52.046, 0.349, 33, 49], [52.858, 0.372, 33, 55], [54.717, 0.812, 47, 55], [54.855, 0.674, 35, 67], [55.482, 0.536, 40, 39], [55.648, 1.022, 28, 59], [56.321, 0.72, 40, 50], [57.273, 0.372, 47, 36], [57.668, 0.395, 44, 54], [58.248, 0.511, 40, 43], [58.48, 0.302, 45, 49], [58.434, 0.465, 33, 58], [59.247, 0.348, 33, 72], [59.247, 0.348, 45, 42]], "keys": [[0.0, 0.115, 56, 70], [0.0, 0.115, 59, 70], [0.0, 0.115, 63, 70], [0.155, 0.726, 52, 70], [0.155, 0.726, 56, 70], [0.155, 0.726, 59, 70], [0.921, 3.188, 57, 70], [0.921, 3.188, 61, 70], [0.921, 3.188, 64, 70], [4.149, 1.539, 54, 70], [4.149, 1.539, 58, 70], [4.149, 1.539, 61, 70], [5.728, 1.561, 54, 70], [5.728, 1.561, 57, 70], [5.728, 1.561, 61, 70], [7.33, 6.438, 57, 70], [7.33, 6.438, 61, 70], [7.33, 6.438, 64, 70], [13.808, 1.585, 59, 70], [13.808, 1.585, 63, 70], [13.808, 1.585, 66, 70], [15.433, 0.75, 59, 70], [15.433, 0.75, 62, 70], [15.433, 0.75, 66, 70], [16.223, 0.75, 57, 70], [16.223, 0.75, 61, 70], [16.223, 0.75, 64, 70], [17.012, 4.814, 52, 70], [17.012, 4.814, 56, 70], [17.012, 4.814, 59, 70], [21.866, 1.539, 59, 70], [21.866, 1.539, 63, 70], [21.866, 1.539, 66, 70], [23.445, 2.421, 52, 70], [23.445, 2.421, 56, 70], [23.445, 2.421, 59, 70], [25.906, 1.539, 57, 70], [25.906, 1.539, 61, 70], [25.906, 1.539, 64, 70], [27.484, 0.773, 52, 70], [27.484, 0.773, 56, 70], [27.484, 0.773, 59, 70], [28.298, 1.539, 59, 70], [28.298, 1.539, 63, 70], [28.298, 1.539, 66, 70], [29.876, 2.399, 52, 70], [29.876, 2.399, 56, 70], [29.876, 2.399, 59, 70], [32.315, 1.585, 57, 70], [32.315, 1.585, 60, 70], [32.315, 1.585, 64, 70], [33.94, 2.352, 59, 70], [33.94, 2.352, 63, 70], [33.94, 2.352, 66, 70], [36.331, 2.399, 52, 70], [36.331, 2.399, 56, 70], [36.331, 2.399, 59, 70], [38.77, 0.773, 57, 70], [38.77, 0.773, 60, 70], [38.77, 0.773, 64, 70], [39.582, 1.562, 57, 70], [39.582, 1.562, 61, 70], [39.582, 1.562, 64, 70], [41.184, 0.75, 56, 70], [41.184, 0.75, 59, 70], [41.184, 0.75, 63, 70], [41.974, 0.796, 59, 70], [41.974, 0.796, 63, 70], [41.974, 0.796, 66, 70], [42.81, 2.351, 49, 70], [42.81, 2.351, 52, 70], [42.81, 2.351, 56, 70], [45.202, 1.561, 57, 70], [45.202, 1.561, 61, 70], [45.202, 1.561, 64, 70], [46.804, 0.796, 54, 70], [46.804, 0.796, 57, 70], [46.804, 0.796, 61, 70], [47.64, 0.75, 56, 70], [47.64, 0.75, 59, 70], [47.64, 0.75, 63, 70], [48.429, 0.773, 54, 70], [48.429, 0.773, 58, 70], [48.429, 0.773, 61, 70], [49.242, 1.562, 49, 70], [49.242, 1.562, 52, 70], [49.242, 1.562, 56, 70], [50.844, 0.75, 56, 70], [50.844, 0.75, 59, 70], [50.844, 0.75, 63, 70], [51.633, 1.585, 57, 70], [51.633, 1.585, 61, 70], [51.633, 1.585, 64, 70], [53.259, 0.772, 56, 70], [53.259, 0.772, 59, 70], [53.259, 0.772, 63, 70], [54.072, 1.561, 59, 70], [54.072, 1.561, 63, 70], [54.072, 1.561, 66, 70], [55.674, 2.375, 52, 70], [55.674, 2.375, 56, 70], [55.674, 2.375, 59, 70], [58.089, 1.585, 57, 70], [58.089, 1.585, 61, 70], [58.089, 1.585, 64, 70], [59.715, 0.246, 57, 70], [59.715, 0.246, 60, 70], [59.715, 0.246, 64, 70]], "drums": [[0.081, 0.16, 38, 106], [0.093, 0.16, 42, 99], [0.859, 0.159, 36, 76], [1.672, 0.16, 38, 102], [2.09, 0.16, 36, 105], [2.09, 0.16, 42, 69], [2.938, 0.16, 36, 81], [3.308, 0.16, 38, 75], [3.716, 0.159, 38, 87], [4.11, 0.159, 36, 104], [4.865, 0.16, 38, 98], [5.689, 0.16, 36, 105], [5.689, 0.16, 42, 87], [6.095, 0.16, 36, 75], [6.478, 0.16, 38, 98], [6.49, 0.16, 42, 93], [6.873, 0.16, 36, 74], [7.268, 0.16, 42, 70], [7.279, 0.16, 36, 70], [8.104, 0.159, 38, 99], [8.522, 0.16, 36, 87], [8.917, 0.159, 42, 79], [9.346, 0.16, 36, 97], [9.729, 0.16, 38, 120], [9.729, 0.16, 42, 80], [10.113, 0.159, 36, 78], [10.53, 0.16, 36, 73], [10.53, 0.16, 42, 76], [10.959, 0.16, 36, 75], [11.32, 0.16, 38, 77], [11.343, 0.16, 42, 71], [11.738, 0.16, 36, 72], [12.144, 0.16, 42, 82], [12.155, 0.16, 36, 82], [12.55, 0.16, 36, 79], [12.933, 0.16, 38, 92], [13.34, 0.16, 36, 85], [13.734, 0.16, 42, 70], [13.746, 0.16, 36, 86], [14.152, 0.16, 38, 77], [14.559, 0.159, 36, 79], [14.559, 0.159, 38, 82], [14.977, 0.159, 38, 88], [15.372, 0.159, 38, 74], [15.383, 0.159, 36, 73], [15.767, 0.159, 38, 87], [15.975, 0.16, 38, 82], [16.184, 0.16, 36, 75], [16.37, 0.16, 38, 76], [16.974, 0.159, 36, 83], [17.764, 0.159, 38, 74], [18.576, 0.16, 36, 76], [18.959, 0.159, 42, 87], [19.366, 0.159, 38, 86], [19.772, 0.16, 42, 78], [20.19, 0.16, 36, 111], [20.573, 0.159, 42, 86], [20.968, 0.159, 38, 83], [20.991, 0.16, 42, 71], [21.408, 0.16, 42, 83], [21.816, 0.159, 36, 71], [22.186, 0.16, 42, 75], [22.593, 0.16, 38, 76], [22.617, 0.159, 42, 79], [22.988, 0.16, 42, 71], [23.394, 0.16, 38, 75], [23.429, 0.159, 36, 90], [24.219, 0.159, 38, 90], [24.242, 0.16, 36, 96], [24.636, 0.16, 42, 90], [25.043, 0.16, 36, 90], [25.426, 0.159, 42, 81], [25.832, 0.16, 38, 78], [26.227, 0.16, 42, 72], [26.656, 0.16, 36, 76], [27.028, 0.159, 42, 73], [27.411, 0.159, 38, 79], [27.841, 0.16, 42, 88], [28.247, 0.16, 36, 109], [28.63, 0.16, 42, 86], [29.036, 0.16, 38, 83], [29.431, 0.16, 42, 75], [29.443, 0.16, 38, 92], [29.884, 0.159, 36, 85], [30.674, 0.159, 42, 85], [30.685, 0.159, 36, 84], [31.417, 0.16, 42, 73], [31.451, 0.16, 38, 84], [31.462, 0.16, 36, 77], [32.252, 0.16, 42, 97], [32.288, 0.16, 36, 109], [33.066, 0.159, 42, 72], [33.1, 0.16, 36, 79], [33.867, 0.159, 42, 74], [33.89, 0.16, 36, 80], [34.702, 0.16, 36, 120], [34.702, 0.16, 42, 120], [35.457, 0.159, 42, 71], [35.503, 0.16, 36, 78], [35.886, 0.16, 38, 76], [35.886, 0.16, 42, 80], [36.281, 0.16, 38, 77], [36.281, 0.16, 42, 87], [36.316, 0.16, 36, 93], [36.676, 0.16, 42, 71], [37.082, 0.16, 42, 78], [37.117, 0.16, 36, 84], [37.872, 0.16, 42, 77], [37.906, 0.16, 36, 93], [38.696, 0.16, 42, 83], [38.719, 0.16, 36, 75], [39.521, 0.159, 42, 77], [39.532, 0.159, 36, 73], [40.345, 0.159, 36, 103], [41.134, 0.159, 42, 71], [41.146, 0.16, 36, 111], [41.913, 0.159, 38, 76], [41.947, 0.16, 36, 81], [42.748, 0.16, 42, 75], [42.759, 0.16, 36, 82], [43.526, 0.159, 42, 78], [43.549, 0.16, 36, 102], [44.35, 0.16, 42, 78], [44.361, 0.16, 36, 86], [45.163, 0.16, 36, 87], [45.976, 0.159, 36, 98], [46.765, 0.16, 42, 73], [46.777, 0.159, 36, 90], [47.566, 0.16, 42, 74], [47.59, 0.159, 36, 83], [47.973, 0.159, 42, 80], [47.984, 0.159, 38, 77], [48.368, 0.159, 42, 69], [48.379, 0.159, 36, 83], [48.611, 0.159, 38, 98], [48.611, 0.159, 42, 83], [49.168, 0.16, 38, 78], [49.18, 0.159, 42, 90], [49.575, 0.159, 42, 68], [49.772, 0.16, 38, 73], [49.783, 0.16, 42, 109], [49.993, 0.159, 42, 70], [50.004, 0.16, 36, 86], [50.399, 0.16, 38, 110], [50.794, 0.159, 36, 69], [50.794, 0.159, 42, 107], [51.583, 0.159, 42, 77], [51.595, 0.16, 36, 103], [51.978, 0.159, 42, 71], [52.396, 0.16, 42, 89], [52.407, 0.16, 36, 92], [53.22, 0.16, 42, 85], [53.232, 0.159, 36, 120], [53.998, 0.16, 42, 73], [54.021, 0.16, 36, 78], [54.427, 0.16, 38, 79], [54.834, 0.159, 38, 80], [55.02, 0.159, 38, 73], [55.635, 0.159, 36, 90], [56.448, 0.159, 38, 86], [56.448, 0.159, 42, 68], [57.249, 0.159, 36, 88], [58.027, 0.159, 38, 89], [58.027, 0.159, 42, 73], [58.468, 0.16, 42, 73], [58.862, 0.16, 36, 80], [59.664, 0.16, 38, 100], [59.664, 0.16, 42, 78]], "guitar": [[0.503, 0.375, 47, 69], [0.503, 0.375, 57, 69], [0.898, 0.386, 45, 68], [0.898, 0.386, 57, 68], [0.898, 0.386, 64, 68], [1.304, 0.386, 45, 64], [1.71, 0.397, 57, 75], [2.128, 0.783, 64, 76], [2.128, 0.783, 69, 76], [2.953, 1.114, 57, 76], [2.953, 1.114, 64, 76], [2.953, 1.114, 69, 76], [4.126, 0.364, 42, 72], [4.126, 0.364, 49, 72], [4.126, 0.364, 54, 72], [4.508, 0.365, 42, 65], [4.508, 0.365, 49, 65], [4.508, 0.365, 54, 65], [4.892, 0.386, 42, 73], [4.892, 0.386, 49, 73], [4.892, 0.386, 61, 73], [5.298, 0.386, 42, 66], [5.298, 0.386, 54, 66], [5.704, 0.386, 42, 76], [5.704, 0.386, 49, 76], [5.704, 0.386, 54, 76], [5.704, 0.386, 61, 76], [6.11, 0.386, 42, 72], [6.11, 0.386, 61, 72], [6.518, 0.375, 42, 72], [6.518, 0.375, 54, 72], [6.911, 0.375, 57, 68], [7.306, 0.795, 69, 68], [8.143, 0.385, 45, 74], [8.549, 0.386, 45, 68], [8.549, 0.386, 57, 68], [8.549, 0.386, 64, 68], [8.549, 0.386, 69, 68], [8.955, 0.386, 69, 68], [9.361, 0.386, 45, 70], [9.361, 0.386, 57, 70], [9.361, 0.386, 61, 70], [9.768, 0.375, 57, 71], [10.162, 0.375, 64, 70], [10.557, 0.386, 45, 68], [10.557, 0.386, 69, 68], [10.964, 0.386, 45, 66], [11.37, 0.386, 45, 70], [11.37, 0.386, 52, 70], [11.776, 0.386, 45, 69], [11.776, 0.386, 64, 69], [12.183, 0.375, 45, 70], [12.183, 0.375, 52, 70], [12.183, 0.375, 64, 70], [12.577, 0.375, 45, 68], [12.972, 0.375, 45, 70], [12.972, 0.375, 52, 70], [12.972, 0.375, 69, 70], [13.367, 0.375, 45, 71], [13.367, 0.375, 52, 71], [13.761, 0.398, 47, 70], [13.761, 0.398, 54, 70], [13.761, 0.398, 64, 70], [14.18, 0.782, 54, 65], [14.18, 0.782, 57, 65], [14.18, 0.782, 69, 65], [15.004, 0.386, 47, 70], [15.004, 0.386, 59, 70], [15.41, 0.375, 54, 66], [15.41, 0.375, 64, 66], [15.41, 0.375, 69, 66], [15.805, 0.375, 47, 71], [15.805, 0.375, 66, 71], [16.2, 0.364, 69, 72], [16.583, 0.364, 64, 67], [16.967, 0.397, 64, 67], [17.384, 0.397, 68, 67], [17.802, 0.75, 52, 70], [17.802, 0.75, 64, 70], [18.592, 0.385, 64, 69], [18.998, 0.386, 64, 70], [19.404, 0.386, 64, 68], [19.81, 0.761, 45, 78], [19.81, 0.761, 64, 78], [20.611, 0.375, 52, 89], [20.611, 0.375, 64, 89], [20.611, 0.375, 69, 89], [21.006, 0.397, 64, 68], [21.424, 0.773, 47, 78], [21.424, 0.773, 54, 78], [21.424, 0.773, 59, 78], [22.238, 0.375, 56, 75], [22.632, 0.375, 47, 75], [22.632, 0.375, 54, 75], [22.632, 0.375, 59, 75], [22.632, 0.375, 71, 75], [23.027, 0.375, 47, 72], [23.027, 0.375, 52, 72], [23.027, 0.375, 64, 72], [23.421, 0.398, 56, 74], [23.84, 0.397, 47, 64], [23.84, 0.397, 64, 64], [24.257, 0.386, 47, 82], [24.257, 0.386, 64, 82], [24.257, 0.386, 68, 82], [24.664, 0.386, 52, 67], [24.664, 0.386, 64, 67], [25.07, 0.375, 52, 71], [25.07, 0.375, 64, 71], [25.07, 0.375, 68, 71], [25.465, 0.375, 52, 75], [25.465, 0.375, 64, 75], [25.859, 0.386, 52, 69], [26.266, 0.386, 45, 78], [26.672, 0.375, 45, 73], [27.067, 0.761, 45, 87], [27.067, 0.761, 52, 87], [27.067, 0.761, 64, 87], [27.868, 0.386, 47, 93], [27.868, 0.386, 54, 93], [27.868, 0.386, 59, 93], [28.274, 0.386, 47, 67], [28.68, 0.386, 56, 81], [29.087, 0.364, 54, 69], [29.087, 0.364, 59, 69], [29.47, 0.365, 52, 73], [29.47, 0.365, 64, 73], [29.853, 0.353, 47, 72], [30.225, 0.353, 52, 73], [30.596, 0.408, 47, 85], [30.596, 0.408, 52, 85], [30.596, 0.408, 59, 85], [31.026, 0.408, 52, 75], [31.026, 0.408, 64, 75], [31.455, 0.397, 47, 80], [31.455, 0.397, 52, 80], [31.455, 0.397, 64, 80], [31.873, 0.398, 57, 76], [32.292, 0.385, 47, 89], [32.292, 0.385, 52, 89], [32.292, 0.385, 64, 89], [32.698, 0.772, 45, 81], [32.698, 0.772, 57, 81], [33.51, 0.386, 45, 97], [33.51, 0.386, 52, 97], [33.51, 0.386, 57, 97], [33.917, 0.386, 47, 67], [34.323, 0.386, 47, 86], [34.323, 0.386, 54, 86], [34.729, 0.375, 54, 77], [35.124, 0.375, 47, 93], [35.519, 0.375, 47, 81], [35.519, 0.375, 54, 81], [35.519, 0.375, 59, 81], [35.914, 0.375, 52, 81], [35.914, 0.375, 64, 81], [36.308, 0.386, 52, 80], [36.308, 0.386, 64, 80], [36.715, 0.386, 52, 83], [36.715, 0.386, 64, 83], [37.121, 0.375, 59, 99], [37.516, 0.375, 52, 69], [37.91, 0.397, 52, 84], [37.91, 0.397, 64, 84], [38.328, 0.398, 52, 72], [38.328, 0.398, 57, 72], [38.328, 0.398, 69, 72], [38.747, 0.385, 47, 72], [39.153, 0.76, 45, 79], [39.153, 0.76, 57, 79], [39.954, 0.375, 45, 91], [39.954, 0.375, 52, 91], [39.954, 0.375, 57, 91], [40.349, 0.385, 52, 69], [40.755, 0.385, 54, 76], [41.161, 0.375, 54, 70], [41.556, 0.375, 56, 103], [41.951, 0.397, 54, 75], [42.369, 0.397, 52, 78], [42.786, 0.375, 49, 80], [42.786, 0.375, 56, 80], [42.786, 0.375, 61, 80], [43.181, 0.375, 49, 85], [43.576, 0.386, 49, 82], [43.576, 0.386, 56, 82], [43.982, 0.386, 47, 88], [44.389, 0.386, 56, 104], [44.795, 0.386, 47, 72], [44.795, 0.386, 56, 72], [45.202, 0.375, 47, 80], [45.597, 0.76, 45, 81], [45.597, 0.76, 49, 81], [45.597, 0.76, 61, 81], [46.398, 0.772, 49, 95], [46.398, 0.772, 56, 95], [47.21, 0.385, 54, 88], [47.617, 0.375, 54, 76], [48.011, 0.375, 56, 90], [48.406, 0.385, 54, 82], [48.812, 0.385, 52, 82], [49.219, 0.386, 49, 78], [49.219, 0.386, 61, 78], [49.625, 0.386, 49, 86], [50.031, 0.75, 57, 84], [50.821, 0.375, 57, 101], [51.216, 0.761, 47, 71], [51.216, 0.761, 56, 71], [52.017, 0.386, 45, 94], [52.017, 0.386, 49, 94], [52.017, 0.386, 57, 94], [52.017, 0.386, 61, 94], [52.423, 0.397, 49, 78], [52.423, 0.397, 61, 78], [52.841, 0.398, 49, 82], [52.841, 0.398, 61, 82], [53.259, 0.375, 56, 91], [53.654, 0.375, 47, 69], [54.048, 0.386, 47, 86], [54.048, 0.386, 54, 86], [54.455, 0.385, 47, 90], [54.455, 0.385, 54, 90], [54.861, 0.364, 54, 78], [55.244, 0.365, 52, 73], [55.627, 0.795, 52, 66], [55.627, 0.795, 59, 66], [55.627, 0.795, 64, 66], [55.627, 0.795, 71, 66], [56.464, 0.375, 47, 74], [56.464, 0.375, 59, 74], [56.464, 0.375, 64, 74], [56.858, 0.375, 47, 69], [56.858, 0.375, 52, 69], [57.253, 0.385, 52, 81], [57.253, 0.385, 64, 81], [57.253, 0.385, 68, 81], [57.659, 0.385, 52, 75], [57.659, 0.385, 64, 75], [58.066, 0.385, 47, 68], [58.472, 0.386, 45, 87], [58.472, 0.386, 57, 87], [58.472, 0.386, 64, 87], [58.878, 0.386, 52, 67], [59.284, 0.386, 52, 98], [59.284, 0.386, 57, 98], [59.284, 0.386, 64, 98], [59.284, 0.386, 69, 98]]}, "title": "T-0014 30초", "desc": "4파트(베이스·건반·드럼·기타) 15마디 · 120 BPM · T-0014 MIDI와 T-0015 Logic 바운스, 30초", "audio": "audio/t0015_full.mp3", "inventory": ""}};
+const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const PARTDEF={bass:{name:'베이스',hint:'끄고 베이스 연습'},keys:{name:'건반',hint:'끄고 피아노 연습'},drums:{name:'드럼'},guitar:{name:'기타',hint:'끄고 기타 연습'}};
+const ORDER=['bass','keys','drums','guitar'];
+const el=id=>document.getElementById(id);
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- song state ---------- */
+let song,PARTS,BARS,TOTAL,CH,KEY,transpose=0,mode='real',selBar=0,lo,hi,mel;
+const ROMAN={0:'I',2:'ii',4:'iii',5:'IV',7:'V',9:'vi',11:'vii°'};
+function parseChord(c){const m=c.match(/^([A-G]#?)(m?)$/);return {root:NAMES.indexOf(m[1]),minor:m[2]==='m'}}
+function detectKey(){let best=null;for(let k=0;k<12;k++){const dia={[k]:0,[(k+2)%12]:1,[(k+4)%12]:1,[(k+5)%12]:0,[(k+7)%12]:0,[(k+9)%12]:1};let sc=0;for(const c of CH){if(dia[c.root]!==undefined&&(dia[c.root]===1)===c.minor)sc+=(c.root===k?1.5:1)}if(!best||sc>best.sc)best={k,sc}}return best.k}
+function roman(c){const d=(c.root-KEY+12)%12;let r=ROMAN[d]||NAMES[d];return c.minor&&r===r.toUpperCase()?r.toLowerCase():r}
+const tn=pc=>NAMES[(pc+transpose+1200)%12];
+const chordName=i=>tn(CH[i].root)+(CH[i].minor?'m':'');
+const noteName=p=>{const q=p+transpose;return NAMES[q%12]+(Math.floor(q/12)-1)};
+const spb0=()=>60/song.bpm;
+
+function loadSong(id){if(S.playing)stop();song=SONGS[id];song.id=id;PARTS=ORDER.filter(p=>song.parts[p]&&song.parts[p].length);for(const p of PARTS)song.parts[p].sort((a,b)=>a[0]-b[0]);BARS=song.bars;TOTAL=BARS*4;CH=song.chords.map(parseChord);KEY=detectKey();
+ mel=PARTS.filter(p=>p!=='drums');lo=127;hi=0;for(const p of mel)for(const n of song.parts[p]){lo=Math.min(lo,n[2]);hi=Math.max(hi,n[2])}lo-=1;hi+=1;
+ S.anchorB=0;S.a=0;S.b=TOTAL;S.loop=false;el('loopOn').checked=false;selBar=0;
+ for(const lid of ['loopA','loopB']){const s=el(lid);s.innerHTML='';for(let i=1;i<=BARS;i++){const o=document.createElement('option');o.value=i;o.textContent=`${i}마디`;s.appendChild(o)}}el('loopB').value=BARS;
+ el('real').src=song.audio;el('real').load();
+ document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));
+ el('songdesc').textContent=song.desc;el('inventory').textContent=song.inventory||'';
+ el('legend').innerHTML=PARTS.map(p=>`<span style="--c:var(--${p})">${PARTDEF[p].name}${p==='drums'?' (킥·스네어·하이햇)':''}</span>`).join('');
+ buildStems();applyMode();updateTempoLabel();el('transVal').textContent=`${transpose>0?'+':''}${transpose} · ${tn(KEY)} 메이저`;renderProg();renderRoles();renderTips();renderBar();draw()}
+
+/* ---------- audio (synth) ---------- */
+let ctx,master,noise,gains={},mute={},vol={},drumOn={36:true,38:true,42:true};
+function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;const g=ctx.createGain();g.gain.value=.8;master.connect(g).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=(mute[p]?0:1)*(vol[p]??1);gains[p].connect(master)}noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+const hz=m=>440*Math.pow(2,(m-69)/12);
+function tone(part,t,dur,pitch,vel){const v=vel/127,out=gains[part],f=hz(pitch+transpose);
+ if(part==='bass'){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(220,t+.25);const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55*v,t+.006);g.gain.setTargetAtTime(.3*v,t+.05,.15);g.gain.setTargetAtTime(0,t+dur,.03);o.connect(lp).connect(g).connect(out);o.start(t);o.stop(t+dur+.3)}
+ else if(part==='keys'){const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.16*v,t+.012);g.gain.setTargetAtTime(.09*v,t+.1,.35);g.gain.setTargetAtTime(0,t+dur,.08);for(const [type,det,amp] of [['triangle',0,1],['sine',-6,.5],['sine',1205,.12]]){const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.detune.value=det;const a=ctx.createGain();a.gain.value=amp;o.connect(a).connect(g);o.start(t);o.stop(t+dur+.6)}g.connect(out)}
+ else if(part==='guitar'){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;const o2=ctx.createOscillator();o2.type='square';o2.frequency.value=f;o2.detune.value=4;const a2=ctx.createGain();a2.gain.value=.25;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.Q.value=2;lp.frequency.setValueAtTime(3200,t);lp.frequency.exponentialRampToValueAtTime(700,t+.3);const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22*v,t+.003);g.gain.exponentialRampToValueAtTime(.002,t+Math.max(.25,dur));o.connect(lp);o2.connect(a2).connect(lp);lp.connect(g).connect(out);o.start(t);o2.start(t);o.stop(t+dur+.4);o2.stop(t+dur+.4)}}
+function drum(t,pitch,vel){if(!drumOn[pitch])return;const v=vel/127,out=gains.drums;
+ if(pitch===36){const o=ctx.createOscillator();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(42,t+.11);const g=ctx.createGain();g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.32);o.connect(g).connect(out);o.start(t);o.stop(t+.35)}
+ else if(pitch===38){const n=ctx.createBufferSource();n.buffer=noise;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1900;bp.Q.value=.7;const g=ctx.createGain();g.gain.setValueAtTime(.5*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);n.connect(bp).connect(g).connect(out);n.start(t);n.stop(t+.2);const o=ctx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(150,t+.08);const g2=ctx.createGain();g2.gain.setValueAtTime(.35*v,t);g2.gain.exponentialRampToValueAtTime(.001,t+.1);o.connect(g2).connect(out);o.start(t);o.stop(t+.12)}
+ else{const n=ctx.createBufferSource();n.buffer=noise;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7500;const g=ctx.createGain();g.gain.setValueAtTime(.22*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.06);n.connect(hp).connect(g).connect(out);n.start(t);n.stop(t+.07)}}
+function clickAt(t,accent){const o=ctx.createOscillator();o.frequency.value=accent?1600:1100;const g=ctx.createGain();g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);o.connect(g).connect(master);o.start(t);o.stop(t+.05)}
+
+/* ---------- transport ---------- */
+const S={playing:false,anchorT:0,anchorB:0,spb:.5,idx:{},click:0,timer:null,loop:false,a:0,b:16,pending:null};
+const real=el('real');
+const rate=()=>el('tempo').value/100;
+function nowBeat(){if(!S.playing)return S.anchorB;if(mode==='real')return real.currentTime/spb0();const b=S.anchorB+(ctx.currentTime-S.anchorT)/S.spb;return b<S.anchorB?S.anchorB:b}
+function seekIdx(beat){for(const p of PARTS){const n=song.parts[p];let i=0;while(i<n.length&&n[i][0]<beat)i++;S.idx[p]=i}S.click=Math.ceil(beat-1e-6)}
+function tick(){const horizon=ctx.currentTime+.18;let guard=0;
+ while(guard++<8){const hB=S.anchorB+(horizon-S.anchorT)/S.spb;const end=S.loop?S.b:TOTAL;const lim=Math.min(hB,end);
+  for(const p of PARTS){const n=song.parts[p];let i=S.idx[p];while(i<n.length&&n[i][0]<lim){const [s,d,pitch,vel]=n[i];const t=S.anchorT+(s-S.anchorB)*S.spb;if(t>=ctx.currentTime-.02){p==='drums'?drum(t,pitch,vel):tone(p,t,Math.max(.05,d*S.spb),pitch,vel)}i++}S.idx[p]=i}
+  if(el('click').checked){while(S.click<lim){clickAt(S.anchorT+(S.click-S.anchorB)*S.spb,S.click%4===0);S.click++}}else S.click=Math.ceil(lim);
+  if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;seekIdx(S.a);continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
+function play(){ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
+ S.anchorT=now+ci*S.spb;S.anchorB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
+ if(mode==='real'){real.playbackRate=rate();real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{stop()})},ci*S.spb*1000)}
+ else{seekIdx(start);S.timer=setInterval(tick,30)}
+ requestAnimationFrame(draw)}
+function stop(){const b=nowBeat();S.playing=false;clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');draw()}
+real.addEventListener('ended',()=>{if(S.playing){stop();S.anchorB=0;draw()}});
+el('play').onclick=()=>S.playing?stop():play();
+function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM (${el('tempo').value}%)`}
+el('tempo').oninput=()=>{updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r};
+el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=`${transpose>0?'+':''}${transpose} · ${tn(KEY)} 메이저`;renderProg();renderBar();renderTips();renderRoles();draw()};
+el('loopOn').onchange=()=>{S.loop=el('loopOn').checked};
+for(const id of ['loopA','loopB']){el(id).onchange=()=>{let a=+el('loopA').value,b=+el('loopB').value;if(b<a){if(id==='loopA')b=a;else a=b;el('loopA').value=a;el('loopB').value=b}S.a=(a-1)*4;S.b=b*4;if(!S.loop){el('loopOn').checked=true;S.loop=true}}}
+
+/* mode + stems */
+el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
+function applyMode(){const r=mode==='real';el('stems').classList.toggle('off',r);el('transpose').disabled=r;el('click').disabled=r;el('modeNote').textContent=r?'실제 렌더는 전체 믹스 한 파일이라 파트 끄기·키 변경·메트로놈은 브라우저 합성에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.':'브라우저 합성은 채보 데이터를 즉석에서 소리로 만든 것이라 음색은 임시입니다. 파트·키·메트로놈을 자유롭게 바꿀 수 있습니다.'}
+function buildStems(){const w=el('stems');w.innerHTML='';for(const p of PARTS){const d=document.createElement('div');d.className='stem';d.style.setProperty('--c',`var(--${p})`);
+ d.innerHTML=`<div class="top"><span class="name">${PARTDEF[p].name}</span><button class="mute" aria-pressed="${!!mute[p]}" data-p="${p}">${mute[p]?'켜기':'끄기'}</button></div><input type="range" min="0" max="100" value="${Math.round((vol[p]??1)*100)}" aria-label="${PARTDEF[p].name} 볼륨" data-v="${p}">`+(p==='drums'?`<div class="sub"><label class="chk"><input type="checkbox" ${drumOn[36]?'checked':''} data-d="36"> 킥</label><label class="chk"><input type="checkbox" ${drumOn[38]?'checked':''} data-d="38"> 스네어</label><label class="chk"><input type="checkbox" ${drumOn[42]?'checked':''} data-d="42"> 하이햇</label></div>`:`<div class="sub muted">${PARTDEF[p].hint}</div>`);w.appendChild(d)}}
+el('stems').addEventListener('click',e=>{const b=e.target.closest('.mute');if(!b)return;const p=b.dataset.p;mute[p]=!mute[p];b.setAttribute('aria-pressed',mute[p]);b.textContent=mute[p]?'켜기':'끄기';applyGain(p);draw()});
+el('stems').addEventListener('input',e=>{if(e.target.dataset.v){vol[e.target.dataset.v]=e.target.value/100;applyGain(e.target.dataset.v)}});
+el('stems').addEventListener('change',e=>{if(e.target.dataset.d)drumOn[e.target.dataset.d]=e.target.checked});
+function applyGain(p){if(gains[p])gains[p].gain.setTargetAtTime((mute[p]?0:1)*(vol[p]??1),ctx.currentTime,.02)}
+
+/* song selector */
+const sel=el('songsel');for(const id in SONGS){const b=document.createElement('button');b.dataset.s=id;b.textContent=SONGS[id].title;b.setAttribute('aria-pressed','false');sel.appendChild(b)}
+sel.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.s!==song.id)loadSong(b.dataset.s)});
+
+/* ---------- piano roll ---------- */
+const cv=el('roll'),cx=cv.getContext('2d');
+function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8,x=b=>b/TOTAL*W;
+ cx.clearRect(0,0,W,H);cx.fillStyle=css('--panel');cx.fillRect(0,0,W,H);
+ const fg=css('--fg'),mu=css('--muted'),line=css('--line');
+ cx.fillStyle=css('--soft');cx.fillRect(x(selBar*4),0,x(4),H);
+ if(S.loop){cx.fillStyle=css('--accent');cx.globalAlpha=.08;cx.fillRect(x(S.a),0,x(S.b-S.a),H);cx.globalAlpha=1}
+ cx.strokeStyle=line;cx.lineWidth=1;for(let b=0;b<=TOTAL;b++){cx.globalAlpha=b%4?.5:1;cx.beginPath();cx.moveTo(x(b),top-4);cx.lineTo(x(b),H);cx.stroke()}cx.globalAlpha=1;
+ cx.textBaseline='top';for(let i=0;i<BARS;i++){cx.fillStyle=fg;cx.font='600 15px "IBM Plex Mono",monospace';cx.fillText(chordName(i),x(i*4)+6,6);cx.fillStyle=mu;cx.font='11px "IBM Plex Mono",monospace';cx.fillText(String(i+1),x(i*4)+6,22)}
+ const y=p=>top+(hi-p)/(hi-lo)*melH;const rh=Math.max(3,melH/(hi-lo)-1);
+ for(const p of mel){cx.fillStyle=css('--'+p);cx.globalAlpha=mute[p]&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts[p]){cx.fillRect(x(s)+.5,y(pitch)-rh/2,Math.max(2,x(d)-1),rh)}}cx.globalAlpha=1;
+ const dy={36:H-14,38:H-14-drumH/3,42:H-14-2*drumH/3};if(song.parts.drums){cx.fillStyle=css('--drums');cx.globalAlpha=mute.drums&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts.drums){const r=pitch===36?6:pitch===38?5:3.5;cx.beginPath();cx.arc(x(s),dy[pitch]??H-14,r,0,Math.PI*2);cx.fill()}cx.globalAlpha=1}
+ cx.fillStyle=mu;cx.font='11px "IBM Plex Sans KR",sans-serif';cx.textBaseline='middle';cx.fillText('킥',4,dy[36]);cx.fillText('스네어',4,dy[38]);cx.fillText('햇',4,dy[42]);
+ cx.strokeStyle=line;cx.beginPath();cx.moveTo(0,H-drumH-6);cx.lineTo(W,H-drumH-6);cx.stroke();
+ const b=Math.max(0,Math.min(TOTAL,nowBeat()));cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke();
+ const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordName(bar);el('nowPos').textContent=`마디 ${bar+1} · 박 ${beat+1}`;for(let i=1;i<=4;i++)el('b'+i).classList.toggle('on',i===beat+1&&S.playing);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
+ if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02)real.currentTime=S.a*spb0();requestAnimationFrame(draw)}}
+cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();const b=Math.floor((e.clientX-r.left)/r.width*BARS);selBar=Math.max(0,Math.min(BARS-1,b));if(!S.playing)S.anchorB=selBar*4;renderBar();draw()});
+
+/* ---------- bar detail ---------- */
+function inBar(part,bar){return (song.parts[part]||[]).filter(n=>n[0]>=bar*4-1e-6&&n[0]<bar*4+4-1e-6)}
+function renderBar(){const b=selBar;const rows=mel.map(p=>{const ns=inBar(p,b);const names=ns.map(n=>noteName(n[2]));const uniq=[...new Set(names)];return `<tr><th style="color:var(--${p})">${PARTDEF[p].name}</th><td>${ns.length?`<span class="mono">${names.join(' ')}</span><div class="muted small">${ns.length}음 · 사용 음 ${uniq.length}개 (${uniq.join(', ')})</div>`:'<span class="muted">쉼</span>'}</td></tr>`}).join('');
+ const dn=inBar('drums',b);const grid=[36,38,42].map(pc=>{const lab=pc===36?'킥':pc===38?'스네어':'하이햇';const hits=new Set(dn.filter(n=>n[2]===pc).map(n=>Math.round((n[0]-b*4)*4)));return `<span class="muted">${lab}</span>`+Array.from({length:16},(_,i)=>`<i class="${hits.has(i)?'hit':''}${i%4===0?' q':''}"></i>`).join('')}).join('');
+ el('bardetail').innerHTML=`<div class="row" style="justify-content:space-between"><h3>마디 ${b+1} · <span class="mono">${chordName(b)}</span> <span class="muted mono small">${roman(CH[b])}</span></h3><button class="btn sm" id="goBar">이 마디부터 재생</button></div><table style="margin-top:.6rem">${rows}</table>${song.parts.drums?`<div class="dgrid">${grid}</div><p class="muted" style="font-size:.78rem;margin-top:.4rem">드럼 격자는 16분음표 16칸. 진한 왼쪽 선이 각 박의 시작.</p>`:''}`;
+ el('goBar').onclick=()=>{if(S.playing)stop();S.anchorB=b*4;play()}}
+
+/* ---------- guide ---------- */
+function renderProg(){el('keyName').textContent=`· ${tn(KEY)} 메이저 추정`;el('prog').innerHTML=song.chords.map((c,i)=>`<div class="cell"><span class="b">${i+1}마디</span><span class="c">${chordName(i)}</span><span class="r">${roman(CH[i])}</span></div>`).join('')}
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+function renderRoles(){const nb=BARS,P=song.parts,cards=[];
+ if(P.bass){const root=P.bass.filter(n=>n[2]%12===CH[Math.min(BARS-1,Math.floor(n[0]/4))].root).length,pct=Math.round(100*root/P.bass.length);cards.push(card('bass','베이스 · 뿌리를 잡는다',[['마디당 음',(P.bass.length/nb).toFixed(1)],['코드 근음 비율',pct+'%'],['음역',`${noteName(Math.min(...P.bass.map(n=>n[2])))}–${noteName(Math.max(...P.bass.map(n=>n[2])))}`]],pct>=60?`근음 비율 ${pct}%면 코드를 그대로 받쳐 주는 전형적인 연주입니다. 바꿀 때는 3번째 박에 5도음을 넣어 움직임을 더해 보세요.`:`근음 밖 음이 많아 걷는 느낌이 있습니다. 노래가 묻히면 1박을 근음으로 고정하세요.`))}
+ if(P.keys){const st={};for(const n of P.keys){const k=n[0].toFixed(2);st[k]=(st[k]||0)+1}const poly=avg(Object.values(st)).toFixed(1),dur=avg(P.keys.map(n=>n[1])).toFixed(2);cards.push(card('keys','건반 · 화음을 깔아 준다',[['마디당 음',(P.keys.length/nb).toFixed(1)],['평균 동시음',poly],['평균 길이(박)',dur]],`동시음 ${poly}개짜리 보이싱이 평균 ${dur}박 울립니다. 보컬이 중음역이면 건반을 한 옥타브 올리거나 3음을 빼서 자리를 비워 주세요.`))}
+ if(P.drums){const c=pc=>(P.drums.filter(n=>n[2]===pc).length/nb).toFixed(1);cards.push(card('drums','드럼 · 박을 세게 해 준다',[['킥/마디',c(36)],['스네어/마디',c(38)],['햇/마디',c(42)]],`하이햇을 끄면 연습 때 박이 어려워지고, 킥만 남기면 다운비트만 들립니다. 브라우저 합성 모드에서 세 가지를 따로 꺼 보며 어떤 층이 박을 느끼게 하는지 확인하세요.`))}
+ if(P.guitar){const per=(P.guitar.length/nb).toFixed(1),dur=avg(P.guitar.map(n=>n[1])).toFixed(2);cards.push(card('guitar',per>=8?'기타 · 리프로 색을 낸다':'기타 · 벽을 세운다',[['마디당 음',per],['평균 길이(박)',dur],['음역',`${noteName(Math.min(...P.guitar.map(n=>n[2])))}–${noteName(Math.max(...P.guitar.map(n=>n[2])))}`]],per>=8?`마디당 ${per}음이면 16분 단위로 쪼개는 리프입니다. 노래와 겹치면 벌스에서 기타를 끄고 코러스에서만 켜는 식으로 밀도를 조절하세요.`:`마디당 ${per}음, 평균 ${dur}박 지속이면 코드 바뀜마다 치는 지속 보이싱(파워코드 벽)입니다. 후렴에서 두께를 더 원하면 같은 보이싱을 한 옥타브 아래로 겹치세요. 다른 악기를 추가하지는 마세요.`))}
+ el('roles').innerHTML=cards.join('')}
+function card(p,title,st,tip){return `<div class="panel role" style="--c:var(--${p})"><h3>${title}</h3><div class="stat">${st.map(([k,v])=>`<span>${k} <b>${v}</b></span>`).join('')}</div><p class="muted" style="font-size:.88rem">${tip}</p></div>`}
+function renderTips(){const vi=NAMES[(KEY+9+transpose)%12]+'m',IV=NAMES[(KEY+5+transpose)%12],V=NAMES[(KEY+7+transpose)%12],I=NAMES[(KEY+transpose)%12];
+ el('tips').innerHTML=[['키',`노래가 높으면 연습실의 키 슬라이더(브라우저 합성)를 −2 ~ −3으로 내려 보세요. 코드 이름과 채보 음이름이 같이 바뀝니다.`],['대체 코드',`${I} 자리에 ${vi}(vi)를 넣으면 같은 멜로디에 그늘이 생깁니다. ${IV}→${V}→${I} 종지는 그대로 두는 편이 안전합니다.`],['밀도',`벌스는 베이스+킥만, 후렴에서 나머지를 더하는 식으로 파트를 켜고 끄며 구성을 미리 들어 보세요.`],['리듬',`드럼의 하이햇만 끄고 들으면 킥·스네어 골격이 보입니다. 이 골격 위에 다른 햇 패턴을 얹는 것이 편곡의 첫 단계입니다.`],['내보내기',`정식 버전에서는 이 상태(키·템포·켠 파트)를 그대로 WAV와 MIDI로 받습니다.`]].map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
+
+/* ---------- upload flow (prototype) ---------- */
+const drop=el('drop'),file=el('file');let picked=null;
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)pick(f)});
+file.addEventListener('change',()=>{if(file.files[0])pick(file.files[0])});
+function pick(f){picked=f;el('fileinfo').hidden=false;el('result').hidden=true;el('steps').innerHTML='';el('prog').style.width='0';el('start').disabled=false;el('fname').textContent=f.name;const mb=(f.size/1048576).toFixed(1);el('fmeta').textContent=`${mb} MB · 길이 확인 중`;
+ try{const u=URL.createObjectURL(f),a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>{const s=Math.round(a.duration);el('fmeta').textContent=`${mb} MB · ${Math.floor(s/60)}분 ${String(s%60).padStart(2,'0')}초 · 이 브라우저 안에만 있습니다`;URL.revokeObjectURL(u)};a.onerror=()=>{el('fmeta').textContent=`${mb} MB · 길이를 읽지 못했습니다 · 이 브라우저 안에만 있습니다`};a.src=u}catch(e){el('fmeta').textContent=`${mb} MB`}}
+const STEPS=[['분리','Demucs 6스템',1400],['채보','Basic Pitch + 보정',1200],['분석','코드·키·구간·악기 구성',900],['편곡','4파트 패턴 생성',1300],['렌더','음원 렌더 + 레벨·저음·클릭 검사',1500]];
+el('start').onclick=()=>{el('start').disabled=true;el('result').hidden=true;const w=el('steps');w.innerHTML=STEPS.map(([n,d])=>`<div class="step"><i></i><span><b>${n}</b> <span class="muted">${d}</span></span><span class="t">대기</span></div>`).join('');const rows=[...w.children];let i=0,t0=performance.now();
+ const run=()=>{if(i>0){rows[i-1].className='step done';rows[i-1].querySelector('.t').textContent=((performance.now()-t0)/1000).toFixed(1)+'s'}if(i>=STEPS.length){el('prog').style.width='100%';el('result').hidden=false;return}rows[i].className='step run';rows[i].querySelector('.t').textContent='진행';el('prog').style.width=Math.round(100*(i+.5)/STEPS.length)+'%';setTimeout(run,STEPS[i][2]);i++};run()};
+el('openDemo').addEventListener('click',()=>{if(song.id!=='onedream')loadSong('onedream')});
+
+/* waitlist (prototype, stores nothing) */
+el('wait').addEventListener('submit',e=>{e.preventDefault();el('waitMsg').textContent='시안 화면이라 아직 저장되지 않습니다. 정식 버전에서 이 자리에 신청이 기록됩니다.'});
+
+loadSong('onedream');
+const h=location.hash.replace('#','');if(['upload','practice','score','guide','plans'].includes(h))setTimeout(()=>document.getElementById(h).scrollIntoView(),50);
+</script>
+
+</body>
+</html>
