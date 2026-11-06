@@ -36,7 +36,7 @@
   --accent-soft:rgba(92,184,255,.14); --loop-soft:rgba(255,179,71,.16);
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
-@media(max-width:700px){:root{--hit:44px}.hero .eyebrow,.hero p.lead,.hero details{display:none}.hero .in{padding-block:.6rem .5rem;gap:.4rem}.hero h1{font-size:1.15rem}.top .in{padding-block:.35rem}}
+@media(max-width:700px){:root{--hit:44px}.hero .eyebrow,.hero p.lead,.hero details{display:none}.hero .in{padding-block:.6rem .5rem;gap:.4rem}.hero .big{font-size:1.15rem}.top .in{padding-block:.35rem}}
 .hero.gone{display:none}
 .upd{border-color:var(--accent);color:var(--accent);cursor:pointer;font:inherit;font-size:.78rem;font-weight:700}
 .swnote{margin-left:.6rem;color:var(--ok);font-size:.82rem}
@@ -45,7 +45,7 @@
 html{-webkit-text-size-adjust:100%;overflow-anchor:none}
 body{word-break:keep-all;overflow-wrap:break-word;margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;padding-bottom:calc(var(--tpH,150px) + 20px);overflow-x:hidden}
 h1,h2,h3{font-weight:700;line-height:1.3;text-wrap:balance;margin:0}
-h1{font-size:clamp(1.45rem,3.4vw,2.1rem)}
+.big{font-size:clamp(1.45rem,3.4vw,2.1rem)}
 h2{font-size:1.3rem}
 h3{font-size:1rem}
 p{margin:0}
@@ -78,7 +78,7 @@ summary.btn{list-style:none}summary.btn::-webkit-details-marker{display:none}
 select,input[type=text],input[type=email],input[type=number]{font:inherit;min-height:var(--hit);padding:0 .5rem;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);color:var(--text)}
 input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .chk{display:flex;align-items:center;gap:.4rem;font-size:.9rem;min-height:var(--hit)}
-.chk input{accent-color:var(--accent);width:18px;height:18px}
+.chk input{accent-color:var(--accent);width:24px;height:24px}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem}
 .grid{display:grid;gap:1rem}
 @media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
@@ -129,7 +129,7 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 /* 믹서 */
 .mixer{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
 #stems{display:contents}
-#stems.off .ch{opacity:.45;pointer-events:none}
+#stems.off .ch{pointer-events:none}#stems.off .ch input,#stems.off .ch .ms{opacity:.45}
 .ch{border:1px solid var(--border);border-top:4px solid var(--c,var(--accent));background:var(--surface);border-radius:12px;padding:.6rem .5rem .7rem;display:grid;justify-items:center;gap:.45rem;align-content:start}
 .ch .name{font-weight:700;font-size:.9rem;text-align:center;line-height:1.25;word-break:keep-all}
 .ch .name::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c,var(--accent));margin-right:.35rem}
@@ -268,7 +268,7 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 .tgl{display:inline-flex;align-items:center;min-height:var(--hit);padding:0 .7rem;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);font-size:.85rem;font-weight:500;cursor:pointer;flex:none;position:relative;white-space:nowrap}
 .tgl input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
 .tgl span::before{content:"○ "}
-.tgl:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tgl:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
 .tgl:has(input:checked) span::before{content:"● "}
 .tgl:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .tgl:has(input:disabled){opacity:.45;cursor:not-allowed}
@@ -349,7 +349,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 <body>
 
 <header class="top"><div class="in">
-  <span class="brand">커버 연습실</span>
+  <h1 class="brand">커버 연습실</h1>
   <div class="seg" id="songsel" role="group" aria-label="곡 선택"></div>
   <div class="chips" aria-label="곡 정보"><span class="chip mono" id="chipKey"></span><span class="chip mono" id="chipBpm"></span><span class="chip mono" id="chipBars"></span></div>
   <button class="chip upd" id="updChip" type="button" hidden>업데이트 있음 · 새로 고침</button>
@@ -357,9 +357,9 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
 </div></header>
 
-<section class="hero" id="hero"><div class="in">
+<section class="hero" id="hero" aria-label="소개"><div class="in">
   <span class="eyebrow">시안 · 브라우저 안에서 채보까지 실제 동작</span>
-  <h1>내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h1>
+  <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
   <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰세요.</p>
   <div class="row"><a class="btn primary" href="#practice">데모 듣기</a><a class="btn" href="#upload">내 곡 올리기</a></div>
   <details><summary>자세히 보기</summary>
@@ -380,7 +380,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   </div><button class="lclr" id="loopClr" type="button" hidden title="구간 반복 해제" aria-label="구간 반복 해제"><span class="tl">반복 해제 </span>✕</button></div>
 </div>
 
-<div class="tabpanel" id="tab-practice" role="tabpanel" aria-labelledby="tabb-practice"><div class="in">
+<div class="tabpanel" id="tab-practice" role="tabpanel" tabindex="0" aria-labelledby="tabb-practice"><div class="in">
   <div class="head"><h2>파트를 빼고, 템포를 늦추고, 구간을 돌리기</h2><p class="muted small">노래 연습이면 전 파트를 켜고, 베이스 연습이면 베이스를 끄고 따라 쳐 보세요(M = 끄기, S = 그 파트만 듣기). 키를 바꾸면 코드 이름도 같이 바뀝니다.</p></div>
   <p class="muted small songdesc" id="songdesc"></p>
   <div class="mixer" id="mixer" role="group" aria-label="믹서">
@@ -401,15 +401,15 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <p class="note">단축키는 <button class="btn sm" type="button" id="helpBtn2">? 단축키 보기</button></p>
 </div></div>
 
-<div class="tabpanel" id="tab-score" role="tabpanel" aria-labelledby="tabb-score" hidden><div class="in">
+<div class="tabpanel" id="tab-score" role="tabpanel" tabindex="0" aria-labelledby="tabb-score" hidden><div class="in">
   <div class="head"><h2>지금 들리는 음이 어떤 음인지</h2><p class="muted small">재생 위치가 선 위를 따라 움직입니다. 마디를 누르면 그 마디의 음과 드럼 패턴이 아래에 풀려 나옵니다.</p></div>
   <div class="row" style="justify-content:space-between;margin-bottom:.5rem"><div class="row"><button class="btn sm" id="vPrev">◀ 이전</button><span class="mono small" id="vRange"></span><button class="btn sm" id="vNext">다음 ▶</button><div class="seg" id="vLen" role="group" aria-label="보이는 마디 수"><button aria-pressed="false" data-n="4">4마디</button><button aria-pressed="true" data-n="8">8마디</button><button aria-pressed="false" data-n="16">16마디</button></div></div><div class="row"><label class="chk"><input type="checkbox" id="vNames"> 음이름 표시</label><label class="chk"><input type="checkbox" id="vFollow" checked> 재생 따라가기</label></div></div>
-  <div class="rollwrap"><canvas class="cv" id="roll" width="1200" height="520"></canvas></div>
+  <div class="rollwrap" tabindex="0" role="region" aria-label="채보 롤 (가로로 스크롤)"><canvas class="cv" id="roll" width="1200" height="520" role="img" aria-label="채보 롤: 파트별 음 위치와 재생 위치. 같은 내용을 아래 마디 상세 표와 글로 볼 수 있습니다" aria-describedby="bardetail"></canvas></div>
   <div class="legend" id="legend"></div>
   <div class="panel bardetail" id="bardetail"></div>
 </div></div>
 
-<div class="tabpanel" id="tab-guide" role="tabpanel" aria-labelledby="tabb-guide" hidden><div class="in">
+<div class="tabpanel" id="tab-guide" role="tabpanel" tabindex="0" aria-labelledby="tabb-guide" hidden><div class="in">
   <div class="head"><h2>코드 진행과 파트 역할을 읽고, 내 식으로 바꾸기</h2><p class="muted small">아래 수치는 모두 채보 데이터에서 계산한 값입니다. 청취 평가가 아니라 신호 기반 분석입니다.</p></div>
   <h3 style="margin-bottom:.5rem">구간 카드 <span class="muted small" style="font-weight:400">누르면 그 구간으로 이동해 반복합니다</span></h3>
   <div class="secs" id="sections"></div>
@@ -424,7 +424,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <div class="grid g4" style="margin-top:1rem" id="roles"></div>
 </div></div>
 
-<div class="tabpanel" id="tab-sing" role="tabpanel" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
+<div class="tabpanel" id="tab-sing" role="tabpanel" tabindex="0" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
   <div class="panel" id="singPanel">
     <div class="head"><h2>시창 · 악보 보고 부르기</h2><p class="muted small">짧은 멜로디가 나옵니다. 먼저 들어 보고, 카운트인 1마디 뒤에 부르면 음마다 맞았는지 판정합니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
@@ -437,7 +437,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
       <div class="opt"><span class="lb">&nbsp;</span><button class="btn" type="button" id="sNew">새 문제</button></div>
     </div>
     <p class="note" id="sSrcLab" hidden></p>
-    <div class="sroll"><canvas id="sRoll" width="800" height="280" role="img" aria-label="시창 목표 멜로디와 내 음높이"></canvas></div>
+    <div class="sroll" tabindex="0" role="region" aria-label="시창 음높이 그래프 (가로로 스크롤)"><canvas id="sRoll" width="800" height="280" role="img" aria-label="시창 목표 멜로디와 내 음높이. 판정 결과는 아래 글로 알려 줍니다" aria-describedby="sMsg sResult"></canvas></div>
     <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button><button class="btn" type="button" id="sCal" title="스피커 클릭 4번을 마이크로 들어 왕복 지연을 잽니다">지연 맞추기</button><span class="muted small mono" id="sLat"></span><button class="btn sm" type="button" id="sCalZero" hidden>0으로</button></div>
     <div class="legend" id="sLegend"><span style="--c:var(--keys)">목표 음</span><span class="ln" style="--c:var(--loop)">내 음높이</span><span class="bx" style="--c:var(--ok)">맞음</span><span class="bx" style="--c:var(--warn)">어긋남</span></div>
     <p class="note" id="sMsg" role="status"></p>
@@ -480,7 +480,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 </div></div></div>
 
 
-<div class="tabpanel" id="tab-upload" role="tabpanel" aria-labelledby="tabb-upload" hidden><div class="in">
+<div class="tabpanel" id="tab-upload" role="tabpanel" tabindex="0" aria-labelledby="tabb-upload" hidden><div class="in">
   <div class="head"><h2>파일 하나로 시작합니다</h2><p class="muted small">파일은 이 브라우저 밖으로 나가지 않습니다. 채보(Basic Pitch)·박자·코드 분석과 베이스·건반·드럼 반주 초안이 기기 안에서 만들어지고, 끝나면 연습·채보·가이드가 내 곡으로 바뀝니다. 3분 곡 기준 30초~2분 걸립니다.</p></div>
   <div class="grid g2">
     <div>
@@ -513,7 +513,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 </div></div>
 </main>
 
-<section class="plans" id="plans"><div class="in">
+<section class="plans" id="plans" aria-label="요금 안내"><div class="in">
   <div class="head"><span class="eyebrow">요금 (안)</span><h2>곡 하나부터, 매주 올리는 분까지</h2><p class="muted small">아직 가정값입니다. 베타 결제 결과로 조정합니다.</p></div>
   <div class="grid g4">
     <div class="panel plan"><span class="eyebrow">무료</span><div class="price">0원</div><ul><li>30초 미리듣기</li><li>워터마크 전곡 1회</li><li>채보·코드 보기</li></ul></div>
@@ -764,7 +764,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  cx.strokeStyle=line;cx.beginPath();cx.moveTo(0,H-drumH-6);cx.lineTo(W,H-drumH-6);cx.stroke();
  if(S.loop){cx.fillStyle=css('--bg');cx.globalAlpha=.62;const l=Math.max(0,Math.min(W,x(S.a))),r=Math.max(0,Math.min(W,x(S.b)));cx.fillRect(0,0,l,H);cx.fillRect(r,0,W-r,H);cx.globalAlpha=1;cx.strokeStyle=css('--loop');cx.lineWidth=2;cx.beginPath();if(x(S.a)>=0&&x(S.a)<=W){cx.moveTo(x(S.a),0);cx.lineTo(x(S.a),H)}if(x(S.b)>=0&&x(S.b)<=W){cx.moveTo(x(S.b),0);cx.lineTo(x(S.b),H)}cx.stroke()}
  if(b>=v0&&b<=v0+vb){cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke()}
- const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordName(bar);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
+ const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordName(bar);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;el('scrub').setAttribute('aria-valuetext',`마디 ${bar+1} 박 ${beat+1}, ${chordName(bar)}`);updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
  if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
 const barAt=e=>{const r=cv.getBoundingClientRect();return Math.max(0,Math.min(BARS-1,view.start+Math.floor((e.clientX-r.left)/r.width*view.len)))};
 cv.addEventListener('pointerdown',e=>{if(e.button)return;drag={x:e.clientX,a:barAt(e),b:barAt(e),moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
@@ -1013,12 +1013,12 @@ let ready=false;const heroEl=el('hero');
 /* 히어로는 한 번 쓰고 나면(재생·탭 이동·아래로 스크롤) 접어 작업 영역을 넓힌다. 이미 지나간 위치면 스크롤을 보정한다 */
 function heroOff(){if(heroEl.classList.contains('gone'))return;const past=scrollY>=heroEl.offsetTop+heroEl.offsetHeight-1,h=heroEl.offsetHeight;heroEl.classList.add('gone');if(past)scrollBy(0,-h)}
 window.addEventListener('scroll',()=>{if(ready&&!heroEl.classList.contains('gone')&&scrollY>heroEl.offsetTop+heroEl.offsetHeight+8)heroOff()},{passive:true});
-function showTab(t){if(ready)heroOff();if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;el('tabb-'+n).setAttribute('aria-selected',n===t)}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
+function showTab(t){if(ready)heroOff();if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;const tb=el('tabb-'+n);tb.setAttribute('aria-selected',n===t);tb.tabIndex=n===t?0:-1}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
 function fromHash(first){const h=location.hash.replace('#','');if(h==='plans'){setTimeout(()=>el('plans').scrollIntoView(),50);return}
  if(TABS.includes(h)){showTab(h);const w=el('work');if(!tabClick&&window.scrollY<w.offsetTop-4)w.scrollIntoView()}else if(first)showTab('practice');tabClick=false}
 window.addEventListener('hashchange',()=>fromHash(false));
 el('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(!b)return;const t=b.dataset.tab;tabClick=true;showTab(t);const w=el('work');if(window.scrollY>w.offsetTop)window.scrollTo(0,w.offsetTop);if(location.hash!=='#'+t)location.hash=t;else tabClick=false});
-el('tabs').addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;const bs=[...document.querySelectorAll('#tabs .tab')],i=bs.indexOf(document.activeElement);if(i<0)return;e.preventDefault();e.stopPropagation();const n=bs[(i+(e.key==='ArrowLeft'?-1:1)+bs.length)%bs.length];n.focus();n.click()});
+el('tabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const bs=[...document.querySelectorAll('#tabs .tab')],i=bs.indexOf(document.activeElement);if(i<0)return;e.preventDefault();e.stopPropagation();const n=e.key==='Home'?bs[0]:e.key==='End'?bs[bs.length-1]:bs[(i+(e.key==='ArrowLeft'?-1:1)+bs.length)%bs.length];n.focus();n.click()});
 
 /* 테마: 시스템 설정이 기본, 수동 선택은 localStorage 에 저장(실패해도 동작) */
 const themeNow=()=>document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
