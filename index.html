@@ -177,6 +177,13 @@ canvas{display:block;width:100%;height:auto}
 .dgrid i.q{box-shadow:inset 2px 0 0 var(--text-muted)}
 
 /* 가이드 */
+.arrsum{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0}
+.achip{font-size:.8rem;border:1px solid var(--border);border-left:4px solid var(--c);border-radius:8px;padding:.15rem .6rem;background:var(--surface);color:var(--text)}
+.achip.ok{--c:var(--ok)}.achip.warn{--c:var(--warn)}.achip.na{--c:var(--border);color:var(--text-muted)}
+.arrlist{margin-top:.5rem}.arrlist summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;font-weight:700}
+.arrbars{display:grid;gap:.3rem;max-height:340px;overflow-y:auto;padding-right:.2rem}
+.arrbar{text-align:left;border:1px solid var(--control-border);border-left:4px solid var(--warn);background:var(--surface);border-radius:8px;padding:.4rem .7rem;min-height:var(--hit);font-size:.86rem;display:grid;gap:.1rem}
+.arrbar:hover{background:var(--surface-2)}.arrbar b{font-family:var(--mono)}
 .secs{display:grid;gap:.5rem;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-bottom:1rem}
 .secard{text-align:left;border:1px solid var(--control-border);background:var(--surface);border-radius:10px;padding:.6rem .8rem;display:grid;gap:.25rem;min-height:var(--hit)}
 .secard:hover{background:var(--surface-2)}
@@ -422,6 +429,11 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <div class="panel"><h3>이렇게 바꿔볼 수 있어요</h3><div class="tips" style="margin-top:.8rem" id="tips"></div></div>
   </div>
   <div class="grid g4" style="margin-top:1rem" id="roles"></div>
+  <div class="panel" id="arrPanel" style="margin-top:1rem"><h3>편곡 점검</h3>
+    <p class="muted small" style="margin:.3rem 0 0">채보·생성 데이터로 계산한 신호 기반 점검이며 청취 평가가 아닙니다.</p>
+    <div class="arrsum" id="arrSum" role="list" aria-label="점검 요약"></div>
+    <details class="arrlist" id="arrList"><summary id="arrSumm">마디별 주의 목록</summary><p class="muted small" id="arrNote"></p><div class="arrbars" id="arrBars" tabindex="0" role="region" aria-label="주의가 있는 마디 목록 (누르면 그 마디로 이동해 1마디 반복)"></div></details>
+    <div class="tips" style="margin-top:1rem" id="arrTips"></div></div>
 </div></div>
 
 <div class="tabpanel" id="tab-sing" role="tabpanel" tabindex="0" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
@@ -606,7 +618,7 @@ function loadSong(id){if(S.playing)stop();song=SONGS[id];song.id=id;BARS=song.ba
  document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));
  el('songdesc').textContent=song.desc;el('inventory').textContent=song.inventory||'';el('cedNote').textContent='';
  el('legend').innerHTML=PARTS.map(p=>`<span style="--c:var(--${p})">${PARTDEF[p].name}${p==='drums'?' (킥·스네어·하이햇)':''}</span>`).join('');
- buildStems();applyMode();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderBar();syncUserUi();updExp();draw()}
+ buildStems();applyMode();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderArr();renderBar();syncUserUi();updExp();draw()}
 
 /* ---------- 반주 생성 (스타일 프리셋: 같은 베이스·건반·드럼 3파트 안에서만 패턴을 바꾼다. 기타 없음) ---------- */
 const STYLES={ballad:'발라드',pop:'팝',rock:'록',acoustic:'어쿠스틱'};
@@ -676,7 +688,7 @@ el('play').onclick=()=>S.playing?stop():play();
 function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;if(window.trUi)trUi();document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
 const tempoOk=()=>{const t=el('tempo'),v=+t.value;return t.value!==''&&v>=+t.min&&v<=+t.max};
 el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'&&ctx.currentTime>=S.anchorT){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r};
-el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=tvLabel();renderProg();renderCed();renderBar();renderTips();renderRoles();draw()};
+el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=tvLabel();renderProg();renderCed();renderBar();renderTips();renderRoles();renderArr();draw()};
 el('loopOn').onchange=()=>{S.loop=el('loopOn').checked;draw()};
 for(const id of ['loopA','loopB']){el(id).onchange=()=>{let a=+el('loopA').value,b=+el('loopB').value;if(b<a){if(id==='loopA')b=a;else a=b;el('loopA').value=a;el('loopB').value=b}S.a=(a-1)*4;S.b=b*4;if(!S.loop){el('loopOn').checked=true;S.loop=true}}}
 function setLoopBars(a,b){el('loopA').value=a;el('loopB').value=b;S.a=(a-1)*4;S.b=b*4;el('loopOn').checked=true;S.loop=true;draw()}
@@ -793,7 +805,7 @@ function openCed(b){edBar=b;selBar=b;renderCed();renderProg();renderBar();draw()
 function renderCed(){const w=el('ced');if(edBar<0||song.id!=='user'){w.hidden=true;return}const c=CH[edBar];w.hidden=false;
  w.innerHTML=`<b>마디 ${edBar+1} 코드 고치기</b><div class="row"><label class="chk">근음 <select id="cedRoot" aria-label="근음">${NAMES.map((_,pc)=>`<option value="${pc}"${pc===c.root?' selected':''}>${tn(pc)}</option>`).join('')}</select></label><div class="seg" id="cedQ" role="group" aria-label="메이저·마이너"><button aria-pressed="${!c.minor}" data-q="">메이저</button><button aria-pressed="${c.minor}" data-q="m">마이너</button></div></div><div class="row"><button class="btn sm" id="cedReset">원래대로</button><button class="btn sm" id="cedClose">닫기</button></div><span class="muted small">고치면 이 마디의 베이스·건반만 다시 만듭니다. 채보 음은 그대로입니다.</span>`}
 function setChord(b,name){song.chords[b]=name;if(name===song.auto[b]){delete song.edits[b];song.conf[b]=song.autoConf[b];song.silent[b]=song.autoSilent[b]}else{song.edits[b]=name;song.conf[b]=1;song.silent[b]=false}regenBars(song,[b],song.style);afterSongEdit();persist()}
-function afterSongEdit(){prep();if(song.id==='user'){song.inventory=userInv(song);el('inventory').textContent=song.inventory}if(S.playing&&mode==='synth')seekIdx(nowBeat());el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderBar();updExp();draw()}
+function afterSongEdit(){prep();if(song.id==='user'){song.inventory=userInv(song);el('inventory').textContent=song.inventory}if(S.playing&&mode==='synth')seekIdx(nowBeat());el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderArr();renderBar();updExp();draw()}
 el('prog').addEventListener('click',e=>{const c=e.target.closest('.cell');if(!c)return;if(song.id!=='user'){el('cedNote').textContent='코드 고치기는 내 곡을 올린 뒤에 쓸 수 있습니다. 데모는 실제로 만든 렌더라 코드가 고정돼 있습니다.';return}openCed(+c.dataset.i)});
 el('ced').addEventListener('change',e=>{if(e.target.id==='cedRoot'){const c=CH[edBar];setChord(edBar,NAMES[+e.target.value]+(c.minor?'m':''))}});
 el('ced').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='cedClose'){edBar=-1;renderCed();renderProg()}else if(b.id==='cedReset')setChord(edBar,song.auto[edBar]);else if(b.dataset.q!==undefined){const c=CH[edBar];setChord(edBar,NAMES[c.root]+b.dataset.q)}});
@@ -822,6 +834,42 @@ function renderTips(){const vi=NAMES[(KEY+9+transpose)%12]+'m',IV=NAMES[(KEY+5+t
  const lowN=ref.filter(n=>n[2]<52);if(lowN.length>=3){const r=lowN.filter(n=>n[2]%12===CH[Math.min(BARS-1,Math.floor(n[0]/4))].root).length;tips.push(['근음',`낮은 음(MIDI 52 미만) ${lowN.length}개 중 ${pc(r/lowN.length)}%가 그 마디 코드의 근음입니다. ${r/lowN.length>=.6?'베이스는 근음 위주로 받쳐도 코드와 잘 맞습니다.':'근음 밖 음이 많아 코드 추정이 흔들렸을 수 있으니 점선 칸을 확인하고 고쳐 보세요.'}`])}
  tips.push(['내보내기',`연습실의 내보내기 버튼으로 지금 상태(키·템포·켠 파트·볼륨)를 MIDI와 WAV로 받을 수 있습니다. WAV는 브라우저 합성 반주만 담습니다.`]);
  el('tips').innerHTML=tips.map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
+
+/* ---------- 편곡 점검: 채보·생성 데이터로만 계산하는 신호 기반 검사(청취 평가 아님). 순수 함수 ---------- */
+/* 멜로디 = score 윗선(없으면 guitar, keys). SingLab.topLine 은 음역에 맞춰 옥타브를 옮기므로 간격 계산에 쓸 수 없어 원래 높이 그대로 뽑는 윗선을 따로 둔다 */
+function arrCheck(sg){
+ const P=sg.parts,B=sg.bars,E=1e-6,has=p=>P[p]&&P[p].length,r2=x=>Math.round(x*100)/100,
+ top=ns=>{const o=[];for(const n of ns.slice().sort((a,b)=>a[0]-b[0])){const c=o[o.length-1];if(c&&n[0]-c[0]<=.06){if(n[2]>c[2]||(n[2]===c[2]&&n[1]>c[1])){c[1]=n[1];c[2]=n[2]}}else o.push([n[0],n[1],n[2]])}return o},
+ src=['score','guitar','keys'].find(has)||null,mel=src?top(P[src]):[],accP=['keys','guitar'].filter(p=>p!==src&&has(p)),accAll=accP.flatMap(p=>P[p]),acc=top(accAll),bass=P.bass||[],
+ inB=(ns,b)=>ns.filter(n=>n[0]>=b*4-E&&n[0]<b*4+4-E),touch=(ns,b)=>ns.filter(n=>n[0]<b*4+4-E&&n[0]+n[1]>b*4+E),
+ ov=(x,y)=>Math.min(x[0]+x[1],y[0]+y[1])-Math.max(x[0],y[0])>.05,st=(x,y,b)=>{const t=Math.max(x[0],y[0]);return t>=b*4-E&&t<b*4+4-E},
+ on=[...new Set(['bass','keys','drums','guitar'].filter(has).flatMap(p=>P[p].map(n=>Math.round(n[0]*1e3)/1e3)))].filter(t=>t<B*4-E).sort((a,b)=>a-b),gaps=[];
+ for(let i=0;i<on.length;i++){const a=i?on[i-1]:0,b=on[i];if(b-a>1+E)gaps.push({s:a,e:b,len:r2(b-a),bar:Math.floor(a/4+E)+1,beat:r2(a%4+1)})}
+ const bars=[],sum={a:{ok:0,warn:0},b:{ok:0,warn:0},c:{ok:0,warn:0},d:{ok:0,warn:0},e:{ok:0,warn:0}};
+ for(let b=0;b<B;b++){const o={bar:b+1};
+  const mb=touch(mel,b),bb=touch(bass,b);let mn=null;if(mb.length&&bb.length)for(const m of mb)for(const x of bb)if(ov(m,x)&&st(m,x,b)){const d=Math.abs(m[2]-x[2]);if(mn===null||d<mn)mn=d}
+  o.a=mn===null?null:{min:mn,flag:mn<12};
+  const mo=inB(mel,b),bs=new Set(inB(bass,b).map(n=>Math.round(n[0]*4)));
+  o.b=mo.length<3||!bs.size?null:(()=>{const sh=mo.filter(n=>bs.has(Math.round(n[0]*4))).length/mo.length;return{share:r2(sh),n:mo.length,flag:sh>.6}})();
+  let cx=null;if(bb.length&&accP.length){cx=0;for(const k of touch(accAll,b))for(const x of bb)if(ov(k,x)&&st(k,x,b)&&k[2]<x[2]){cx++;break}}
+  o.c=cx===null?null:{n:cx,flag:cx>0};
+  const mc=mo.length,ac=inB(acc,b).length;o.d=!mc||!acc.length?null:{mel:mc,acc:ac,flag:ac>mc};
+  o.g=gaps.filter(g=>g.bar===b+1);o.e=on.length?{n:o.g.length,flag:o.g.length>0}:null;
+  for(const k of 'abcde')if(o[k])sum[k][o[k].flag?'warn':'ok']++;bars.push(o)}
+ return{src,acc:accP,hasBass:bass.length>0,bars,sum,gaps}}
+const ARR_L={a:'베이스–멜로디 간격(12반음 미만)',b:'리듬 겹침(같은 16분 위치 60% 초과)',c:'음역 교차(건반·기타가 베이스 아래)',d:'멜로디보다 바쁜 반주 윗선',e:'1박 넘는 빈 구간(새 음 없음)'};
+function renderArr(){const R=arrCheck(song),sc=R.src?PARTDEF[R.src].name.replace(/ \(.*$/,''):'없음',nA=R.bars.length;
+ el('arrSum').innerHTML=Object.keys(ARR_L).map(k=>{const s=R.sum[k],n=s.ok+s.warn;return `<span class="achip ${n?s.warn?'warn':'ok':'na'}" role="listitem">${n?s.warn?'주의':'통과':'해당 없음'} · ${ARR_L[k]} <b>${n?`주의 ${s.warn} · 통과 ${s.ok}`:'-'}</b></span>`}).join('');
+ const rows=R.bars.filter(o=>'abcde'.split('').some(k=>o[k]&&o[k].flag)).map(o=>{const t=[];
+  if(o.a&&o.a.flag)t.push(`베이스–멜로디 최소 ${o.a.min}반음`);if(o.b&&o.b.flag)t.push(`멜로디 ${o.b.n}음 중 ${Math.round(o.b.share*100)}%가 베이스와 같은 16분 위치`);if(o.c&&o.c.flag)t.push(`베이스보다 낮은 반주 음 ${o.c.n}개`);if(o.d&&o.d.flag)t.push(`멜로디 ${o.d.mel}음 < 반주 윗선 ${o.d.acc}음`);
+  for(const g of o.g)t.push(`${g.bar}마디 ${g.beat}박 이후 ${g.len}박 새 음 없음`);
+  return `<button type="button" class="arrbar" data-b="${o.bar}"><b>${o.bar}마디</b><span>${t.join(' · ')}</span></button>`});
+ el('arrSumm').textContent=`마디별 주의 목록 (${rows.length}/${nA}마디)`;el('arrBars').innerHTML=rows.join('');el('arrBars').hidden=!rows.length;
+ el('arrNote').textContent=`멜로디 기준: ${sc} 윗선${R.hasBass?'':' · 베이스 파트 없음(간격·리듬·교차 검사 생략)'}. ${rows.length?'마디를 누르면 그곳으로 이동해 1마디를 반복합니다.':'주의가 있는 마디가 없습니다.'}`;
+ const up=song.id==='user';
+ el('arrTips').innerHTML=[['원곡 구성',up?'이 반주는 코드에서 생성한 초안이라 원곡의 실제 악기 구성은 알 수 없습니다. 원곡에 없는 악기를 더해 저음이나 빈틈을 채우기보다, 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하세요.':`${song.inventory||'원곡 구성 정보가 없습니다.'} 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하고, 원곡에 없는 악기를 더해 채우지 마세요.`],
+  ['저음 밸런스','이 프로젝트의 청취에서는 저음 영역(베이스 약 150 Hz, 건반 약 250 Hz)을 −4 dB쯤 낮춘 쪽이 선호됐습니다. 규칙이 아니라 출발점이며, 곡과 스피커에 따라 직접 들어 조정하세요.']].map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
+el('arrBars').addEventListener('click',e=>{const c=e.target.closest('.arrbar');if(!c)return;const b=+c.dataset.b;setLoopBars(b,b);seekTo((b-1)*4)});
 
 /* ---------- upload flow (prototype) ---------- */
 const drop=el('drop'),file=el('file');let picked=null;
