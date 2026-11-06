@@ -3,6 +3,7 @@
    - tracker: 마이크 스트림 → 20 ms 간격 [시각, midi(소수), 신뢰도] 기록
    - makeExercise: 키·음역 안에서 순차 진행 위주의 시창 멜로디 생성 (박 단위 [시작박, 길이박, midi])
    - scoreTake: 목표 음별로 ±50 cent 안에 든 유성 프레임 비율, 평균 cent 오차, 판정
+   - estimateLatency: 스피커 클릭을 마이크로 다시 듣는 왕복 지연(ms) 추정
    - smoothNotes: pyin+평활 분할과 같은 방식으로 음높이 곡선을 음 목록으로 (2026-11-07 시험 F1 0.755 방식)
    - earQuiz: 키 안의 음정·3화음 문제 생성
    신호 기반 판정이며 사람 청취 평가가 아니다. */
@@ -48,6 +49,11 @@ function scoreTake(target,track,beatToSec,{tol=50,minConf=.5}={}){const per=targ
  const sung=per.filter(x=>x.voiced);return {notes:per,score:sung.length?Math.round(100*per.filter(x=>x.verdict==='맞음').length/per.length):0,
   meanAbsCents:sung.length?Math.round(sung.reduce((a,x)=>a+Math.abs(x.octave?x.medCents-Math.sign(x.medCents)*1200:x.medCents),0)/sung.length):null}}
 
+/* 왕복 지연 추정(ms). samples [[초, rms]] 시간순, clicks 예약 시각(초) 배열. 첫 클릭 전 구간 rms 중앙값(잡음 바닥)의 5배와 0.02 중 큰 값을 클릭 뒤 [-30 ms, +450 ms] 안에서 처음 넘는 시각 − 예약 시각의 중앙값. 잡힌 클릭이 2개 미만이면 null */
+function estimateLatency(samples,clicks,{win=.45,minRms=.02,k=5}={}){const base=samples.filter(s=>s[0]<clicks[0]-.05).map(s=>s[1]).sort((a,b)=>a-b),nf=base.length?base[base.length>>1]:0,thr=Math.max(minRms,nf*k),lat=[];
+ for(const c of clicks){const s=samples.find(x=>x[0]>=c-.03&&x[0]<=c+win&&x[1]>thr);if(s)lat.push(Math.max(0,s[0]-c))}
+ if(lat.length<2)return null;lat.sort((a,b)=>a-b);return Math.round(1000*lat[lat.length>>1])}
+
 /* 음높이 곡선 → 음 목록 [시작초,길이초,midi]. 중앙값에서 0.6 반음 이상 벗어나면 새 음, 60 ms 미만 버림 */
 function smoothNotes(track,{dev=.6,minDur=.06}={}){const out=[];let seg=[];const flush=()=>{if(seg.length>1){const ps=seg.map(f=>f[1]).sort((a,b)=>a-b),m=ps[ps.length>>1],dur=seg[seg.length-1][0]-seg[0][0];if(dur>=minDur)out.push([seg[0][0],dur,Math.round(m)])}seg=[]};
  for(const f of track){if(f[1]==null||f[2]<.5){flush();continue}if(seg.length){const ps=seg.map(x=>x[1]).sort((a,b)=>a-b);if(Math.abs(f[1]-ps[ps.length>>1])>dev)flush()}seg.push(f)}flush();return out}
@@ -60,5 +66,5 @@ function earQuiz({type='interval',key=0,level=1,seed=Date.now(),lo=55,hi=72}={})
  let base;if(level<2){const deg=MAJ.filter(d=>MAJ.includes((d+semi)%12));const d=deg[Math.floor(R()*deg.length)]??0;base=lo+((key+d-lo)%12+12)%12}else base=lo+Math.floor(R()*(hi-lo-12));
  return {type,answer:name,choices:pool.map(p=>p[0]),notes:[base,base+semi],label:NAMES[base%12]}}
 
-const api={yin,tracker,makeExercise,scoreTake,smoothNotes,earQuiz,NAMES};
+const api={yin,tracker,makeExercise,scoreTake,smoothNotes,estimateLatency,earQuiz,NAMES};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);

@@ -32,10 +32,11 @@
   --accent-soft:rgba(92,184,255,.14); --loop-soft:rgba(255,179,71,.16);
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
-@media(max-width:700px){:root{--hit:44px}.hero .eyebrow{display:none}.hero .in{padding-block:.9rem .6rem}}
+@media(max-width:700px){:root{--hit:44px}.hero .eyebrow,.hero p.lead,.hero details{display:none}.hero .in{padding-block:.6rem .5rem;gap:.4rem}.hero h1{font-size:1.15rem}.top .in{padding-block:.35rem}}
+.hero.gone{display:none}
 
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overflow-anchor:none}
 body{word-break:keep-all;overflow-wrap:break-word;margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;padding-bottom:calc(var(--tpH,150px) + 20px);overflow-x:hidden}
 h1,h2,h3{font-weight:700;line-height:1.3;text-wrap:balance;margin:0}
 h1{font-size:clamp(1.45rem,3.4vw,2.1rem)}
@@ -104,7 +105,15 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .strip.looping .sc:not(.inl){opacity:.38}
 .sc.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .sc.cur .n{color:var(--accent)}
-.tabs{display:flex;gap:.2rem;overflow-x:auto;padding:0 max(16px,calc((100% - 1148px)/2));scrollbar-width:none}
+.tabrow{display:flex;align-items:center;padding-right:max(8px,calc((100% - 1148px)/2))}
+.tabs{display:flex;gap:.2rem;overflow-x:auto;padding:0 0 0 max(16px,calc((100% - 1148px)/2));scrollbar-width:none;flex:1;min-width:0}
+.lclr{flex:none;min-height:30px;border:1px solid var(--loop);color:var(--loop);background:var(--loop-soft);border-radius:999px;font-size:.78rem;font-weight:500;padding:0 .7rem;margin-left:.4rem}
+.lh{position:absolute;width:26px;z-index:2;touch-action:none;cursor:ew-resize;display:block}
+.lh::before{content:"";position:absolute;top:6px;bottom:6px;width:6px;border-radius:3px;background:var(--loop);box-shadow:0 0 0 1px var(--bg)}
+.lh.a::before{left:2px}.lh.b::before{right:2px}
+.lh:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.strip{-webkit-touch-callout:none}
+.strip.lp .sc.inl{box-shadow:0 0 0 2px var(--loop)}
 .tab{border:0;background:transparent;min-height:var(--hit);padding:0 .9rem;font-weight:500;color:var(--text-muted);border-bottom:3px solid transparent;white-space:nowrap;flex:none}
 .tab:hover{color:var(--text)}
 .tab[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
@@ -225,7 +234,7 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 
 /* 하단 고정 트랜스포트 */
 .tp{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface-2);border-top:1px solid var(--control-border);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tp-in{max-width:1180px;margin:0 auto;padding:.4rem max(16px,env(safe-area-inset-right,0px)) .4rem max(16px,env(safe-area-inset-left,0px));display:grid;gap:.2rem}
+.tp-in{grid-template-columns:minmax(0,1fr);max-width:1180px;margin:0 auto;padding:.4rem max(16px,env(safe-area-inset-right,0px)) .4rem max(16px,env(safe-area-inset-left,0px));display:grid;gap:.2rem}
 .tp-r1{display:flex;align-items:center;gap:.6rem}
 .play{width:56px;height:56px;border-radius:50%;background:var(--accent);color:var(--on-accent);border:0;font-size:1.35rem;flex:none;display:grid;place-items:center;padding:0}
 .play:hover{filter:brightness(1.08)}
@@ -258,14 +267,37 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 .tgl:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .tgl:has(input:disabled){opacity:.45;cursor:not-allowed}
 .menu{position:relative;flex:none}
-.menu .pop{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--tpH,130px) + 8px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--control-border);border-radius:12px;padding:.8rem;display:grid;gap:.5rem;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.menu .pop{z-index:40;position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--tpH,130px) + 8px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--control-border);border-radius:12px;padding:.8rem;display:grid;gap:.5rem;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 @media(max-width:700px){
- .tp-in{gap:0}
+ .tp-in{gap:0;padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))}
+ .chips{display:none}.brand{font-size:.95rem}.top .in{gap:.4rem}.top .seg button{padding:0 .5rem;font-size:.8rem}.top .ibtn{min-width:40px}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
  .tp-r2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:.4rem .7rem;padding-bottom:2px}
- .play{width:52px;height:52px}
- .now{min-width:3.8rem}
- .grp .chipb{min-width:44px;min-height:var(--hit)}
+ .play{width:48px;height:48px}
+ .now{min-width:3.2rem}
+ .tp-r2{flex-wrap:nowrap;overflow:visible;gap:.3rem;justify-content:space-between}
+ .grp .lb,.grp .chipb,.grp .bpm{display:none}
+ .grp .ibtn{min-width:30px;padding:0 .1rem}
+ .grp input[type=number]{width:2.6rem}
+ .keyv{min-width:3.3rem;font-size:.78rem}
+ .tgl{padding:0 .5rem}.tgl span::before{content:""}
+ .tp-r2>.tgl,.tp-r2>.menu>summary{font-size:.8rem}
+ .tp-r2 .btn{padding:0 .6rem}
+ .strip{padding:4px max(16px,calc((100% - 1148px)/2)) 4px;gap:3px}
+ .sc{flex:0 0 56px;height:40px;display:flex;align-items:center;gap:.3rem;padding:0 .4rem}
+ .sc .n{font-size:.62rem}.sc .c{font-size:.92rem}
+ .tabrow .tab{min-height:40px}
 }
+.menu .pop .tgl{justify-self:start}
+#morePop .menu .pop{position:static;width:auto;border:0;padding:0;box-shadow:none;background:none}
+#morePop #expMenu summary{display:none}
+.tpt{margin-left:auto}
+.tp.min .tp-r2,.tp.min .scrub,.tp.min #home{display:none}
+.tp.min .tpt{margin-left:auto}
+.stepind{color:var(--loop);font-weight:700;margin-left:.15rem}
+.stepcfg{display:grid;grid-template-columns:1fr auto;gap:.4rem .6rem;align-items:center}
+.stepcfg input{width:5rem;text-align:center}
+.legend .ln::before{height:3px;width:18px;vertical-align:3px;border-radius:2px}
+.legend .bx::before{background:none;border:2px solid var(--c)}
 
 /* 단축키 시트 */
 dialog{background:var(--surface);color:var(--text);border:1px solid var(--control-border);border-radius:14px;padding:1.1rem 1.2rem;max-width:min(520px,calc(100vw - 32px));width:100%}
@@ -303,7 +335,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
 </div></header>
 
-<section class="hero"><div class="in">
+<section class="hero" id="hero"><div class="in">
   <span class="eyebrow">시안 · 브라우저 안에서 채보까지 실제 동작</span>
   <h1>내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h1>
   <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰세요.</p>
@@ -317,13 +349,13 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 <main id="work">
 <div class="dock">
   <div class="strip" id="strip" role="group" aria-label="코드 띠. 누르면 그 마디로 이동, 끌면 구간 반복"></div>
-  <div class="tabs" id="tabs" role="tablist" aria-label="작업 영역">
+  <div class="tabrow"><div class="tabs" id="tabs" role="tablist" aria-label="작업 영역">
     <button class="tab" role="tab" id="tabb-practice" data-tab="practice" aria-controls="tab-practice" aria-selected="true">연습</button>
     <button class="tab" role="tab" id="tabb-score" data-tab="score" aria-controls="tab-score" aria-selected="false">채보</button>
     <button class="tab" role="tab" id="tabb-guide" data-tab="guide" aria-controls="tab-guide" aria-selected="false">가이드</button>
     <button class="tab" role="tab" id="tabb-sing" data-tab="sing" aria-controls="tab-sing" aria-selected="false">시창·청음</button>
     <button class="tab" role="tab" id="tabb-upload" data-tab="upload" aria-controls="tab-upload" aria-selected="false">올리기</button>
-  </div>
+  </div><button class="lclr" id="loopClr" type="button" hidden title="구간 반복 해제" aria-label="구간 반복 해제"><span class="tl">반복 해제 </span>✕</button></div>
 </div>
 
 <div class="tabpanel" id="tab-practice" role="tabpanel" aria-labelledby="tabb-practice"><div class="in">
@@ -337,7 +369,11 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <p class="note" id="modeNote"></p>
   <div class="opts">
     <div class="opt"><span class="lb">소리</span><div class="seg" id="modesel" role="group" aria-label="소리"><button aria-pressed="true" data-m="real">실제 렌더</button><button aria-pressed="false" data-m="synth">브라우저 합성</button></div></div>
-    <div class="opt"><span class="lb">구간 반복 (마디)</span><div class="row"><select id="loopA" aria-label="시작 마디"></select><span class="muted">~</span><select id="loopB" aria-label="끝 마디"></select><label class="chk" title="반복이 한 바퀴 돌 때마다 템포 +5%, 목표 100%"><input type="checkbox" id="stepOn"> 단계 연습</label></div><span class="muted small">코드 띠를 끌거나 채보 그림에서 드래그해도 됩니다. 더블클릭하면 해제.</span></div>
+    <div class="opt"><span class="lb">구간 반복 (마디)</span><div class="row"><select id="loopA" aria-label="시작 마디"></select><span class="muted">~</span><select id="loopB" aria-label="끝 마디"></select><label class="chk" id="stepLab"><input type="checkbox" id="stepOn"> 단계 연습</label>
+      <details class="menu" id="stepMenu"><summary class="ibtn" title="단계 연습 설정" aria-label="단계 연습 설정">⚙</summary>
+        <div class="pop"><b>단계 연습 설정</b>
+          <div class="stepcfg"><label for="trFrom">시작 속도 (%)</label><input type="number" id="trFrom" min="25" max="110" inputmode="numeric"><label for="trTo">목표 속도 (%)</label><input type="number" id="trTo" min="25" max="110" inputmode="numeric"><label for="trStep">한 단계 (%p)</label><input type="number" id="trStep" min="1" max="25" inputmode="numeric"><label for="trReps">단계당 반복 횟수</label><input type="number" id="trReps" min="1" max="16" inputmode="numeric"></div>
+          <p class="note" style="margin:0" id="trNote"></p></div></details></div><span class="muted small">코드 띠를 길게 눌러 끌거나(터치), 끌어서(마우스) 구간을 정합니다. 띠 양 끝의 손잡이로 길이를 고치고, 빈 곳을 누르거나 「반복 해제」로 풉니다.</span></div>
     <div class="opt" id="styleRow" hidden><span class="lb">반주 스타일 (내 곡)</span><div class="seg" id="styleSel" role="group" aria-label="반주 스타일"><button aria-pressed="false" data-st="ballad">발라드</button><button aria-pressed="true" data-st="pop">팝</button><button aria-pressed="false" data-st="rock">록</button><button aria-pressed="false" data-st="acoustic">어쿠스틱</button></div><span class="muted small">베이스·건반·드럼 패턴만 바뀝니다. 기타는 넣지 않습니다.</span></div>
   </div>
   <p class="note">단축키는 <button class="btn sm" type="button" id="helpBtn2">? 단축키 보기</button></p>
@@ -377,10 +413,11 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
       <div class="opt"><span class="lb">&nbsp;</span><button class="btn" type="button" id="sNew">새 문제</button></div>
     </div>
     <div class="sroll"><canvas id="sRoll" width="800" height="280" role="img" aria-label="시창 목표 멜로디와 내 음높이"></canvas></div>
-    <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button></div>
+    <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button><button class="btn" type="button" id="sCal" title="스피커 클릭 4번을 마이크로 들어 왕복 지연을 잽니다">지연 맞추기</button><span class="muted small mono" id="sLat"></span><button class="btn sm" type="button" id="sCalZero" hidden>0으로</button></div>
+    <div class="legend" id="sLegend"><span style="--c:var(--keys)">목표 음</span><span class="ln" style="--c:var(--loop)">내 음높이</span><span class="bx" style="--c:var(--ok)">맞음</span><span class="bx" style="--c:var(--warn)">어긋남</span></div>
     <p class="note" id="sMsg" role="status"></p>
     <div id="sResult" aria-live="polite"></div>
-    <p class="note">신호 기반 판정이며 사람 평가가 아닙니다. 음마다 ±50 cent 안에 든 소리 프레임이 60% 이상이면 「맞음」입니다. 마이크 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다. 이어폰을 쓰면 카운트인 소리가 마이크에 섞이지 않습니다.</p>
+    <p class="note">신호 기반 판정이며 사람 평가가 아닙니다. 음마다 ±50 cent 안에 든 소리 프레임이 60% 이상이면 「맞음」입니다. 마이크 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다. 이어폰을 쓰면 카운트인 소리가 마이크에 섞이지 않습니다. 「지연 맞추기」는 스피커 소리를 마이크로 다시 들어야 하므로 이어폰을 빼고 하세요. 잰 값은 이 브라우저에만 저장됩니다.</p>
   </div>
   <div class="panel" id="earPanel">
     <div class="head"><h2>청음 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정이나 3화음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
@@ -451,17 +488,19 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <button class="play" id="play" type="button" aria-label="재생" title="재생/정지 (Space)">▶</button>
     <div class="now" aria-live="off"><span class="pos mono" id="nowPos" title="마디:박">1:1</span><span class="chord mono" id="nowChord">–</span></div>
     <div class="scrub"><div class="tr"><i id="scrubLoop" hidden></i></div><input type="range" id="scrub" min="0" max="400" step="1" value="0" aria-label="재생 위치"></div>
+    <button class="ibtn tpt" id="tpToggle" type="button" aria-expanded="true" aria-label="컨트롤 접기" title="컨트롤 접기/펼치기">⌄</button>
   </div>
   <div class="tp-r2">
-    <div class="grp" role="group" aria-label="속도"><span class="lb">속도</span><button class="ibtn" id="tempoDn" type="button" title="속도 −5% ( [ )" aria-label="속도 낮추기">−</button><input type="number" id="tempo" min="25" max="110" step="5" value="100" inputmode="numeric" aria-label="속도 퍼센트" title="직접 입력 (피치 유지 슬로다운)"><span class="u">%</span><button class="ibtn" id="tempoUp" type="button" title="속도 +5% ( ] )" aria-label="속도 높이기">+</button><button class="chipb" type="button" data-t="50" aria-pressed="false">50</button><button class="chipb" type="button" data-t="75" aria-pressed="false">75</button><button class="chipb" type="button" data-t="100" aria-pressed="true">100</button><span class="bpm mono" id="tempoVal"></span></div>
+    <div class="grp" role="group" aria-label="속도"><span class="lb">속도</span><button class="ibtn" id="tempoDn" type="button" title="속도 −5% ( [ )" aria-label="속도 낮추기">−</button><input type="number" id="tempo" min="25" max="110" step="5" value="100" inputmode="numeric" aria-label="속도 퍼센트" title="직접 입력 (피치 유지 슬로다운)"><span class="u">%</span><span class="stepind" id="stepInd" hidden title="단계 연습 중: 반복마다 속도가 올라갑니다" aria-label="단계 연습 중">↑</span><button class="ibtn" id="tempoUp" type="button" title="속도 +5% ( ] )" aria-label="속도 높이기">+</button><button class="chipb" type="button" data-t="50" aria-pressed="false">50</button><button class="chipb" type="button" data-t="75" aria-pressed="false">75</button><button class="chipb" type="button" data-t="100" aria-pressed="true">100</button><span class="bpm mono" id="tempoVal"></span></div>
     <div class="grp" role="group" aria-label="키"><span class="lb">키</span><button class="ibtn" id="keyDn" type="button" title="키 −1 반음" aria-label="키 내리기">−</button><span class="keyv mono" id="transVal"></span><input type="hidden" id="transpose" value="0"><button class="ibtn" id="keyUp" type="button" title="키 +1 반음" aria-label="키 올리기">+</button></div>
     <label class="tgl" title="구간 반복 (L)"><input type="checkbox" id="loopOn"><span>반복</span></label>
-    <label class="tgl" title="재생 전 1마디 카운트인"><input type="checkbox" id="countIn" checked><span>카운트인</span></label>
-    <label class="tgl" title="메트로놈 (M)"><input type="checkbox" id="click"><span>메트로놈</span></label>
+    <label class="tgl" id="countInL" title="재생 전 1마디 카운트인"><input type="checkbox" id="countIn" checked><span>카운트인</span></label>
+    <label class="tgl" id="clickL" title="메트로놈 (M)"><input type="checkbox" id="click"><span>메트로놈</span></label>
     <details class="menu" id="expMenu"><summary class="btn" title="내보내기">내보내기</summary>
       <div class="pop" id="export"><b>내보내기</b><p class="small muted" id="expInfo"></p>
         <div class="row"><button class="btn primary sm" id="expMidi" type="button">MIDI 받기</button><button class="btn sm" id="expWav" type="button">WAV 받기 (합성)</button><a class="btn sm" id="expMp3" href="audio/onedream_s59.mp3" download>데모 실제 렌더 MP3</a></div>
         <p class="note" id="expMsg" role="status" style="margin:0"></p></div></details>
+    <details class="menu" id="moreMenu" hidden><summary class="btn" title="카운트인·메트로놈·내보내기">더보기</summary><div class="pop" id="morePop"></div></details>
   </div>
 </div></div>
 
@@ -477,7 +516,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <tr><td><kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>4</kbd></td><td>그 파트만 듣기(솔로)</td></tr>
     <tr><td><kbd>?</kbd></td><td>이 창 열기 (<kbd>Esc</kbd>로 닫기)</td></tr>
   </table>
-  <p class="muted small">입력칸·선택칸·슬라이더에 포커스가 있으면 단축키는 꺼집니다. 코드 띠: 누르면 이동, 끌면 구간 반복. 채보 그림: 드래그 = 구간 반복, 더블클릭 = 해제.</p>
+  <p class="muted small">입력칸·선택칸·슬라이더에 포커스가 있으면 단축키는 꺼집니다. 코드 띠: 누르면 이동, 끌면(터치는 길게 누른 뒤 끌면) 구간 반복, 양 끝 손잡이로 길이 조절, 빈 곳을 누르면 해제. 채보 그림: 드래그 = 구간 반복, 더블클릭 = 해제.</p>
   <form method="dialog" style="margin-top:.8rem"><button class="btn primary" value="close">닫기</button></form>
 </dialog>
 
@@ -576,7 +615,7 @@ function tick(){const horizon=ctx.currentTime+.18;let guard=0;
   for(const p of PARTS){const n=song.parts[p];let i=S.idx[p];while(i<n.length&&n[i][0]<lim){const [s,d,pitch,vel]=n[i];const t=S.anchorT+(s-S.anchorB)*S.spb;if(t>=ctx.currentTime-.02){p==='drums'?drum(t,pitch,vel):tone(p,t,Math.max(.05,d*S.spb),pitch,vel)}i++}S.idx[p]=i}
   if(el('click').checked){while(S.click<lim){clickAt(S.anchorT+(S.click-S.anchorB)*S.spb,S.click%4===0);S.click++}}else S.click=Math.ceil(lim);
   if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;stepUp();seekIdx(S.a);if(S.withAudio){const wrapAt=S.anchorT;setTimeout(()=>{if(S.playing)real.currentTime=S.a*spb0()},Math.max(0,(wrapAt-ctx.currentTime)*1000))}continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
-function play(){if(sing&&sing.busy)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
+function play(){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
  S.anchorT=now+ci*S.spb;S.anchorB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
  real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
@@ -587,7 +626,7 @@ real.addEventListener('ended',()=>{if(S.playing&&mode==='real'){stop();S.anchorB
 el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';if(masterGain)masterGain.gain.setTargetAtTime(masterLevel(),ctx.currentTime,.02);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel()};
 el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(mode==='synth'){real.volume=masterLevel()*origLevel();if(S.playing&&!S.withAudio&&origLevel()>0&&song.audio){S.withAudio=true;real.currentTime=nowBeat()*spb0();real.play().catch(()=>{})}}};
 el('play').onclick=()=>S.playing?stop():play();
-function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
+function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;if(window.trUi)trUi();document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
 const tempoOk=()=>{const t=el('tempo'),v=+t.value;return t.value!==''&&v>=+t.min&&v<=+t.max};
 el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r};
 el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=tvLabel();renderProg();renderCed();renderBar();renderTips();renderRoles();draw()};
@@ -595,8 +634,15 @@ el('loopOn').onchange=()=>{S.loop=el('loopOn').checked;draw()};
 for(const id of ['loopA','loopB']){el(id).onchange=()=>{let a=+el('loopA').value,b=+el('loopB').value;if(b<a){if(id==='loopA')b=a;else a=b;el('loopA').value=a;el('loopB').value=b}S.a=(a-1)*4;S.b=b*4;if(!S.loop){el('loopOn').checked=true;S.loop=true}}}
 function setLoopBars(a,b){el('loopA').value=a;el('loopB').value=b;S.a=(a-1)*4;S.b=b*4;el('loopOn').checked=true;S.loop=true;draw()}
 function clearLoop(){S.loop=false;el('loopOn').checked=false;S.a=0;S.b=TOTAL;el('loopA').value=1;el('loopB').value=BARS;draw()}
-/* 단계 연습: 반복이 한 바퀴 돌 때마다 템포 +5%, 목표 100% */
-function stepUp(){if(!el('stepOn').checked||+el('tempo').value>=100)return;el('tempo').value=Math.min(100,+el('tempo').value+5);updateTempoLabel();S.spb=spb0()/rate();real.playbackRate=rate()}
+/* 단계 연습: 반복이 reps 바퀴 돌 때마다 템포 +step %p, 목표(to)까지. 설정은 ⚙ 팝오버(localStorage 'pr-trainer'), 반복 끝에서 stepUp()이 불린다 */
+const TR={from:60,to:100,step:5,reps:1,cnt:0};
+try{Object.assign(TR,JSON.parse(localStorage.getItem('pr-trainer'))||{})}catch(e){}
+function trFix(){const c=(v,a,b,d)=>{v=Math.round(+v);return isFinite(v)?Math.max(a,Math.min(b,v)):d};TR.from=c(TR.from,25,110,60);TR.to=Math.max(TR.from,c(TR.to,25,110,100));TR.step=c(TR.step,1,25,5);TR.reps=c(TR.reps,1,16,1)}
+function trUi(){for(const k of ['From','To','Step','Reps'])el('tr'+k).value=TR[k.toLowerCase()];const t=`반복이 ${TR.reps}번 돌 때마다 속도 +${TR.step}%p, ${TR.from}%에서 ${TR.to}%까지`;el('stepLab').title=t;el('trNote').textContent=t+'. 구간 반복이 켜져 있을 때만 올라갑니다.';el('stepInd').hidden=!(el('stepOn').checked&&+el('tempo').value<TR.to)}
+function stepUp(){if(!el('stepOn').checked)return;if(+el('tempo').value<TR.to&&++TR.cnt>=TR.reps){TR.cnt=0;el('tempo').value=Math.min(TR.to,+el('tempo').value+TR.step);updateTempoLabel();S.spb=spb0()/rate();real.playbackRate=rate()}trUi()}
+trFix();
+el('stepOn').onchange=()=>{TR.cnt=0;if(el('stepOn').checked)setTempo(TR.from);trUi()};
+el('stepMenu').addEventListener('change',e=>{if(!e.target.id||!e.target.id.startsWith('tr'))return;TR.from=el('trFrom').value;TR.to=el('trTo').value;TR.step=el('trStep').value;TR.reps=el('trReps').value;trFix();TR.cnt=0;try{localStorage.setItem('pr-trainer',JSON.stringify({from:TR.from,to:TR.to,step:TR.step,reps:TR.reps}))}catch(_){}trUi()});
 /* 재생 위치 이동(마디 단위 이동·키보드) */
 function seekTo(beat){beat=Math.max(0,Math.min(TOTAL-.01,beat));selBar=Math.floor(beat/4);
  if(S.playing){if(mode==='synth'){S.anchorB=beat;S.anchorT=ctx.currentTime+.03;seekIdx(beat)}if(mode==='real'||S.withAudio)real.currentTime=beat*spb0()}else S.anchorB=beat;
@@ -837,19 +883,36 @@ el('wait').addEventListener('submit',e=>{e.preventDefault();el('waitMsg').textCo
 /* ---------- 앱 화면: 코드 띠 · 스크러버 · 구간 카드 · 탭 · 테마 · 단축키 시트 ---------- */
 var sing={busy:false};
 const ownBtn=t=>!!(t&&t.tagName==='BUTTON'&&t.closest&&t.closest('#tab-sing')); // 시창·청음 탭의 버튼은 Space 로 눌림(재생 단축키 양보)
-let stripKey='',stripBar=-1,stripDrag=null,stripNoClick=false,scrubbing=false;
-const curBar=()=>Math.max(0,Math.min(BARS-1,Math.floor(nowBeat()/4+1e-6)));
-function renderStrip(){el('strip').innerHTML=song.chords.map((c,i)=>`<button class="sc" type="button" data-i="${i}" aria-label="${i+1}마디 ${chordName(i)}"><span class="n">${i+1}</span><span class="c">${chordName(i)}</span></button>`).join('');stripKey='';stripBar=-1}
-/* 현재 마디 강조 · 루프 구간 색 · 루프 밖 흐리게. 값이 바뀔 때만 클래스를 만진다 */
-function updStrip(bar){const w=el('strip'),dr=stripDrag&&stripDrag.moved?[Math.min(stripDrag.a,stripDrag.b),Math.max(stripDrag.a,stripDrag.b)]:null;
- const la=dr?dr[0]:S.loop?Math.floor(S.a/4+1e-6):-1,lb=dr?dr[1]:S.loop?Math.ceil(S.b/4-1e-6)-1:-1,key=`${bar}|${la}|${lb}`;if(key===stripKey)return;stripKey=key;
- w.classList.toggle('looping',la>=0);[...w.children].forEach((c,i)=>{c.classList.toggle('cur',i===bar);c.classList.toggle('inl',la>=0&&i>=la&&i<=lb)});
- if(bar!==stripBar){stripBar=bar;const c=w.children[bar];if(c&&S.playing)w.scrollLeft=c.offsetLeft-w.clientWidth/2+c.offsetWidth/2}}
-el('strip').addEventListener('pointerdown',e=>{if(e.button)return;const c=e.target.closest('.sc');if(!c)return;stripDrag={a:+c.dataset.i,b:+c.dataset.i,moved:false}});
-window.addEventListener('pointermove',e=>{if(!stripDrag)return;const t=document.elementFromPoint(e.clientX,e.clientY),c=t&&t.closest&&t.closest('.sc');if(c)stripDrag.b=+c.dataset.i;const m=stripDrag.b!==stripDrag.a;if(m!==stripDrag.moved||m){stripDrag.moved=m;updStrip(curBar())}});
-window.addEventListener('pointerup',()=>{const d=stripDrag;if(!d)return;stripDrag=null;if(d.moved){stripNoClick=true;setTimeout(()=>stripNoClick=false,60);setLoopBars(Math.min(d.a,d.b)+1,Math.max(d.a,d.b)+1)}else updStrip(curBar())});
-window.addEventListener('pointercancel',()=>{if(stripDrag){stripDrag=null;stripKey='';updStrip(curBar())}});
-el('strip').addEventListener('click',e=>{if(stripNoClick)return;const c=e.target.closest('.sc');if(c)seekTo(+c.dataset.i*4)});
+let stripKey='',stripBar=-1,stripDrag=null,stripNoClick=false,scrubbing=false,lpT=0,lpArm=null,hDrag=null;
+const LP_MS=350,LH=26,curBar=()=>Math.max(0,Math.min(BARS-1,Math.floor(nowBeat()/4+1e-6))),cellsOf=()=>el('strip').querySelectorAll('.sc');
+function renderStrip(){el('strip').innerHTML=song.chords.map((c,i)=>`<button class="sc" type="button" data-i="${i}" aria-label="${i+1}마디 ${chordName(i)}"><span class="n">${i+1}</span><span class="c">${chordName(i)}</span></button>`).join('')+'<i class="lh a" data-e="a" tabindex="0" role="slider" aria-label="반복 시작 마디 조절 (좌우 화살표)" hidden></i><i class="lh b" data-e="b" tabindex="0" role="slider" aria-label="반복 끝 마디 조절 (좌우 화살표)" hidden></i>';stripKey='';stripBar=-1}
+/* 현재 마디 강조 · 루프 구간 색 · 루프 밖 흐리게 · 양 끝 손잡이. 값이 바뀔 때만 클래스를 만진다 */
+function updStrip(bar){const w=el('strip'),cs=cellsOf(),dr=stripDrag&&stripDrag.moved?[Math.min(stripDrag.a,stripDrag.b),Math.max(stripDrag.a,stripDrag.b)]:null;
+ const la=dr?dr[0]:S.loop?Math.floor(S.a/4+1e-6):-1,lb=dr?dr[1]:S.loop?Math.ceil(S.b/4-1e-6)-1:-1,key=`${bar}|${la}|${lb}|${dr?1:0}${S.loop?1:0}${stripDrag&&stripDrag.lp?1:0}`;if(key===stripKey)return;stripKey=key;
+ w.classList.toggle('looping',la>=0);w.classList.toggle('lp',!!(stripDrag&&stripDrag.lp));cs.forEach((c,i)=>{c.classList.toggle('cur',i===bar);c.classList.toggle('inl',la>=0&&i>=la&&i<=lb)});el('loopClr').hidden=!S.loop;
+ const A=w.querySelector('.lh.a'),B=w.querySelector('.lh.b'),f=cs[la],l=cs[lb],show=la>=0&&!dr&&f&&l;A.hidden=B.hidden=!show;
+ if(show){A.style.top=B.style.top=f.offsetTop+'px';A.style.height=B.style.height=f.offsetHeight+'px';A.style.left=f.offsetLeft+'px';B.style.left=(l.offsetLeft+l.offsetWidth-LH)+'px'}
+ if(bar!==stripBar){stripBar=bar;const c=cs[bar];if(c&&S.playing)w.scrollLeft=c.offsetLeft-w.clientWidth/2+c.offsetWidth/2}}
+/* 가로 좌표 → 가장 가까운 마디 칸 번호(손잡이 위·띠 밖에서도 동작) */
+function barAtX(x){let best=0,bd=1e9;cellsOf().forEach((c,i)=>{const r=c.getBoundingClientRect(),d=x<r.left?r.left-x:x>r.right?x-r.right:0;if(d<bd){bd=d;best=i}});return best}
+function stripAuto(e){const w=el('strip'),r=w.getBoundingClientRect();if(e.clientX<r.left+28)w.scrollLeft-=12;else if(e.clientX>r.right-28)w.scrollLeft+=12}
+function moveEdge(which,b){let a=Math.floor(S.a/4+1e-6),z=Math.ceil(S.b/4-1e-6)-1;if(which==='a')a=Math.max(0,Math.min(b,z));else z=Math.min(BARS-1,Math.max(b,a));if(a!==Math.floor(S.a/4+1e-6)||z!==Math.ceil(S.b/4-1e-6)-1)setLoopBars(a+1,z+1);return [a,z]}
+el('strip').addEventListener('pointerdown',e=>{if(e.button)return;const h=e.target.closest('.lh');
+ if(h){e.preventDefault();hDrag={e:h.dataset.e};try{h.setPointerCapture(e.pointerId)}catch(_){}return}
+ const c=e.target.closest('.sc');if(!c)return;const i=+c.dataset.i;
+ if(e.pointerType==='touch'){lpArm={x:e.clientX,y:e.clientY};clearTimeout(lpT);lpT=setTimeout(()=>{if(!lpArm)return;lpArm.on=true;stripDrag={a:i,b:i,moved:true,lp:true};try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}updStrip(curBar())},LP_MS)} // 터치: 350 ms 길게 눌러야 구간 선택, 그 전에 움직이면 평소처럼 스크롤
+ else stripDrag={a:i,b:i,moved:false}});
+el('strip').addEventListener('touchmove',e=>{if(stripDrag&&stripDrag.lp&&e.cancelable)e.preventDefault()},{passive:false});
+el('strip').addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('pointermove',e=>{if(lpArm&&!lpArm.on&&Math.hypot(e.clientX-lpArm.x,e.clientY-lpArm.y)>8){clearTimeout(lpT);lpArm=null}
+ if(hDrag){stripAuto(e);moveEdge(hDrag.e,barAtX(e.clientX));return}
+ if(!stripDrag)return;stripAuto(e);stripDrag.b=barAtX(e.clientX);const m=!!stripDrag.lp||stripDrag.b!==stripDrag.a;if(m!==stripDrag.moved||m){stripDrag.moved=m;updStrip(curBar())}});
+window.addEventListener('pointerup',()=>{clearTimeout(lpT);lpArm=null;if(hDrag){hDrag=null;stripNoClick=true;setTimeout(()=>stripNoClick=false,60);return}const d=stripDrag;if(!d)return;stripDrag=null;if(d.moved){stripNoClick=true;setTimeout(()=>stripNoClick=false,60);setLoopBars(Math.min(d.a,d.b)+1,Math.max(d.a,d.b)+1)}else updStrip(curBar())});
+window.addEventListener('pointercancel',()=>{clearTimeout(lpT);if(lpArm&&!lpArm.on)lpArm=null;hDrag=null;if(stripDrag){stripDrag=null;stripKey='';updStrip(curBar())}});
+el('strip').addEventListener('click',e=>{if(stripNoClick)return;const c=e.target.closest('.sc');if(c)seekTo(+c.dataset.i*4);else if(e.target===el('strip')&&S.loop)clearLoop()});
+el('strip').addEventListener('keydown',e=>{const h=e.target.closest&&e.target.closest('.lh');if(!h||(e.key!=='ArrowLeft'&&e.key!=='ArrowRight'))return;e.preventDefault();e.stopPropagation();const cur=h.dataset.e==='a'?Math.floor(S.a/4+1e-6):Math.ceil(S.b/4-1e-6)-1;moveEdge(h.dataset.e,cur+(e.key==='ArrowLeft'?-1:1))});
+el('loopClr').onclick=clearLoop;
+window.addEventListener('resize',()=>{stripKey='';updStrip(curBar())});
 
 function updScrub(b){const sc=el('scrub'),lp=el('scrubLoop');if(!scrubbing)sc.value=Math.round(b*100);lp.hidden=!S.loop;if(S.loop){lp.style.left=(S.a/TOTAL*100)+'%';lp.style.width=((S.b-S.a)/TOTAL*100)+'%'}}
 el('scrub').addEventListener('pointerdown',()=>{scrubbing=true});
@@ -864,7 +927,11 @@ el('sections').addEventListener('click',e=>{const c=e.target.closest('.secard');
 
 /* 탭 ↔ URL 해시 */
 const TABS=['practice','score','guide','sing','upload'];let tabClick=false;
-function showTab(t){if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;el('tabb-'+n).setAttribute('aria-selected',n===t)}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
+let ready=false;const heroEl=el('hero');
+/* 히어로는 한 번 쓰고 나면(재생·탭 이동·아래로 스크롤) 접어 작업 영역을 넓힌다. 이미 지나간 위치면 스크롤을 보정한다 */
+function heroOff(){if(heroEl.classList.contains('gone'))return;const past=scrollY>=heroEl.offsetTop+heroEl.offsetHeight-1,h=heroEl.offsetHeight;heroEl.classList.add('gone');if(past)scrollBy(0,-h)}
+window.addEventListener('scroll',()=>{if(ready&&!heroEl.classList.contains('gone')&&scrollY>heroEl.offsetTop+heroEl.offsetHeight+8)heroOff()},{passive:true});
+function showTab(t){if(ready)heroOff();if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;el('tabb-'+n).setAttribute('aria-selected',n===t)}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
 function fromHash(first){const h=location.hash.replace('#','');if(h==='plans'){setTimeout(()=>el('plans').scrollIntoView(),50);return}
  if(TABS.includes(h)){showTab(h);const w=el('work');if(!tabClick&&window.scrollY<w.offsetTop-4)w.scrollIntoView()}else if(first)showTab('practice');tabClick=false}
 window.addEventListener('hashchange',()=>fromHash(false));
@@ -873,19 +940,28 @@ el('tabs').addEventListener('keydown',e=>{if(e.key!=='ArrowLeft'&&e.key!=='Arrow
 
 /* 테마: 시스템 설정이 기본, 수동 선택은 localStorage 에 저장(실패해도 동작) */
 const themeNow=()=>document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-function updThemeBtn(){const d=themeNow()==='dark';el('themeBtn').textContent=d?'☀ 밝게':'☾ 어둡게';el('themeBtn').setAttribute('aria-label',d?'밝은 테마로 바꾸기':'어두운 테마로 바꾸기')}
+function updThemeBtn(){const d=themeNow()==='dark';el('themeBtn').innerHTML=(d?'☀':'☾')+'<span class="tl"> '+(d?'밝게':'어둡게')+'</span>';el('themeBtn').setAttribute('aria-label',d?'밝은 테마로 바꾸기':'어두운 테마로 바꾸기')}
 el('themeBtn').onclick=()=>{const t=themeNow()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('pr-theme',t)}catch(e){}updThemeBtn();draw();if(window.singDraw)window.singDraw()};
 
 /* 단축키 시트, 내보내기 메뉴, 하단 바 높이 */
 const ks=el('keysheet');for(const id of ['helpBtn','helpBtn2'])el(id).onclick=()=>ks.showModal();
 ks.addEventListener('click',e=>{if(e.target===ks)ks.close()});
-document.addEventListener('click',e=>{const m=el('expMenu');if(m.open&&!m.contains(e.target)&&!(e.target.hasAttribute&&e.target.hasAttribute('download')))m.open=false});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el('expMenu').open)el('expMenu').open=false});
+document.addEventListener('click',e=>{document.querySelectorAll('details.menu[open]').forEach(m=>{if(m.parentElement.id!=='morePop'&&!m.contains(e.target)&&!(e.target.hasAttribute&&e.target.hasAttribute('download')))m.open=false})});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('details.menu[open]').forEach(m=>{if(m.parentElement.id!=='morePop')m.open=false})});
+/* 좁은 화면: 카운트인·메트로놈·내보내기를 「더보기」 팝오버로 옮긴다(같은 요소를 옮길 뿐이라 id·동작은 그대로) */
+const mqM=matchMedia('(max-width:700px)');
+function layoutMore(){const r2=document.querySelector('.tp-r2'),mm=el('moreMenu'),pop=el('morePop'),items=[el('countInL'),el('clickL'),el('expMenu')];
+ if(mqM.matches){items.forEach(x=>pop.appendChild(x));mm.hidden=false;el('expMenu').open=true}else{items.forEach(x=>r2.insertBefore(x,mm));mm.hidden=true;mm.open=false;el('expMenu').open=false}}
+if(mqM.addEventListener)mqM.addEventListener('change',layoutMore);layoutMore();
+/* 트랜스포트 접기: 재생 + 위치만 남긴다. 상태는 localStorage('pr-tp') */
+function setTp(min,save){el('transport').classList.toggle('min',min);const b=el('tpToggle');b.textContent=min?'⌃':'⌄';b.setAttribute('aria-expanded',!min);b.setAttribute('aria-label',min?'컨트롤 펼치기':'컨트롤 접기');if(save)try{localStorage.setItem('pr-tp',min?'1':'0')}catch(e){}}
+{let m=false;try{m=localStorage.getItem('pr-tp')==='1'}catch(e){}setTp(m)}
+el('tpToggle').onclick=()=>setTp(!el('transport').classList.contains('min'),true);
 if(window.ResizeObserver)new ResizeObserver(()=>document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px')).observe(el('transport'));
 document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px');
 
 /* ---------- 시창·청음 탭 (sing.js). 마이크 소리는 음높이로만 계산하고 저장·전송하지 않는다. 신호 기반 판정 ---------- */
-Object.assign(sing,{bars:4,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
+Object.assign(sing,{lat:0,bars:4,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
 const sn=p=>NAMES[p%12]+(Math.floor(p/12)-1);
 const singKeyPc=()=>sing.keyMode==='C'?0:((KEY+transpose)%12+12)%12;
 const singSpb=()=>60/(song.bpm*rate());
@@ -909,11 +985,11 @@ function singDraw(){const c=el('sRoll');if(!c)return;const g=c.getContext('2d'),
   if(sing.res){const v=sing.res.notes[i].verdict;g.strokeStyle=v==='맞음'?css('--ok'):v==='소리 없음'?mu:css('--warn');g.lineWidth=2.5;g.strokeRect(x(s)+1.5,y(p)-rh/2,w,rh);g.lineWidth=1}
   if(w>26){g.fillStyle=css('--bg');g.fillText(sn(p),x(s)+6,y(p))}});
  const tr=sing.track;if(tr&&tr.length){g.strokeStyle=css('--loop');g.lineWidth=3;g.lineJoin='round';let prev=null;g.beginPath();
-  for(const f of tr){if(f[1]==null||f[2]<.5){prev=null;continue}const b=(f[0]-sing.t0)/sing.spb;if(b<-.2||b>tot+.3){prev=null;continue}const yy=y(f[1]);if(yy<0||yy>H){prev=null;continue}
+  for(const f of tr){if(f[1]==null||f[2]<.5){prev=null;continue}const b=(f[0]-sing.lat-sing.t0)/sing.spb;if(b<-.2||b>tot+.3){prev=null;continue}const yy=y(f[1]);if(yy<0||yy>H){prev=null;continue}
    if(prev&&f[0]-prev[0]<.09&&Math.abs(f[1]-prev[1])<1.5)g.lineTo(x(b),yy);else g.moveTo(x(b),yy);prev=f}g.stroke();g.lineWidth=1}
  if(sing.head!=null&&sing.head>=0&&sing.head<=tot){g.strokeStyle=css('--accent');g.lineWidth=2;g.beginPath();g.moveTo(x(sing.head),0);g.lineTo(x(sing.head),H);g.stroke();g.lineWidth=1}}
 window.singDraw=singDraw;
-function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
+function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
  for(const [s,d,p] of sing.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92);
@@ -927,13 +1003,29 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
  for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0);
  sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
  let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
-  if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb);sing.res=res;const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
+  if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat);sing.res=res;const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
    el('sResult').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 (맞음 ${ok}/${n}음) · 평균 오차 <b>${res.meanAbsCents==null?'—':res.meanAbsCents}</b> cent</p><div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${VCLS[x.verdict]||'none'}"><b>${i+1}</b> ${sn(x.pitch)} ${x.verdict}${x.verdict!=='소리 없음'&&x.medCents!=null?` ${x.medCents>0?'+':''}${Math.round(x.medCents)}c`:''}</span>`).join('')}</div>`;
    msg.textContent=res.notes.every(x=>x.verdict==='소리 없음')?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'}
   else msg.textContent='중단했습니다.';singDraw()};
  sing.abort=()=>done(false);
  msg.textContent='카운트인 1마디 뒤에 부르세요…';
  sing.iv=setInterval(()=>{const now=ctx.currentTime;sing.head=now>=rec0?(now-rec0)/spb:null;if(now>=rec0&&msg.textContent.startsWith('카운트인'))msg.textContent='부르는 중…';singDraw();if(now>=end)done(true)},30)}
+/* 지연 맞추기: 스피커 클릭 4번(0.7초 간격)을 마이크로 다시 들어 「예약 시각 → 마이크 기록 시각」 왕복 지연을 잰다. 판정할 때 음 구간을 그만큼 뒤로 민다(= 기록 시각에서 뺀다). 값은 localStorage('pr-miclat', ms) */
+try{const v=+localStorage.getItem('pr-miclat');if(isFinite(v)&&v>=0&&v<=500)sing.lat=v/1000}catch(e){}
+function updLat(){el('sLat').textContent=`지연 보정 ${Math.round(sing.lat*1000)} ms`;el('sCalZero').hidden=!sing.lat}
+function setLat(ms){sing.lat=ms/1000;try{localStorage.setItem('pr-miclat',String(ms))}catch(e){}updLat();singDraw()}
+function calClick(t){const o=ctx.createOscillator();o.frequency.value=1800;const g=ctx.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.06)}
+async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
+ const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st;
+ try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}catch(e){singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
+ const an=ctx.createAnalyser();an.fftSize=512;const src=ctx.createMediaStreamSource(st);src.connect(an);const buf=new Float32Array(512),sm=[];
+ const iv=setInterval(()=>{an.getFloatTimeDomainData(buf);let r=0;for(let i=0;i<512;i++)r+=buf[i]*buf[i];sm.push([ctx.currentTime,Math.sqrt(r/512)])},8);
+ const t0=ctx.currentTime+.8,cl=[0,1,2,3].map(i=>t0+i*.7);cl.forEach(calClick);msg.textContent='클릭 소리 4번을 재는 중입니다…(이어폰을 빼고 스피커로)';
+ await sleep(Math.max(0,(cl[3]+.7-ctx.currentTime)*1000));clearInterval(iv);try{src.disconnect();st.getTracks().forEach(t=>t.stop())}catch(_){}singSetBusy(false);
+ const ms=SingLab.estimateLatency(sm,cl);
+ if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
+ else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다. 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`}}
+el('sCal').onclick=singCal;el('sCalZero').onclick=()=>{setLat(0);el('sMsg').textContent='지연 보정을 0 ms로 되돌렸습니다.'};
 el('sRec').onclick=singRec;el('sListen').onclick=singListen;el('sNew').onclick=singNew;el('sStop').onclick=()=>{if(sing.abort)sing.abort()};
 el('sBars').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.bars=+b.dataset.v;segPress('sBars',b);singNew()});
 el('sRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.range=[+b.dataset.lo,+b.dataset.hi];segPress('sRange',b);singNew()});
@@ -958,8 +1050,8 @@ el('eType').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 el('eLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ear.level=+b.dataset.v;segPress('eLevel',b);earNew()});
 window.onTabShown=t=>{if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;singDraw()}};
 
-loadSong('onedream');checkSaved();updThemeBtn();if(window.SingLab){singNew();earNew()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
-fromHash(true);
+loadSong('onedream');checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
+fromHash(true);ready=true;
 </script>
 
 </body>
