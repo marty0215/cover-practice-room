@@ -148,7 +148,7 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 /* 채보 */
 .rollwrap{border:1px solid var(--border);border-radius:10px;overflow-x:auto;background:var(--surface)}
 canvas{display:block;width:100%;height:auto}
-.rollwrap canvas{min-width:720px}
+.rollwrap canvas{min-width:900px}
 .cv{touch-action:pan-y;cursor:crosshair}
 .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.85rem;margin-top:.6rem}
 .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:.35rem;vertical-align:-1px}
@@ -289,7 +289,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 .choices{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.7rem}
 .choices .btn.ok{border-color:var(--ok);color:var(--ok);font-weight:700}
 .choices .btn.bad{border-color:var(--warn);color:var(--warn);font-weight:700}
-.stack{display:grid;gap:1rem;max-width:900px}
+.stack{display:grid;gap:1rem;max-width:900px}.stack>*,.grid>*{min-width:0}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -321,6 +321,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <button class="tab" role="tab" id="tabb-practice" data-tab="practice" aria-controls="tab-practice" aria-selected="true">연습</button>
     <button class="tab" role="tab" id="tabb-score" data-tab="score" aria-controls="tab-score" aria-selected="false">채보</button>
     <button class="tab" role="tab" id="tabb-guide" data-tab="guide" aria-controls="tab-guide" aria-selected="false">가이드</button>
+    <button class="tab" role="tab" id="tabb-sing" data-tab="sing" aria-controls="tab-sing" aria-selected="false">시창·청음</button>
     <button class="tab" role="tab" id="tabb-upload" data-tab="upload" aria-controls="tab-upload" aria-selected="false">올리기</button>
   </div>
 </div>
@@ -364,6 +365,35 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   </div>
   <div class="grid g4" style="margin-top:1rem" id="roles"></div>
 </div></div>
+
+<div class="tabpanel" id="tab-sing" role="tabpanel" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
+  <div class="panel" id="singPanel">
+    <div class="head"><h2>시창 · 악보 보고 부르기</h2><p class="muted small">짧은 멜로디가 나옵니다. 먼저 들어 보고, 카운트인 1마디 뒤에 부르면 음마다 맞았는지 판정합니다.</p></div>
+    <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
+      <div class="opt"><span class="lb">마디</span><div class="seg" id="sBars" role="group" aria-label="마디 수"><button type="button" aria-pressed="false" data-v="2">2</button><button type="button" aria-pressed="true" data-v="4">4</button><button type="button" aria-pressed="false" data-v="8">8</button></div></div>
+      <div class="opt"><span class="lb">음역</span><div class="seg" id="sRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button></div></div>
+      <div class="opt"><span class="lb">난이도</span><div class="seg" id="sLevel" role="group" aria-label="난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+      <div class="opt"><span class="lb">키</span><div class="seg" id="sKey" role="group" aria-label="키"><button type="button" aria-pressed="true" data-v="song" id="sKeySong">곡 키</button><button type="button" aria-pressed="false" data-v="C">C</button></div></div>
+      <div class="opt"><span class="lb">&nbsp;</span><button class="btn" type="button" id="sNew">새 문제</button></div>
+    </div>
+    <div class="sroll"><canvas id="sRoll" width="800" height="280" role="img" aria-label="시창 목표 멜로디와 내 음높이"></canvas></div>
+    <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button></div>
+    <p class="note" id="sMsg" role="status"></p>
+    <div id="sResult" aria-live="polite"></div>
+    <p class="note">신호 기반 판정이며 사람 평가가 아닙니다. 음마다 ±50 cent 안에 든 소리 프레임이 60% 이상이면 「맞음」입니다. 마이크 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다. 이어폰을 쓰면 카운트인 소리가 마이크에 섞이지 않습니다.</p>
+  </div>
+  <div class="panel" id="earPanel">
+    <div class="head"><h2>청음 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정이나 3화음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
+    <div class="row" style="gap:.8rem 1.2rem">
+      <div class="opt"><span class="lb">문제 종류</span><div class="seg" id="eType" role="group" aria-label="문제 종류"><button type="button" aria-pressed="true" data-v="interval">음정</button><button type="button" aria-pressed="false" data-v="triad">3화음</button></div></div>
+      <div class="opt"><span class="lb">난이도</span><div class="seg" id="eLevel" role="group" aria-label="청음 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+    </div>
+    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">다음 문제</button></div>
+    <div class="choices" id="eChoices" role="group" aria-label="보기"></div>
+    <p class="score" id="eFb" role="status"></p>
+    <p class="note" id="eAcc"></p>
+  </div>
+</div></div></div>
 
 
 <div class="tabpanel" id="tab-upload" role="tabpanel" aria-labelledby="tabb-upload" hidden><div class="in">
@@ -455,6 +485,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
 <script src="vendor/basicpitch.js"></script>
+<script src="sing.js"></script>
 
 <script>
 const SONGS = {"onedream": {"bpm": 82, "bars": 4, "chords": ["A", "E", "B", "C#m"], "parts": {"bass": [[0.0, 0.75, 33, 100], [0.75, 0.212, 33, 100], [1.0, 0.463, 33, 100], [1.5, 0.463, 33, 100], [2.0, 0.212, 33, 100], [2.25, 0.212, 33, 100], [2.5, 1.212, 33, 100], [3.75, 0.212, 28, 100], [4.0, 0.963, 28, 100], [5.0, 1.962, 28, 100], [7.5, 0.463, 28, 100], [8.5, 0.963, 35, 100], [9.5, 0.963, 35, 100], [10.5, 0.463, 35, 100], [11.0, 0.463, 35, 100], [11.5, 0.463, 35, 100], [12.0, 0.5, 25, 100], [12.5, 0.212, 25, 100], [12.75, 0.713, 25, 100], [13.5, 0.713, 25, 100], [14.25, 0.463, 25, 100], [14.75, 1.212, 25, 100]], "drums": [[0.0, 0.125, 36, 100], [0.5, 0.062, 42, 88], [1.0, 0.062, 42, 100], [1.0, 0.125, 38, 95], [2.0, 0.125, 36, 100], [2.5, 0.062, 42, 88], [2.5, 0.125, 36, 100], [3.0, 0.062, 42, 100], [3.0, 0.125, 38, 95], [3.5, 0.062, 42, 88], [4.0, 0.062, 42, 100], [4.0, 0.125, 36, 100], [4.5, 0.062, 42, 88], [5.0, 0.062, 42, 100], [5.0, 0.125, 38, 95], [5.5, 0.062, 42, 88], [6.0, 0.125, 36, 100], [6.5, 0.062, 42, 88], [6.5, 0.125, 36, 100], [7.0, 0.062, 42, 100], [7.0, 0.125, 38, 95], [7.5, 0.062, 42, 88], [8.0, 0.125, 36, 100], [8.5, 0.062, 42, 88], [9.0, 0.062, 42, 100], [9.0, 0.125, 38, 95], [10.0, 0.125, 36, 100], [10.5, 0.062, 42, 88], [10.5, 0.125, 36, 100], [11.0, 0.062, 42, 100], [11.0, 0.125, 38, 95], [11.5, 0.062, 42, 88], [12.0, 0.062, 42, 100], [12.0, 0.125, 36, 100], [12.5, 0.062, 42, 88], [13.0, 0.062, 42, 100], [13.0, 0.125, 38, 95], [13.5, 0.062, 42, 88], [14.0, 0.125, 36, 100], [14.5, 0.062, 42, 88], [14.5, 0.125, 36, 100], [15.0, 0.062, 42, 100], [15.0, 0.125, 38, 95], [15.5, 0.062, 42, 88]], "guitar": [[0.0, 2.462, 57, 100], [0.0, 2.462, 64, 100], [2.5, 1.462, 57, 100], [2.5, 1.462, 64, 100], [4.0, 0.212, 52, 100], [4.0, 0.212, 59, 100], [4.0, 0.212, 68, 100], [4.25, 2.212, 52, 100], [4.25, 2.212, 59, 100], [4.25, 2.212, 68, 100], [6.5, 1.212, 52, 100], [6.5, 1.212, 59, 100], [6.5, 1.212, 68, 100], [7.75, 0.212, 52, 100], [7.75, 0.212, 59, 100], [7.75, 0.212, 68, 100], [8.0, 2.462, 59, 100], [8.0, 2.462, 63, 100], [8.0, 2.462, 66, 100], [10.5, 1.462, 59, 100], [10.5, 1.462, 63, 100], [10.5, 1.462, 66, 100], [12.0, 2.462, 49, 100], [12.0, 2.462, 64, 100], [14.5, 1.462, 49, 100], [14.5, 1.462, 64, 100]]}, "title": "One Dream 후렴 17–20", "desc": "One Dream 후렴 17–20마디 · 82 BPM · 드럼·베이스·기타 3층 (원곡 구성에 건반 없음) · S59 렌더 2026-10-27, 12초", "audio": "audio/onedream_s59.mp3", "inventory": "원곡 구성 추정(instrument-id): 드럼 킷 0.97 · 닫힌 햇 0.93 · 디스토션 기타 0.90 · 핑거 베이스 0.58(저신뢰) · 건반 없음. 그래서 이 반주에도 건반을 넣지 않았습니다."}};
@@ -521,7 +552,7 @@ const userInv=sg=>{const low=sg.chords.filter((c,i)=>sg.conf[i]<.15&&!sg.edits[i
 let ctx,master,masterGain,noise,gains={},mute={},solo={},vol={},drumOn={36:true,38:true,42:true};
 const anySolo=()=>Object.values(solo).some(Boolean),audible=p=>anySolo()?!!solo[p]:!mute[p],eff=p=>(audible(p)?1:0)*(vol[p]??1);
 const masterLevel=()=>el('master').value/100, origLevel=()=>el('origVol').value/100;
-function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(master)}gains.sing=ctx.createGain();gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(master)}gains.sing=ctx.createGain();gains.sing.gain.value=2.2;gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function tone(part,t,dur,pitch,vel){const v=vel/127,out=gains[part],f=hz(pitch+(part==='sing'?0:transpose));
  if(part==='bass'){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(220,t+.25);const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55*v,t+.006);g.gain.setTargetAtTime(.3*v,t+.05,.15);g.gain.setTargetAtTime(0,t+dur,.03);o.connect(lp).connect(g).connect(out);o.start(t);o.stop(t+dur+.3)}
@@ -581,7 +612,7 @@ el('home').onclick=()=>seekTo(0);
 const keyOf=e=>({Space:'Space',ArrowLeft:'Left',ArrowRight:'Right',BracketLeft:'[',BracketRight:']',KeyL:'L',KeyM:'M',Home:'Home',Digit1:'1',Digit2:'2',Digit3:'3',Digit4:'4'})[e.code]||(e.key==='?'?'?':null)||({' ':'Space','[':'[',']':']',l:'L',L:'L',m:'M',M:'M',ArrowLeft:'Left',ArrowRight:'Right',Home:'Home'})[e.key];
 const typing=t=>{const g=t&&t.tagName;return g==='TEXTAREA'||g==='SELECT'||(g==='INPUT'&&/^(text|number|email|range)$/.test(t.type))};
 const MS_KEYS={1:'bass',2:'keys',3:'drums',4:'guitar'};
-document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typing(e.target)||el('keysheet').open)return;const k=keyOf(e);if(!k)return;e.preventDefault();
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typing(e.target)||el('keysheet').open)return;const k=keyOf(e);if(!k||(k==='Space'&&ownBtn(e.target)))return;e.preventDefault();
  if(k==='Space'){if(!e.repeat)S.playing?stop():play()}
  else if(k==='Home')seekTo(0)
  else if(k==='?')el('keysheet').showModal()
@@ -590,7 +621,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typin
  else if(k==='L'){el('loopOn').checked=!el('loopOn').checked;S.loop=el('loopOn').checked;draw()}
  else if(k==='M'&&!el('click').disabled)el('click').checked=!el('click').checked
  else if(MS_KEYS[k]&&mode==='synth'){e.shiftKey?toggleSolo(MS_KEYS[k]):toggleMute(MS_KEYS[k])}});
-document.addEventListener('keyup',e=>{if(e.code==='Space'&&!typing(e.target)&&!el('keysheet').open)e.preventDefault()}); // 포커스된 버튼이 Space로 또 눌리는 것을 막는다
+document.addEventListener('keyup',e=>{if(e.code==='Space'&&!typing(e.target)&&!el('keysheet').open&&!ownBtn(e.target))e.preventDefault()}); // 포커스된 버튼이 Space로 또 눌리는 것을 막는다
 
 /* mode + stems */
 el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
@@ -805,6 +836,7 @@ el('wait').addEventListener('submit',e=>{e.preventDefault();el('waitMsg').textCo
 
 /* ---------- 앱 화면: 코드 띠 · 스크러버 · 구간 카드 · 탭 · 테마 · 단축키 시트 ---------- */
 var sing={busy:false};
+const ownBtn=t=>!!(t&&t.tagName==='BUTTON'&&t.closest&&t.closest('#tab-sing')); // 시창·청음 탭의 버튼은 Space 로 눌림(재생 단축키 양보)
 let stripKey='',stripBar=-1,stripDrag=null,stripNoClick=false,scrubbing=false;
 const curBar=()=>Math.max(0,Math.min(BARS-1,Math.floor(nowBeat()/4+1e-6)));
 function renderStrip(){el('strip').innerHTML=song.chords.map((c,i)=>`<button class="sc" type="button" data-i="${i}" aria-label="${i+1}마디 ${chordName(i)}"><span class="n">${i+1}</span><span class="c">${chordName(i)}</span></button>`).join('');stripKey='';stripBar=-1}
@@ -831,7 +863,7 @@ function renderSections(){const lab=formLabels(),w=el('sections');let h='';
 el('sections').addEventListener('click',e=>{const c=e.target.closest('.secard');if(!c)return;const a=+c.dataset.a,b=+c.dataset.b;setLoopBars(a,b);seekTo((a-1)*4)});
 
 /* 탭 ↔ URL 해시 */
-const TABS=['practice','score','guide','upload'];let tabClick=false;
+const TABS=['practice','score','guide','sing','upload'];let tabClick=false;
 function showTab(t){if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;el('tabb-'+n).setAttribute('aria-selected',n===t)}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
 function fromHash(first){const h=location.hash.replace('#','');if(h==='plans'){setTimeout(()=>el('plans').scrollIntoView(),50);return}
  if(TABS.includes(h)){showTab(h);const w=el('work');if(!tabClick&&window.scrollY<w.offsetTop-4)w.scrollIntoView()}else if(first)showTab('practice');tabClick=false}
@@ -852,8 +884,82 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el('expMenu').open)
 if(window.ResizeObserver)new ResizeObserver(()=>document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px')).observe(el('transport'));
 document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px');
 
+/* ---------- 시창·청음 탭 (sing.js). 마이크 소리는 음높이로만 계산하고 저장·전송하지 않는다. 신호 기반 판정 ---------- */
+Object.assign(sing,{bars:4,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
+const sn=p=>NAMES[p%12]+(Math.floor(p/12)-1);
+const singKeyPc=()=>sing.keyMode==='C'?0:((KEY+transpose)%12+12)%12;
+const singSpb=()=>60/(song.bpm*rate());
+const VCLS={'맞음':'ok','높음':'hi','낮음':'lo','옥타브 차이':'oct','소리 없음':'none'};
+const seed=()=>((Date.now()^Math.floor(Math.random()*1e9))>>>0)||1;
+function segPress(id,b){document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute('aria-pressed',x===b))}
+function singNew(){if(sing.busy)return;clearInterval(sing.liv);sing.head=null;
+ sing.ex=window.SingLab?SingLab.makeExercise({key:singKeyPc(),minor:false,bars:sing.bars,lo:sing.range[0],hi:sing.range[1],seed:seed(),level:sing.level}):[];
+ sing.track=[];sing.res=null;el('sResult').innerHTML='';el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;
+ el('sMsg').textContent=sing.ex.length?`${NAMES[singKeyPc()]} 메이저 · ${sing.bars}마디 · ${Math.round(song.bpm*rate())} BPM(연습 탭의 속도를 따릅니다). 먼저 「들어보기」, 준비되면 「부르기」.`:'이 음역에서는 문제를 만들 수 없습니다. 다른 음역이나 키를 고르세요.';
+ singDraw()}
+function singDraw(){const c=el('sRoll');if(!c)return;const g=c.getContext('2d'),W=c.width,H=c.height,ex=sing.ex,tot=sing.bars*4;
+ g.clearRect(0,0,W,H);g.fillStyle=css('--surface');g.fillRect(0,0,W,H);if(!ex.length)return;
+ const ps=ex.map(n=>n[2]),lo=Math.min(...ps)-3,hi=Math.max(...ps)+3,x=b=>b/tot*W,y=p=>12+(hi-p)/(hi-lo)*(H-24),rh=Math.max(10,(H-24)/(hi-lo)-3);
+ const mu=css('--text-muted'),bd=css('--border'),tx=css('--text');
+ g.lineWidth=1;for(let b=0;b<=tot;b++){g.strokeStyle=bd;g.globalAlpha=b%4?.5:1;g.beginPath();g.moveTo(x(b),0);g.lineTo(x(b),H);g.stroke()}g.globalAlpha=1;
+ g.font='13px "JetBrains Mono",monospace';g.textBaseline='top';g.fillStyle=mu;for(let b=0;b<sing.bars;b++)g.fillText(String(b+1),x(b*4)+5,3);
+ g.strokeStyle=bd;g.globalAlpha=.6;for(const p of new Set(ps)){g.beginPath();g.moveTo(0,y(p));g.lineTo(W,y(p));g.stroke()}g.globalAlpha=1;
+ g.font='600 14px "JetBrains Mono",monospace';g.textBaseline='middle';
+ ex.forEach(([s,d,p],i)=>{const w=Math.max(4,x(d)-3);g.fillStyle=css('--keys');g.fillRect(x(s)+1.5,y(p)-rh/2,w,rh);
+  if(sing.res){const v=sing.res.notes[i].verdict;g.strokeStyle=v==='맞음'?css('--ok'):v==='소리 없음'?mu:css('--warn');g.lineWidth=2.5;g.strokeRect(x(s)+1.5,y(p)-rh/2,w,rh);g.lineWidth=1}
+  if(w>26){g.fillStyle=css('--bg');g.fillText(sn(p),x(s)+6,y(p))}});
+ const tr=sing.track;if(tr&&tr.length){g.strokeStyle=css('--loop');g.lineWidth=3;g.lineJoin='round';let prev=null;g.beginPath();
+  for(const f of tr){if(f[1]==null||f[2]<.5){prev=null;continue}const b=(f[0]-sing.t0)/sing.spb;if(b<-.2||b>tot+.3){prev=null;continue}const yy=y(f[1]);if(yy<0||yy>H){prev=null;continue}
+   if(prev&&f[0]-prev[0]<.09&&Math.abs(f[1]-prev[1])<1.5)g.lineTo(x(b),yy);else g.moveTo(x(b),yy);prev=f}g.stroke();g.lineWidth=1}
+ if(sing.head!=null&&sing.head>=0&&sing.head<=tot){g.strokeStyle=css('--accent');g.lineWidth=2;g.beginPath();g.moveTo(x(sing.head),0);g.lineTo(x(sing.head),H);g.stroke();g.lineWidth=1}}
+window.singDraw=singDraw;
+function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
+function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
+ const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
+ for(const [s,d,p] of sing.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92);
+ sing.liv=setInterval(()=>{const b=(ctx.currentTime-t)/spb;sing.head=b<0?null:b;if(b>tot+.3){clearInterval(sing.liv);sing.head=null}singDraw()},40)}
+async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length)singNew();if(!sing.ex.length)return;
+ clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
+ const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let tr;
+ try{tr=await SingLab.tracker(ctx,null)}catch(e){singSetBusy(false);const n=e&&e.name;
+  msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 마이크 없이도 「들어보기」와 청음은 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요. 「들어보기」와 청음은 마이크 없이 쓸 수 있습니다.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ const spb=singSpb(),tot=sing.bars*4,t0=ctx.currentTime+.15,rec0=t0+4*spb,end=rec0+tot*spb+.12;
+ for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0);
+ sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
+ let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
+  if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb);sing.res=res;const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
+   el('sResult').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 (맞음 ${ok}/${n}음) · 평균 오차 <b>${res.meanAbsCents==null?'—':res.meanAbsCents}</b> cent</p><div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${VCLS[x.verdict]||'none'}"><b>${i+1}</b> ${sn(x.pitch)} ${x.verdict}${x.verdict!=='소리 없음'&&x.medCents!=null?` ${x.medCents>0?'+':''}${Math.round(x.medCents)}c`:''}</span>`).join('')}</div>`;
+   msg.textContent=res.notes.every(x=>x.verdict==='소리 없음')?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'}
+  else msg.textContent='중단했습니다.';singDraw()};
+ sing.abort=()=>done(false);
+ msg.textContent='카운트인 1마디 뒤에 부르세요…';
+ sing.iv=setInterval(()=>{const now=ctx.currentTime;sing.head=now>=rec0?(now-rec0)/spb:null;if(now>=rec0&&msg.textContent.startsWith('카운트인'))msg.textContent='부르는 중…';singDraw();if(now>=end)done(true)},30)}
+el('sRec').onclick=singRec;el('sListen').onclick=singListen;el('sNew').onclick=singNew;el('sStop').onclick=()=>{if(sing.abort)sing.abort()};
+el('sBars').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.bars=+b.dataset.v;segPress('sBars',b);singNew()});
+el('sRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.range=[+b.dataset.lo,+b.dataset.hi];segPress('sRange',b);singNew()});
+el('sLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.level=+b.dataset.v;segPress('sLevel',b);singNew()});
+el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.keyMode=b.dataset.v;segPress('sKey',b);singNew()});
 
-loadSong('onedream');checkSaved();updThemeBtn();fromHash(true);
+/* 청음: 음정 / 3화음. 정답률은 localStorage(실패해도 동작) */
+const ear={type:'interval',level:1,q:null,done:false};
+let earA={};try{earA=JSON.parse(localStorage.getItem('pr-ear'))||{}}catch(e){}
+const earKey=()=>ear.type+ear.level,earName=t=>t==='interval'?'음정':'3화음';
+function earShowAcc(){const a=earA[earKey()]||{n:0,ok:0};el('eAcc').textContent=`${earName(ear.type)} 난이도 ${ear.level} 정답률: ${a.n?`${a.ok}/${a.n} (${Math.round(100*a.ok/a.n)}%)`:'아직 기록 없음'} · 이 브라우저에만 저장됩니다.`}
+function earNew(){clearTimeout(ear.tm);ear.q=SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed()});ear.done=false;
+ el('eChoices').innerHTML=ear.q.choices.map(c=>`<button class="btn" type="button" data-c="${c}">${c}</button>`).join('');el('eFb').textContent='';el('eNext').disabled=true;earShowAcc()}
+function earPlay(){if(!ear.q)earNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();const n=ear.q.notes,t=ctx.currentTime+.1;
+ if(ear.q.type==='interval'){tone('sing',t,.55,n[0],90);tone('sing',t+.65,.55,n[1],90);for(const p of n)tone('sing',t+1.7,1.2,p,90)}
+ else{n.forEach((p,i)=>tone('sing',t+i*.5,.45,p,90));for(const p of n)tone('sing',t+1.9,1.3,p,90)}}
+el('ePlay').onclick=earPlay;el('eNext').onclick=()=>{earNew();earPlay()};
+el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,a=earA[earKey()]||(earA[earKey()]={n:0,ok:0});a.n++;if(ok)a.ok++;try{localStorage.setItem('pr-ear',JSON.stringify(earA))}catch(_){}
+ document.querySelectorAll('#eChoices button').forEach(x=>{if(x.dataset.c===ear.q.answer){x.classList.add('ok');x.textContent='✓ '+x.dataset.c}else if(x===b){x.classList.add('bad');x.textContent='✗ '+x.dataset.c}});
+ el('eFb').textContent=ok?`정답입니다. ${ear.q.label}에서 시작한 ${ear.q.answer}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다(${ear.q.label}에서 시작).`;el('eNext').disabled=false;earShowAcc()});
+el('eType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ear.type=b.dataset.v;segPress('eType',b);earNew()});
+el('eLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ear.level=+b.dataset.v;segPress('eLevel',b);earNew()});
+window.onTabShown=t=>{if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;singDraw()}};
+
+loadSong('onedream');checkSaved();updThemeBtn();if(window.SingLab){singNew();earNew()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
+fromHash(true);
 </script>
 
 </body>
