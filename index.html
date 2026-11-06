@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>커버 연습실</title>
+<meta name="theme-color" content="#0F1115">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="description" content="연습용 반주 플레이어 · 채보 · 편곡 가이드. 파일은 브라우저 밖으로 나가지 않습니다.">
 <script>try{var t=localStorage.getItem('pr-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,6 +38,8 @@
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
 @media(max-width:700px){:root{--hit:44px}.hero .eyebrow,.hero p.lead,.hero details{display:none}.hero .in{padding-block:.6rem .5rem;gap:.4rem}.hero h1{font-size:1.15rem}.top .in{padding-block:.35rem}}
 .hero.gone{display:none}
+.upd{border-color:var(--accent);color:var(--accent);cursor:pointer;font:inherit;font-size:.78rem;font-weight:700}
+.swnote{margin-left:.6rem;color:var(--ok);font-size:.82rem}
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;overflow-anchor:none}
@@ -346,6 +352,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <span class="brand">커버 연습실</span>
   <div class="seg" id="songsel" role="group" aria-label="곡 선택"></div>
   <div class="chips" aria-label="곡 정보"><span class="chip mono" id="chipKey"></span><span class="chip mono" id="chipBpm"></span><span class="chip mono" id="chipBars"></span></div>
+  <button class="chip upd" id="updChip" type="button" hidden>업데이트 있음 · 새로 고침</button>
   <button class="ibtn" id="themeBtn" type="button" aria-label="테마 바꾸기" title="테마 바꾸기"></button>
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
 </div></header>
@@ -520,7 +527,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <div class="msg" id="waitMsg" role="status"></div></div>
 </div></section>
 
-<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다.</div></footer>
+<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다.<span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
 
 <div class="tp" id="transport" role="region" aria-label="재생 컨트롤"><div class="tp-in">
   <div class="tp-r1">
@@ -1190,6 +1197,13 @@ window.onTabShown=t=>{if(t!=='sing'&&sing.abort)sing.abort();if(t==='sing'){el('
 
 loadSong('onedream');checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 fromHash(true);ready=true;
+/* ---------- PWA: https 또는 localhost에서만 서비스 워커 등록(file:// 등에서는 건너뜀). 미지원 브라우저에서도 아무것도 깨지지 않는다 ---------- */
+(function(){if(!('serviceWorker' in navigator)||!(location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'))return;
+ const note=()=>el('swNote').hidden=false,chk=()=>{if(window.caches)caches.match('sing.js').then(r=>{if(r)note()}).catch(()=>{})};
+ const upd=w=>{const b=el('updChip');b.hidden=false;b.onclick=()=>{let r=0;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!r){r=1;location.reload()}});w.postMessage('skip')}};
+ navigator.serviceWorker.addEventListener('message',e=>{if(e.data==='cached')chk()});
+ navigator.serviceWorker.register('sw.js').then(reg=>{chk();if(reg.waiting&&navigator.serviceWorker.controller)upd(reg.waiting);
+  reg.addEventListener('updatefound',()=>{const w=reg.installing;if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)upd(w)})})}).catch(()=>{})})();
 </script>
 
 </body>
