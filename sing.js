@@ -24,7 +24,8 @@ function yin(buf,sr,fmin=70,fmax=1100,thr=.12){const n=buf.length,maxL=Math.min(
 
 /* 마이크 → 음높이 기록. ctx 는 호출 쪽 AudioContext. stop() 은 트랙과 노드를 정리한다 */
 async function tracker(ctx,onFrame){const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
- const src=ctx.createMediaStreamSource(stream),an=ctx.createAnalyser();an.fftSize=2048;src.connect(an);const buf=new Float32Array(an.fftSize),track=[];let on=true;
+ let src,an;try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=2048;src.connect(an)}catch(e){stream.getTracks().forEach(t=>t.stop());throw e}
+ const buf=new Float32Array(an.fftSize),track=[];let on=true;
  const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];track.push(fr);onFrame&&onFrame(fr)},20);
  return {track,stop(){on=false;clearInterval(iv);src.disconnect();stream.getTracks().forEach(t=>t.stop())}}}
 

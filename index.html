@@ -642,10 +642,10 @@ function drum(t,pitch,vel){if(!drumOn[pitch])return;const v=vel/127,out=gains.dr
  if(pitch===36){const o=ctx.createOscillator();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(42,t+.11);const g=ctx.createGain();g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.32);o.connect(g).connect(out);o.start(t);o.stop(t+.35)}
  else if(pitch===38){const n=ctx.createBufferSource();n.buffer=noise;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1900;bp.Q.value=.7;const g=ctx.createGain();g.gain.setValueAtTime(.5*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);n.connect(bp).connect(g).connect(out);n.start(t);n.stop(t+.2);const o=ctx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(150,t+.08);const g2=ctx.createGain();g2.gain.setValueAtTime(.35*v,t);g2.gain.exponentialRampToValueAtTime(.001,t+.1);o.connect(g2).connect(out);o.start(t);o.stop(t+.12)}
  else{const n=ctx.createBufferSource();n.buffer=noise;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7500;const g=ctx.createGain();g.gain.setValueAtTime(.22*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.06);n.connect(hp).connect(g).connect(out);n.start(t);n.stop(t+.07)}}
-function clickAt(t,accent){const o=ctx.createOscillator();o.frequency.value=accent?1600:1100;const g=ctx.createGain();g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);o.connect(g).connect(master);o.start(t);o.stop(t+.05)}
+function clickAt(t,accent){const o=ctx.createOscillator();S.cl.push(o);if(S.cl.length>64)S.cl.shift();o.frequency.value=accent?1600:1100;const g=ctx.createGain();g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);o.connect(g).connect(master);o.start(t);o.stop(t+.05)}
 
 /* ---------- transport ---------- */
-const S={playing:false,anchorT:0,anchorB:0,spb:.5,idx:{},click:0,timer:null,loop:false,a:0,b:16,pending:null};
+const S={playing:false,anchorT:0,anchorB:0,spb:.5,idx:{},click:0,timer:null,loop:false,a:0,b:16,pending:null,cl:[]};
 const real=el('real');
 const rate=()=>{const t=el('tempo'),v=+t.value;return Math.max(+t.min,Math.min(+t.max,v||100))/100};
 function nowBeat(){if(!S.playing)return S.anchorB;if(mode==='real')return real.currentTime/spb0();const b=S.anchorB+(ctx.currentTime-S.anchorT)/S.spb;return b<S.anchorB?S.anchorB:b}
@@ -660,15 +660,15 @@ function play(){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx(
  real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
  if(mode==='synth'){seekIdx(start);S.timer=setInterval(tick,30)}
- requestAnimationFrame(draw)}
-function stop(){const b=nowBeat();S.playing=false;clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');draw()}
+ draw()}
+function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');draw()}
 real.addEventListener('ended',()=>{if(S.playing&&mode==='real'){stop();S.anchorB=0;draw()}});
 el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';if(masterGain)masterGain.gain.setTargetAtTime(masterLevel(),ctx.currentTime,.02);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel()};
 el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(mode==='synth'){real.volume=masterLevel()*origLevel();if(S.playing&&!S.withAudio&&origLevel()>0&&song.audio){S.withAudio=true;real.currentTime=nowBeat()*spb0();real.play().catch(()=>{})}}};
 el('play').onclick=()=>S.playing?stop():play();
 function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;if(window.trUi)trUi();document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
 const tempoOk=()=>{const t=el('tempo'),v=+t.value;return t.value!==''&&v>=+t.min&&v<=+t.max};
-el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r};
+el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'&&ctx.currentTime>=S.anchorT){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r};
 el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=tvLabel();renderProg();renderCed();renderBar();renderTips();renderRoles();draw()};
 el('loopOn').onchange=()=>{S.loop=el('loopOn').checked;draw()};
 for(const id of ['loopA','loopB']){el(id).onchange=()=>{let a=+el('loopA').value,b=+el('loopB').value;if(b<a){if(id==='loopA')b=a;else a=b;el('loopA').value=a;el('loopB').value=b}S.a=(a-1)*4;S.b=b*4;if(!S.loop){el('loopOn').checked=true;S.loop=true}}}
@@ -685,7 +685,7 @@ el('stepOn').onchange=()=>{TR.cnt=0;if(el('stepOn').checked)setTempo(TR.from);tr
 el('stepMenu').addEventListener('change',e=>{if(!e.target.id||!e.target.id.startsWith('tr'))return;TR.from=el('trFrom').value;TR.to=el('trTo').value;TR.step=el('trStep').value;TR.reps=el('trReps').value;trFix();TR.cnt=0;try{localStorage.setItem('pr-trainer',JSON.stringify({from:TR.from,to:TR.to,step:TR.step,reps:TR.reps}))}catch(_){}trUi()});
 /* 재생 위치 이동(마디 단위 이동·키보드) */
 function seekTo(beat){beat=Math.max(0,Math.min(TOTAL-.01,beat));selBar=Math.floor(beat/4);
- if(S.playing){if(mode==='synth'){S.anchorB=beat;S.anchorT=ctx.currentTime+.03;seekIdx(beat)}if(mode==='real'||S.withAudio)real.currentTime=beat*spb0()}else S.anchorB=beat;
+ if(S.playing){if(mode==='synth'){S.anchorB=beat;S.anchorT=ctx.currentTime+.03;seekIdx(beat);if(S.pending){clearTimeout(S.pending);S.pending=null;if(S.withAudio)real.play().catch(()=>{})}}if(mode==='real'||S.withAudio)real.currentTime=beat*spb0()}else S.anchorB=beat;
  renderBar();draw()}
 const setTempo=v=>{el('tempo').value=Math.max(+el('tempo').min,Math.min(+el('tempo').max,Math.round(v)));el('tempo').oninput()};
 el('tempo').onchange=()=>setTempo(+el('tempo').value||100);
@@ -734,6 +734,7 @@ function setView(s){view.start=Math.max(0,Math.min(Math.max(0,BARS-view.len),s))
 el('vPrev').onclick=()=>setView(view.start-view.len);el('vNext').onclick=()=>setView(view.start+view.len);
 el('vLen').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;viewPref=+b.dataset.n;view.len=Math.min(viewPref,BARS);document.querySelectorAll('#vLen button').forEach(x=>x.setAttribute('aria-pressed',x===b));setView(view.start);if(S.playing)draw()});
 el('vNames').onchange=()=>draw();
+let rafId=0; // 재생 중 draw() 를 따로 불러도 rAF 연쇄가 하나만 돌게 한다
 function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  const b=Math.max(0,Math.min(TOTAL,nowBeat()));
  if(S.playing&&el('vFollow').checked){const bar=Math.floor(b/4);if(bar<view.start||bar>=view.start+view.len)view.start=Math.max(0,Math.min(Math.max(0,BARS-view.len),Math.floor(bar/view.len)*view.len))}
@@ -757,7 +758,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  if(S.loop){cx.fillStyle=css('--bg');cx.globalAlpha=.62;const l=Math.max(0,Math.min(W,x(S.a))),r=Math.max(0,Math.min(W,x(S.b)));cx.fillRect(0,0,l,H);cx.fillRect(r,0,W-r,H);cx.globalAlpha=1;cx.strokeStyle=css('--loop');cx.lineWidth=2;cx.beginPath();if(x(S.a)>=0&&x(S.a)<=W){cx.moveTo(x(S.a),0);cx.lineTo(x(S.a),H)}if(x(S.b)>=0&&x(S.b)<=W){cx.moveTo(x(S.b),0);cx.lineTo(x(S.b),H)}cx.stroke()}
  if(b>=v0&&b<=v0+vb){cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke()}
  const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordName(bar);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
- if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}requestAnimationFrame(draw)}}
+ if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
 const barAt=e=>{const r=cv.getBoundingClientRect();return Math.max(0,Math.min(BARS-1,view.start+Math.floor((e.clientX-r.left)/r.width*view.len)))};
 cv.addEventListener('pointerdown',e=>{if(e.button)return;drag={x:e.clientX,a:barAt(e),b:barAt(e),moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.x)>6)drag.moved=true;drag.b=barAt(e);if(drag.moved&&!S.playing)draw()});
@@ -822,7 +823,7 @@ const drop=el('drop'),file=el('file');let picked=null;
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)pick(f)});
 file.addEventListener('change',()=>{if(file.files[0])pick(file.files[0])});
 function pick(f){if(running)return;picked=f;el('fileinfo').hidden=false;el('result').hidden=true;el('err').hidden=true;el('longWarn').hidden=true;el('steps').innerHTML='';el('prog').style.width='0';el('start').disabled=false;el('fname').textContent=f.name;const mb=(f.size/1048576).toFixed(1);el('fmeta').textContent=`${mb} MB · 길이 확인 중`;
- try{const u=URL.createObjectURL(f),a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>{const s=Math.round(a.duration);if(a.duration>600)showLong(a.duration);el('fmeta').textContent=`${mb} MB · ${Math.floor(s/60)}분 ${String(s%60).padStart(2,'0')}초 · 이 브라우저 안에만 있습니다`;URL.revokeObjectURL(u)};a.onerror=()=>{el('fmeta').textContent=`${mb} MB · 길이를 읽지 못했습니다 · 이 브라우저 안에만 있습니다`};a.src=u}catch(e){el('fmeta').textContent=`${mb} MB`}}
+ try{const u=URL.createObjectURL(f),a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>{const s=Math.round(a.duration);if(a.duration>600)showLong(a.duration);el('fmeta').textContent=`${mb} MB · ${Math.floor(s/60)}분 ${String(s%60).padStart(2,'0')}초 · 이 브라우저 안에만 있습니다`;URL.revokeObjectURL(u)};a.onerror=()=>{el('fmeta').textContent=`${mb} MB · 길이를 읽지 못했습니다 · 이 브라우저 안에만 있습니다`;URL.revokeObjectURL(u)};a.src=u}catch(e){el('fmeta').textContent=`${mb} MB`}}
 /* ---------- real in-browser analysis ---------- */
 const STEPS=[['읽기','파일 디코드 → 모노 22.05 kHz'],['박자','BPM·첫 박 추정'],['채보','Basic Pitch 모델 (시간이 가장 오래 걸립니다)'],['분석','마디별 코드·키'],['초안','베이스·건반·드럼 반주 생성']];
 let rows=[],t0=0,raw=null,userUrl=null,bpModel=null,running=false,job=null,saved=null,U={bpm:0,off:0,style:'pop',edits:{}};
@@ -830,7 +831,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function showLong(sec){el('longWarn').hidden=false;el('longWarn').textContent=`길이 ${Math.round(sec/60)}분: 10분이 넘는 파일입니다. 처리에 몇 분 이상 걸리고 메모리를 많이 써서 브라우저가 느려지거나 멈출 수 있습니다. 도중에 취소할 수 있고, 후렴 등 일부만 잘라 올리는 편이 안전합니다.`}
 function stepState(i,state,txt){rows[i].className='step '+state;rows[i].querySelector('.t').textContent=txt??(state==='done'?((performance.now()-t0)/1000).toFixed(1)+'s':'진행');el('prog').style.width=Math.round(100*(state==='done'?i+1:i+.3)/STEPS.length)+'%'}
 function fail(msg,step){el('err').hidden=false;const st=STEPS[step];el('err').textContent=`처리 실패${st?` · ${step+1}/${STEPS.length}단계 「${st[0]}」`:''}: ${msg}`;el('start').disabled=false;rows.forEach(r=>{if(r.className.includes('run'))r.className='step'});if(rows[step]){rows[step].className='step fail';rows[step].querySelector('.t').textContent='실패'}}
-async function decodeMono(file){const ab=await file.arrayBuffer();const dc=new (window.AudioContext||window.webkitAudioContext)();const buf=await dc.decodeAudioData(ab);dc.close&&dc.close();const sr=22050,len=Math.ceil(buf.duration*sr);const oc=new OfflineAudioContext(1,len,sr);const src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start();const out=await oc.startRendering();return {data:out.getChannelData(0),sr,duration:buf.duration}}
+async function decodeMono(file){const ab=await file.arrayBuffer();const dc=new (window.AudioContext||window.webkitAudioContext)();let buf;try{buf=await dc.decodeAudioData(ab)}finally{dc.close&&dc.close()}const sr=22050,len=Math.ceil(buf.duration*sr);const oc=new OfflineAudioContext(1,len,sr);const src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start();const out=await oc.startRendering();return {data:out.getChannelData(0),sr,duration:buf.duration}}
 function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]]}}for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let j=0;j<len/2;j++){const ur=re[i+j],ui=im[i+j],vr=re[i+j+len/2]*cr-im[i+j+len/2]*ci,vi=re[i+j+len/2]*ci+im[i+j+len/2]*cr;re[i+j]=ur+vr;im[i+j]=ui+vi;re[i+j+len/2]=ur-vr;im[i+j+len/2]=ui-vi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}}
 /* 온셋 세기: 로그 스펙트럼 양의 변화량(스펙트럴 플럭스). full = 전체 대역, low = 킥 대역(<215 Hz) */
 function onsetStrength(data,sr,band){const N=1024,hop=512,n=Math.max(1,Math.floor((data.length-N)/hop));const win=new Float32Array(N);for(let i=0;i<N;i++)win[i]=.5-.5*Math.cos(2*Math.PI*i/N);let prev=null;const flux=new Float32Array(n),re=new Float32Array(N),im=new Float32Array(N);const k1=band==='low'?10:N/2;for(let f=0;f<n;f++){for(let i=0;i<N;i++){re[i]=data[f*hop+i]*win[i];im[i]=0}fft(re,im);const mag=new Float32Array(N/2);for(let k=0;k<N/2;k++)mag[k]=Math.log1p(10*Math.hypot(re[k],im[k]));if(prev){let s=0;for(let k=1;k<k1;k++){const d=mag[k]-prev[k];if(d>0)s+=d}flux[f]=s}prev=mag}const out=new Float32Array(n),w=8;for(let i=0;i<n;i++){let s=0,c=0;for(let j=Math.max(0,i-w);j<Math.min(n,i+w);j++){s+=flux[j];c++}out[i]=Math.max(0,flux[i]-s/c)}return {flux:out,fps:sr/hop,hop}}
@@ -886,16 +887,16 @@ function buildSong(notesSec,bpm,offset,duration,name,o){o=o||{};const style=STYL
  const silent=autoSilent.map((x,b)=>edits[b]?false:x);
  const sg={title:name.replace(/\.[^.]+$/,'').slice(0,28),bpm,bars,chords,conf,auto,autoConf,autoSilent,silent,edits,style,parts:{score,bass:[],keys:[],drums:[]},audio:userUrl,desc:`${name} · ${bpm} BPM 추정 · ${bars}마디 · 채보 ${score.length}음 · 베이스·건반·드럼은 코드에서 만든 초안`};
  regenBars(sg,[...Array(bars).keys()],style);sg.inventory=userInv(sg);return sg}
-el('start').onclick=async()=>{if(!picked||running)return;running=true;const my=job={cancel:false,step:0};el('start').disabled=true;el('cancel').hidden=false;el('cancel').disabled=false;el('cancel').textContent='취소';el('result').hidden=true;el('err').hidden=true;const w=el('steps');w.innerHTML=STEPS.map(([n,d])=>`<div class="step"><i></i><span><b>${n}</b> <span class="muted">${d}</span></span><span class="t">대기</span></div>`).join('');rows=[...w.children];t0=performance.now();
+el('start').onclick=async()=>{if(!picked||running)return;running=true;const my=job={cancel:false,step:0};let prev=null,done=false;el('start').disabled=true;el('cancel').hidden=false;el('cancel').disabled=false;el('cancel').textContent='취소';el('result').hidden=true;el('err').hidden=true;const w=el('steps');w.innerHTML=STEPS.map(([n,d])=>`<div class="step"><i></i><span><b>${n}</b> <span class="muted">${d}</span></span><span class="t">대기</span></div>`).join('');rows=[...w.children];t0=performance.now();
  const chk=()=>{if(my.cancel)throw new Error('__cancel')},go=async(i)=>{my.step=i;stepState(i,'run');await sleep(30);chk()};
  try{await go(0);const {data,sr,duration}=await decodeMono(picked);chk();stepState(0,'done');if(duration>600)showLong(duration);
   await go(1);const tempo=estimateTempo(data,sr),chroma=audioChroma(data,sr);stepState(1,'done',`${tempo.bpm} BPM · 첫 박 ${tempo.offset}s`);chk();
   await go(2);if(!window.tf||!window.BasicPitchLib)throw new Error('채보 모델 스크립트를 불러오지 못했습니다. 네트워크를 확인하고 새로 고침하세요.');const notes=await transcribe(data,sr,p=>{chk();rows[2].querySelector('.t').textContent=Math.round(p*100)+'%';el('prog').style.width=Math.round(100*(2+p)/STEPS.length)+'%'});stepState(2,'done',`${notes.length}음 · ${((performance.now()-t0)/1000).toFixed(0)}s`);chk();
-  if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(picked);raw={notes,duration,name:picked.name,chroma};
+  prev={raw,url:userUrl,U};userUrl=URL.createObjectURL(picked);raw={notes,duration,name:picked.name,chroma};
   my.step=3;stepState(3,'run');stepState(4,'run');await sleep(30);chk();tempo.offset=Math.round(refineDownbeat(notes,tempo.bpm,tempo.offset,duration,tempo.ph)*1000)/1000;U={bpm:tempo.bpm,off:tempo.offset,style:'pop',edits:{}};const s=makeUser();stepState(3,'done',`첫 박 ${tempo.offset}s`);stepState(4,'done');
-  el('bpmIn').value=tempo.bpm;el('offIn').value=tempo.offset;installUser(s)}
+  el('bpmIn').value=tempo.bpm;el('offIn').value=tempo.offset;installUser(s);done=true}
  catch(e){if(e&&e.message==='__cancel'){el('err').hidden=false;el('err').textContent=`취소했습니다(${STEPS[my.step][0]} 단계에서 멈춤). 파일은 그대로 선택돼 있어 다시 시작할 수 있습니다.`;rows.forEach((r,i)=>{if(!r.className.includes('done')){r.className='step';r.querySelector('.t').textContent='취소'}});el('start').disabled=false}else{console.error(e);fail(e&&e.message?e.message:String(e),my.step)}}
- finally{running=false;job=null;el('cancel').hidden=true}};
+ finally{if(prev){if(done){if(prev.url)URL.revokeObjectURL(prev.url)}else{URL.revokeObjectURL(userUrl);userUrl=prev.url;raw=prev.raw;U=prev.U}}running=false;job=null;el('cancel').hidden=true}};
 el('cancel').onclick=()=>{if(job){job.cancel=true;el('cancel').disabled=true;el('cancel').textContent='취소 중…'}};
 const makeUser=()=>buildSong(raw.notes,U.bpm,U.off,raw.duration,raw.name,{style:U.style,edits:U.edits,chroma:raw.chroma});
 function installUser(s){U.edits=s.edits;U.style=s.style;SONGS.user=s;if(!document.querySelector('#songsel [data-s=user]')){const b=document.createElement('button');b.dataset.s='user';sel.prepend(b)}document.querySelector('#songsel [data-s=user]').textContent='내 곡 · '+s.title;el('resMeta').textContent=s.desc;el('result').hidden=false;el('start').disabled=!picked;mute.score=true;el('relinkLab').hidden=!!s.audio;const ov=s.audio?60:0;el('origVol').value=ov;el('origVal').textContent=ov+'%';mode='synth';document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));loadSong('user');persist()}
@@ -904,7 +905,7 @@ function realign(bpm,off){if(!raw||!(bpm>=40&&bpm<=220)||!isFinite(off))return f
 el('realign').onclick=()=>realign(+el('bpmIn').value,+el('offIn').value);
 const scaleBpm=f=>{const b=Math.round(+el('bpmIn').value*f*10)/10;if(!(b>=40&&b<=220)){el('bpmMsg').textContent=`BPM ${b}은 40~220 범위를 벗어나 적용하지 않았습니다.`;return}realign(b,+el('offIn').value)};
 el('bpmHalf').onclick=()=>scaleBpm(.5);el('bpmDouble').onclick=()=>scaleBpm(2);
-el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
+el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(S.playing)stop();if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
 
 /* ---------- 저장: 분석 결과(채보 음·BPM·첫 박·수정한 코드·스타일)만 IndexedDB에. 원본 파일은 저장하지 않음. 실패해도 페이지는 정상 ---------- */
 const DB={open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('practice-room',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('blocked'))}catch(e){rej(e)}})},
@@ -912,7 +913,7 @@ const DB={open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('prac
  get(k){return this.op('readonly',s=>s.get(k))},put(k,v){return this.op('readwrite',s=>s.put(v,k))},del(k){return this.op('readwrite',s=>s.delete(k))}};
 let saveT=0;
 function persist(){if(!raw)return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await DB.put('last',{v:1,name:raw.name,duration:raw.duration,bpm:U.bpm,off:U.off,style:U.style,edits:{...U.edits},notes:raw.notes.map(n=>[n.startTimeSeconds,n.durationSeconds,n.pitchMidi,n.amplitude]),chroma:raw.chroma||null,at:Date.now()});el('saveNote').textContent='분석 결과를 이 브라우저에 저장했습니다(원본 파일은 저장하지 않음).'}catch(e){el('saveNote').textContent='이 브라우저에서는 분석 결과를 저장하지 못했습니다(사생활 보호 모드 등). 연습은 그대로 됩니다.'}},400)}
-async function checkSaved(){try{const r=await DB.get('last');if(!r||!Array.isArray(r.notes))return;saved=r;el('restore').hidden=false;el('restoreInfo').textContent=`${r.name} · ${r.bpm} BPM · 채보 ${r.notes.length}음 · 고친 코드 ${Object.keys(r.edits||{}).length}개 · ${new Date(r.at).toLocaleString('ko-KR')} 저장. 원본 파일은 저장하지 않았으니 원곡 소리는 다시 고르면 됩니다.`}catch(e){}}
+async function checkSaved(){try{const r=await DB.get('last');if(!r||!Array.isArray(r.notes)||!(r.bpm>=40&&r.bpm<=220)||!isFinite(r.off)||!(r.duration>0)||r.notes.some(n=>!Array.isArray(n)||n.length<4))return;saved=r;el('restore').hidden=false;el('restoreInfo').textContent=`${r.name} · ${r.bpm} BPM · 채보 ${r.notes.length}음 · 고친 코드 ${Object.keys(r.edits||{}).length}개 · ${new Date(r.at).toLocaleString('ko-KR')} 저장. 원본 파일은 저장하지 않았으니 원곡 소리는 다시 고르면 됩니다.`}catch(e){}}
 el('restoreGo').onclick=()=>{const r=saved;if(!r||running)return;raw={notes:r.notes.map(([a,b,c,d])=>({startTimeSeconds:a,durationSeconds:b,pitchMidi:c,amplitude:d})),duration:r.duration,name:r.name,chroma:r.chroma||null};if(userUrl){URL.revokeObjectURL(userUrl);userUrl=null}picked=null;U={bpm:r.bpm,off:r.off,style:r.style||'pop',edits:r.edits||{}};
  el('fileinfo').hidden=false;el('fname').textContent=r.name+' (이전 분석)';el('fmeta').textContent='저장된 분석 결과 · 원본 파일 없음';el('steps').innerHTML='';el('prog').style.width='100%';el('err').hidden=true;el('longWarn').hidden=true;el('bpmIn').value=U.bpm;el('offIn').value=U.off;installUser(makeUser());el('restore').hidden=true};
 el('restoreDel').onclick=async()=>{try{await DB.del('last')}catch(e){}saved=null;el('restore').hidden=true};
@@ -1070,6 +1071,8 @@ function singDraw(){const c=el('sRoll');if(!c)return;const g=c.getContext('2d'),
    if(prev&&f[0]-prev[0]<.09&&Math.abs(f[1]-prev[1])<1.5)g.lineTo(x(b),yy);else g.moveTo(x(b),yy);prev=f}g.stroke();g.lineWidth=1}
  if(sing.head!=null&&sing.head>=0&&sing.head<=tot){g.strokeStyle=css('--accent');g.lineWidth=2;g.beginPath();g.moveTo(x(sing.head),0);g.lineTo(x(sing.head),H);g.stroke();g.lineWidth=1}}
 window.singDraw=singDraw;
+/* 탭을 옮기거나 화면이 가려지면 녹음을 멈추고 마이크를 닫는다 */
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&sing.abort)sing.abort()});addEventListener('pagehide',()=>{if(sing.abort)sing.abort()});
 function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
@@ -1080,8 +1083,9 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
  const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let tr;
  try{tr=await SingLab.tracker(ctx,null)}catch(e){singSetBusy(false);const n=e&&e.name;
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 마이크 없이도 「들어보기」와 청음은 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요. 「들어보기」와 청음은 마이크 없이 쓸 수 있습니다.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ if(el('tab-sing').hidden||document.hidden){tr.stop();singSetBusy(false);msg.textContent='시창 탭을 벗어나 녹음을 시작하지 않았습니다.';return} // 권한 창이 떠 있는 동안 탭을 옮긴 경우 마이크를 바로 닫는다
  const spb=singSpb(),tot=sing.bars*4,t0=ctx.currentTime+.15,rec0=t0+4*spb,end=rec0+tot*spb+.12;
- for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0);
+ try{for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0)}catch(e){tr.stop();singSetBusy(false);msg.textContent='녹음을 시작하지 못했습니다: '+e.message;return}
  sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
  let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
   if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat);sing.res=res;if(res.notes.some(x=>x.verdict!=='소리 없음'))statRec('sight',res.score/100);const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
@@ -1099,11 +1103,14 @@ function calClick(t){const o=ctx.createOscillator();o.frequency.value=1800;const
 async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
  const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st;
  try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}catch(e){singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
- const an=ctx.createAnalyser();an.fftSize=512;const src=ctx.createMediaStreamSource(st);src.connect(an);const buf=new Float32Array(512),sm=[];
- const iv=setInterval(()=>{an.getFloatTimeDomainData(buf);let r=0;for(let i=0;i<512;i++)r+=buf[i]*buf[i];sm.push([ctx.currentTime,Math.sqrt(r/512)])},8);
- const t0=ctx.currentTime+.8,cl=[0,1,2,3].map(i=>t0+i*.7);cl.forEach(calClick);msg.textContent='클릭 소리 4번을 재는 중입니다…(이어폰을 빼고 스피커로)';
- await sleep(Math.max(0,(cl[3]+.7-ctx.currentTime)*1000));clearInterval(iv);try{src.disconnect();st.getTracks().forEach(t=>t.stop())}catch(_){}singSetBusy(false);
- const ms=SingLab.estimateLatency(sm,cl);
+ let src,iv=0,cl=[];const sm=[];
+ try{const an=ctx.createAnalyser();an.fftSize=512;src=ctx.createMediaStreamSource(st);src.connect(an);const buf=new Float32Array(512);
+ iv=setInterval(()=>{an.getFloatTimeDomainData(buf);let r=0;for(let i=0;i<512;i++)r+=buf[i]*buf[i];sm.push([ctx.currentTime,Math.sqrt(r/512)])},8);
+ const t0=ctx.currentTime+.8;cl=[0,1,2,3].map(i=>t0+i*.7);cl.forEach(calClick);msg.textContent='클릭 소리 4번을 재는 중입니다…(이어폰을 빼고 스피커로)';
+ await sleep(Math.max(0,(cl[3]+.7-ctx.currentTime)*1000))}
+ catch(e){msg.textContent='지연 재기에 실패했습니다: '+e.message+'. 보정값은 그대로입니다.';cl=[]}
+ finally{clearInterval(iv);try{src&&src.disconnect()}catch(_){}st.getTracks().forEach(t=>t.stop());singSetBusy(false)}
+ if(!cl.length)return;const ms=SingLab.estimateLatency(sm,cl);
  if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
  else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다. 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`}}
 el('sCal').onclick=singCal;el('sCalZero').onclick=()=>{setLat(0);el('sMsg').textContent='지연 보정을 0 ms로 되돌렸습니다.'};
@@ -1120,7 +1127,7 @@ el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 const DRILLS=[['interval','음정'],['triad','3화음'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sight','시창 점수']];
 let STAT={};try{STAT=JSON.parse(localStorage.getItem('pr-stats'))||{}}catch(e){STAT={}}
 function spark(h){if(h.length<2)return '<span class="muted">—</span>';const W=72,H=20,p=h.map((v,i)=>`${(2+i*(W-4)/(h.length-1)).toFixed(1)},${(H-3-v*(H-6)).toFixed(1)}`).join(' ');return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${h.length}회 추이"><polyline points="${p}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${p.split(' ').pop().split(',')[0]}" cy="${p.split(' ').pop().split(',')[1]}" r="2.2" fill="var(--accent)"/></svg>`}
-function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r?r.n:0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows}
+function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows}
 function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}statRender()}
 let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};try{localStorage.removeItem('pr-stats')}catch(_){}statRender()};
 
@@ -1179,7 +1186,7 @@ el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;md.done=true;const n
 /* 컴퓨터 키 입력: 시창·청음 탭이 보이고 입력칸에 포커스가 없을 때만. 전역 단축키보다 먼저 가로챈다(캡처 단계) */
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||!md.ex.length||md.done||sing.busy||typing(e.target)||el('keysheet').open)return;
  const p=MD_KEYS[e.code];if(p==null&&e.key!=='Backspace')return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;if(p==null)mdUndo();else{mdAdd(p);const b=el('mdKeys').querySelector(`[data-p="${p}"]`);b.classList.add('on');setTimeout(()=>b.classList.remove('on'),120)}},true);
-window.onTabShown=t=>{if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
+window.onTabShown=t=>{if(t!=='sing'&&sing.abort)sing.abort();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
 loadSong('onedream');checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 fromHash(true);ready=true;
