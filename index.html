@@ -1710,9 +1710,10 @@ function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.st
  sing.liv=setInterval(()=>{const b=(ctx.currentTime-t)/spb;sing.head=b<0?null:b;if(b>tot+.3){clearInterval(sing.liv);sing.head=null}singDraw()},40)}
 async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length)singNew();if(!sing.ex.length)return;
  clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
- const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let tr;
- try{tr=await micTracker('sing',null,()=>{if(sing.abort)sing.abort()})}catch(e){singSetBusy(false);const n=e&&e.name;
+ const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let tr,cut=false;sing.abort=()=>{cut=true}; /* 마이크를 여는 동안 「그만」도 받는다 */
+ try{tr=await micTracker('sing',null,()=>{if(sing.abort)sing.abort()})}catch(e){sing.abort=null;singSetBusy(false);const n=e&&e.name;
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 마이크 없이도 「들어보기」와 청음은 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요. 「들어보기」와 청음은 마이크 없이 쓸 수 있습니다.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ sing.abort=null;if(cut){tr.stop();singSetBusy(false);msg.textContent='중단했습니다.';return}
  if(el('tab-sing').hidden||document.hidden){tr.stop();singSetBusy(false);msg.textContent='시창 탭을 벗어나 녹음을 시작하지 않았습니다.';return} // 권한 창이 떠 있는 동안 탭을 옮긴 경우 마이크를 바로 닫는다
  const spb=singSpb(),tot=sing.bars*4,t0=ctx.currentTime+.15,rec0=t0+4*spb,end=rec0+tot*spb+.12;
  try{for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0)}catch(e){tr.stop();singSetBusy(false);msg.textContent='녹음을 시작하지 못했습니다: '+e.message;return}
