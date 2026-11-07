@@ -36,31 +36,47 @@ class BasicPitch {
             pitchBends: note.pitchBends,
         }));
     }
+    /* 메모리: 모든 중간 텐서는 즉시 해제하고(tidy/dispose), 출력은 중첩 JS 배열 대신 Float32Array 조각 위의 행 뷰로 넘긴다(값은 float32 그대로라 결과 동일). */
     async evaluateSingleFrame(reshapedInput, batchNumber) {
         const model = await this.model;
-        const singleBatch = tf.slice(reshapedInput, batchNumber, 1);
-        const results = model.execute(singleBatch, [
-            OUTPUT_TO_TENSOR_NAME.frames,
-            OUTPUT_TO_TENSOR_NAME.onsets,
-            OUTPUT_TO_TENSOR_NAME.contours,
-        ]);
-        return [results[0], results[1], results[2]];
+        return tf.tidy(() => {
+            const singleBatch = tf.slice(reshapedInput, batchNumber, 1);
+            const results = model.execute(singleBatch, [
+                OUTPUT_TO_TENSOR_NAME.frames,
+                OUTPUT_TO_TENSOR_NAME.onsets,
+                OUTPUT_TO_TENSOR_NAME.contours,
+            ]);
+            return [results[0], results[1], results[2]];
+        });
     }
     async prepareData(singleChannelAudioData) {
-        const wavSamples = tf.concat1d([
-            tf.zeros([Math.floor(OVERLAP_LENGTH_FRAMES / 2)], 'float32'),
-            tf.tensor(singleChannelAudioData),
-        ]);
-        return [
-            tf.expandDims(tf.signal.frame(wavSamples, AUDIO_N_SAMPLES, HOP_SIZE, true, 0), -1),
-            singleChannelAudioData.length,
-        ];
+        return tf.tidy(() => {
+            const wavSamples = tf.concat1d([
+                tf.zeros([Math.floor(OVERLAP_LENGTH_FRAMES / 2)], 'float32'),
+                tf.tensor(singleChannelAudioData),
+            ]);
+            return [
+                tf.expandDims(tf.signal.frame(wavSamples, AUDIO_N_SAMPLES, HOP_SIZE, true, 0), -1),
+                singleChannelAudioData.length,
+            ];
+        });
     }
-    unwrapOutput(result) {
-        let rawOutput = result;
-        rawOutput = result.slice([0, N_OVERLAP_OVER_2, 0], [-1, result.shape[1] - 2 * N_OVERLAP_OVER_2, -1]);
-        const outputShape = rawOutput.shape;
-        return rawOutput.reshape([outputShape[0] * outputShape[1], outputShape[2]]);
+    unwrapOutput(result, framesToOutput) {
+        return tf.tidy(() => {
+            let rawOutput = result.slice([0, N_OVERLAP_OVER_2, 0], [-1, result.shape[1] - 2 * N_OVERLAP_OVER_2, -1]);
+            const outputShape = rawOutput.shape;
+            let flat = rawOutput.reshape([outputShape[0] * outputShape[1], outputShape[2]]);
+            if (framesToOutput != null && framesToOutput < flat.shape[0]) {
+                flat = flat.slice([0, 0], [framesToOutput, -1]);
+            }
+            return flat;
+        });
+    }
+    /* 텐서 [N, W] -> Float32Array 조각을 N 개의 행 뷰로 */
+    tensorToRows(t) {
+        const w = t.shape[1], n = t.shape[0], buf = t.dataSync().slice(), rows = new Array(n);
+        for (let r = 0; r < n; r++) rows[r] = buf.subarray(r * w, (r + 1) * w);
+        return rows;
     }
     async evaluateModel(resampledBuffer, onComplete, percentCallback) {
         let singleChannelAudioData;
@@ -79,28 +95,28 @@ class BasicPitch {
             singleChannelAudioData = resampledBuffer.getChannelData(0);
         }
         const [reshapedInput, audioOriginalLength] = await this.prepareData(singleChannelAudioData);
-        const nOutputFramesOriginal = Math.floor(audioOriginalLength * (ANNOTATIONS_FPS / AUDIO_SAMPLE_RATE));
-        let calculatedFrames = 0;
-        for (let i = 0; i < reshapedInput.shape[0]; ++i) {
-            percentCallback(i / reshapedInput.shape[0]);
-            const [resultingFrames, resultingOnsets, resultingContours] = await this.evaluateSingleFrame(reshapedInput, i);
-            let unwrappedResultingFrames = this.unwrapOutput(resultingFrames);
-            let unwrappedResultingOnsets = this.unwrapOutput(resultingOnsets);
-            let unwrappedResultingContours = this.unwrapOutput(resultingContours);
-            const calculatedFramesTmp = unwrappedResultingFrames.shape[0];
-            if (calculatedFrames >= nOutputFramesOriginal) {
-                continue;
+        try {
+            const nOutputFramesOriginal = Math.floor(audioOriginalLength * (ANNOTATIONS_FPS / AUDIO_SAMPLE_RATE));
+            let calculatedFrames = 0;
+            for (let i = 0; i < reshapedInput.shape[0]; ++i) {
+                percentCallback(i / reshapedInput.shape[0]);
+                const outs = await this.evaluateSingleFrame(reshapedInput, i);
+                try {
+                    const calculatedFramesTmp = outs[0].shape[1] - 2 * N_OVERLAP_OVER_2;
+                    if (calculatedFrames >= nOutputFramesOriginal) {
+                        continue;
+                    }
+                    const framesToOutput = calculatedFramesTmp + calculatedFrames >= nOutputFramesOriginal
+                        ? nOutputFramesOriginal - calculatedFrames : null;
+                    const un = outs.map(o => this.unwrapOutput(o, framesToOutput));
+                    try {
+                        calculatedFrames += calculatedFramesTmp;
+                        onComplete(this.tensorToRows(un[0]), this.tensorToRows(un[1]), this.tensorToRows(un[2]));
+                    } finally { un.forEach(t => t.dispose()); }
+                } finally { outs.forEach(t => t.dispose()); }
             }
-            if (calculatedFramesTmp + calculatedFrames >= nOutputFramesOriginal) {
-                const framesToOutput = nOutputFramesOriginal - calculatedFrames;
-                unwrappedResultingFrames = unwrappedResultingFrames.slice([0, 0], [framesToOutput, -1]);
-                unwrappedResultingOnsets = unwrappedResultingOnsets.slice([0, 0], [framesToOutput, -1]);
-                unwrappedResultingContours = unwrappedResultingContours.slice([0, 0], [framesToOutput, -1]);
-            }
-            calculatedFrames += calculatedFramesTmp;
-            onComplete(await unwrappedResultingFrames.array(), await unwrappedResultingOnsets.array(), await unwrappedResultingContours.array());
-        }
-        percentCallback(1.0);
+            percentCallback(1.0);
+        } finally { reshapedInput.dispose(); }
     }
 }
 
@@ -158,7 +174,7 @@ function globalMax(array) {
     return array.reduce((prev, row) => Math.max(prev, ...row), 0);
 }
 function min3dForAxis0(array) {
-    const minArray = array[0].map(v => v.slice());
+    const minArray = array[0].map(v => Array.from(v));
     for (let x = 1; x < array.length; ++x) {
         for (let y = 0; y < array[0].length; ++y) {
             for (let z = 0; z < array[0][0].length; ++z) {
@@ -186,7 +202,7 @@ function argRelMax(array, order = 1) {
     return result;
 }
 function max3dForAxis0(array) {
-    const maxArray = array[0].map(v => v.slice());
+    const maxArray = array[0].map(v => Array.from(v));
     for (let x = 1; x < array.length; ++x) {
         for (let y = 0; y < array[0].length; ++y) {
             for (let z = 0; z < array[0][0].length; ++z) {
@@ -219,27 +235,29 @@ function constrainFrequency(onsets, frames, maxFreq, minFreq) {
         }
     }
 }
+/* 메모리: 원본은 프레임 차분·최소·최대마다 전체 크기 행렬을 새로 만들었다(15000x88 이중 배열 열 개 남짓). 같은 식을 한 칸씩 계산해 결과 행렬 하나만 만든다(값 동일: 같은 배정밀도 연산). */
 function getInferredOnsets(onsets, frames, nDiff = 2) {
-    const diffs = Array.from(Array(nDiff).keys())
-        .map(n => n + 1)
-        .map(n => {
-        const framesAppended = Array(n)
-            .fill(Array(frames[0].length).fill(0))
-            .concat(frames);
-        const nPlus = framesAppended.slice(n);
-        const minusN = framesAppended.slice(0, -n);
-        if (nPlus.length !== minusN.length) {
-            throw new Error(`nPlus length !== minusN length: ${nPlus.length} !== ${minusN.length}`);
+    const nR = frames.length, nC = frames[0].length;
+    const diffMin = (r, c) => {
+        let m = Infinity;
+        for (let n = 1; n <= nDiff; n++) {
+            const prev = r - n >= 0 ? frames[r - n][c] : 0;
+            const d = frames[r][c] - prev;
+            if (d < m) m = d;
         }
-        return nPlus.map((row, r) => row.map((v, c) => v - minusN[r][c]));
-    });
-    let frameDiff = min3dForAxis0(diffs);
-    frameDiff = frameDiff.map(row => row.map(v => Math.max(v, 0)));
-    frameDiff = frameDiff.map((row, r) => (r < nDiff ? row.fill(0) : row));
+        return Math.max(m, 0);
+    };
+    const fd = (r, c) => (r < nDiff ? 0 : diffMin(r, c));
     const onsetMax = globalMax(onsets);
-    const frameDiffMax = globalMax(frameDiff);
-    frameDiff = frameDiff.map(row => row.map(v => (onsetMax * v) / frameDiffMax));
-    return max3dForAxis0([onsets, frameDiff]);
+    let frameDiffMax = 0;
+    for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) frameDiffMax = Math.max(frameDiffMax, fd(r, c));
+    const out = new Array(nR);
+    for (let r = 0; r < nR; r++) {
+        const row = new Array(nC);
+        for (let c = 0; c < nC; c++) row[c] = Math.max(onsets[r][c], (onsetMax * fd(r, c)) / frameDiffMax);
+        out[r] = row;
+    }
+    return out;
 }
 function outputToNotesPoly(frames, onsets, onsetThresh = 0.5, frameThresh = 0.3, minNoteLen = 5, inferOnsets = true, maxFreq = null, minFreq = null, melodiaTrick = true, energyTolerance = 11) {
     let inferredFrameThresh = frameThresh;
@@ -253,14 +271,14 @@ function outputToNotesPoly(frames, onsets, onsetThresh = 0.5, frameThresh = 0.3,
     if (inferOnsets) {
         inferredOnsets = getInferredOnsets(onsets, frames);
     }
-    const peakThresholdMatrix = inferredOnsets.map(o => o.map(() => 0));
+    const peakThresholdMatrix = inferredOnsets.map(o => Array.from(o, () => 0));
     argRelMax(inferredOnsets).forEach(([row, col]) => {
         peakThresholdMatrix[row][col] = inferredOnsets[row][col];
     });
     const [noteStarts, freqIdxs] = whereGreaterThanAxis1(peakThresholdMatrix, onsetThresh);
     noteStarts.reverse();
     freqIdxs.reverse();
-    const remainingEnergy = frames.map(frame => frame.slice());
+    const remainingEnergy = frames.map(frame => Array.from(frame));
     const noteEvents = noteStarts
         .map((noteStartIdx, idx) => {
         const freqIdx = freqIdxs[idx];
@@ -387,9 +405,7 @@ function addPitchBendsToNoteEvents(contours, notes, nBinsTolerance = 25) {
             Math.max(0, freqIdx - (N_FREQ_BINS_CONTOURS - nBinsTolerance - 1)));
         const pitchBendSubmatrix = contours
             .slice(note.startFrame, note.startFrame + note.durationFrames)
-            .map(d => d
-            .slice(freqStartIdx, freqEndIdx)
-            .map((v, col) => v * freqGuassianSubMatrix[col]));
+            .map(d => Array.from(d.subarray ? d.subarray(freqStartIdx, freqEndIdx) : d.slice(freqStartIdx, freqEndIdx), (v, col) => v * freqGuassianSubMatrix[col]));
         const pbShift = nBinsTolerance - Math.max(0, nBinsTolerance - freqIdx);
         const bends = argMaxAxis1(pitchBendSubmatrix).map(v => v - pbShift);
         return Object.assign(Object.assign({}, note), { pitchBends: bends });
