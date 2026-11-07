@@ -439,7 +439,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 .onb{border-bottom:1px solid var(--border);background:var(--accent-soft)}
 .onb-in{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);align-items:center;padding-block:var(--s3)}
 .onb-in h2{font-size:1rem}
-.onb-steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);flex:1}
+.onb-steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);flex:1}
 .onb-steps li{display:flex;gap:var(--s2);align-items:center}
 .onb-steps li>div{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);align-items:center}
 .onb .num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:.8rem;font-weight:700;flex:none}
@@ -461,7 +461,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 <section class="hero" id="hero" aria-label="소개"><div class="in">
   <span class="eyebrow">시안 · 브라우저 안에서 채보까지 실제 동작</span>
   <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
-  <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰세요.</p>
+  <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰고, 시창·청음으로 귀와 목소리도 연습하세요.</p>
   <details><summary>자세히 보기</summary>
     <p>곡을 올리면 베이스·드럼·건반을 새로 만든 반주 초안과 채보, 박자, 코드·키를 브라우저 안에서 계산합니다. 들어 있는 곡은 이 프로젝트에서 만든 것입니다. One Dream 후렴 4마디(실제 렌더 음원이 붙은 데모)와 원작 연습곡 1(16마디, 브라우저 합성). 파일은 서버로 가지 않습니다.</p>
     <p>모든 수치는 신호 기반 분석이며 청취로 검증한 결과가 아닙니다.</p>
@@ -470,8 +470,9 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 
 <section class="onb" id="onb" aria-labelledby="onbT" hidden><div class="in"><div class="onb-in"><h2 id="onbT">처음 오셨나요?</h2>
   <ol class="onb-steps"><li><span class="num">1</span><div><b>데모 듣기</b><button class="btn primary sm" type="button" id="onbPlay">▶ 데모 재생</button></div></li>
-  <li><span class="num">2</span><div><b>파트 끄기</b><button class="btn sm" type="button" id="onbMute">믹서에서 M 눌러 보기</button></div></li>
-  <li><span class="num">3</span><div><b>내 곡 올리기</b><a class="btn sm" href="#upload">올리기 탭 열기</a></div></li></ol>
+  <li><span class="num">2</span><div><b>파트 끄기</b><button class="btn sm" type="button" id="onbMute">M 눌러 보기</button></div></li>
+  <li><span class="num">3</span><div><b>내 곡 올리기</b><a class="btn sm" href="#upload">올리기 열기</a></div></li>
+  <li><span class="num">4</span><div><b>귀·목소리 연습</b><a class="btn sm" href="#sing">시창·청음 열기</a></div></li></ol>
   <button class="btn sm ghost" type="button" id="onbClose" aria-label="안내 닫기">닫기</button></div></div></section>
 
 <main id="work">
@@ -576,15 +577,6 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     </div>
     <div id="rtSum" aria-live="polite"></div>
   </div>
-  <div class="panel sp" data-sp="sight pitch" id="vrPanel">
-    <details id="vrDet"><summary><b>음역 찾기</b> · 내 음역으로 연습</summary>
-      <p class="note">편한 소리로 낮은 음과 높은 음을 각각 3초 동안 길게 내면 음역을 재서 시창·음정 부르기 문제를 그 안에서 냅니다. 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다.</p>
-      <div class="row" style="gap:.5rem"><button class="btn" type="button" id="vrLow">① 낮은 음 재기</button><button class="btn" type="button" id="vrHigh">② 높은 음 재기</button><button class="btn" type="button" id="vrStop" hidden>■ 그만</button></div>
-      <p class="note" id="vrMsg" role="status" aria-live="polite"></p>
-      <p class="score" id="vrRes" aria-live="polite"></p>
-      <div class="row" style="gap:.5rem"><button class="btn primary" type="button" id="vrApply" disabled>이 음역으로 연습</button><button class="btn sm ghost" type="button" id="vrClear" hidden>내 음역 지우기</button></div>
-    </details>
-  </div>
   <div class="panel sp" data-sp="sight" id="singPanel">
     <div class="head"><h2>시창 · 악보 보고 부르기</h2><p class="muted small">짧은 멜로디를 먼저 들어 보고, 카운트인 1마디 뒤에 부르면 음마다 판정합니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
@@ -592,15 +584,14 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
       <div class="opt"><span class="lb">음역</span><div class="seg" id="sRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button><button type="button" aria-pressed="false" data-lo="0" data-hi="0" data-my="1" hidden>내 음역</button></div></div>
       <div class="opt"><span class="lb">난이도</span><div class="seg" id="sLevel" role="group" aria-label="난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
       <div class="opt"><span class="lb">키</span><div class="seg" id="sKey" role="group" aria-label="키"><button type="button" aria-pressed="true" data-v="song" id="sKeySong">곡 키</button><button type="button" aria-pressed="false" data-v="C">C</button></div></div>
-      <div class="opt"><span class="lb">멜로디</span><div class="seg" id="sSrc" role="group" aria-label="멜로디 출처"><button type="button" aria-pressed="true" data-v="gen">생성 연습곡</button><button type="button" aria-pressed="false" data-v="song">현재 곡</button></div></div>
+      <div class="opt"><span class="lb">문제 출처</span><div class="seg" id="sSrc" role="group" aria-label="시창 문제 출처"><button type="button" aria-pressed="true" data-v="gen">생성 멜로디</button><button type="button" aria-pressed="false" data-v="song">이 곡에서</button></div></div>
       <div class="opt" id="sSongOpt" hidden><span class="lb">마디 범위 (최대 8)</span><span class="row" style="gap:.4rem"><input type="number" class="numin" id="sFrom" min="1" step="1" aria-label="시작 마디"> – <input type="number" class="numin" id="sTo" min="1" step="1" aria-label="끝 마디"><button class="btn sm" type="button" id="sFromLoop" title="연습 탭의 반복 구간(없으면 1–4마디)">반복 구간</button></span></div>
-      <div class="opt"><span class="lb">&nbsp;</span><button class="btn" type="button" id="sNew">새 문제</button></div>
-    </div>
+          </div>
     <p class="note" id="sSrcLab" hidden></p>
     <div class="row" style="gap:.6rem 1.2rem;align-items:flex-end;margin-top:.6rem"><div class="opt"><span class="lb">표시</span><div class="seg" id="sView" role="group" aria-label="목표 멜로디 표시 방식"><button type="button" aria-pressed="true" data-v="roll">피아노롤</button><button type="button" aria-pressed="false" data-v="staff">오선보</button></div></div><div class="opt" id="sStLabOpt" hidden><span class="lb">음 아래 글자</span><div class="seg" id="sStLab" role="group" aria-label="오선보 음 아래 글자"><button type="button" aria-pressed="true" data-v="0">없음</button><button type="button" aria-pressed="false" data-v="sol">계이름</button><button type="button" aria-pressed="false" data-v="name">음이름</button></div></div></div>
     <div class="sroll stbox" id="sStaffBox" hidden><div id="sStaff"></div></div>
     <div class="sroll" id="sRollBox" tabindex="0" role="region" aria-label="시창 음높이 그래프 (가로로 스크롤)"><canvas id="sRoll" width="800" height="280" role="img" aria-label="시창 목표 멜로디와 내 음높이. 판정 결과는 아래 글로 알려 줍니다" aria-describedby="sMsg sResult"></canvas></div>
-    <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button><button class="btn" type="button" id="sCal" title="스피커 클릭 4번을 마이크로 들어 왕복 지연을 잽니다">지연 맞추기</button><span class="muted small mono" id="sLat"></span><button class="btn sm ghost" type="button" id="sCalZero" hidden>0으로</button></div>
+    <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="sListen">▶ 들어보기</button><button class="btn primary" type="button" id="sRec">● 부르기</button><button class="btn" type="button" id="sStop" hidden>■ 그만</button><button class="btn" type="button" id="sNew">새 문제</button><button class="btn" type="button" id="sCal" title="스피커 클릭 4번을 마이크로 들어 왕복 지연을 잽니다">지연 맞추기</button><span class="muted small mono" id="sLat"></span><button class="btn sm ghost" type="button" id="sCalZero" hidden>0으로</button></div>
     <div class="legend" id="sLegend"><span style="--c:var(--keys)">목표 음</span><span class="ln" style="--c:var(--loop)">내 음높이</span><span class="bx" style="--c:var(--ok)">맞음</span><span class="bx" style="--c:var(--warn)">어긋남</span></div>
     <p class="note" id="sMsg" role="status"></p>
     <div id="sResult" aria-live="polite"></div>
@@ -624,6 +615,15 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div id="pmResult" aria-live="polite"></div>
     <details class="help"><summary>도움말 · 판정 기준과 마이크</summary><p>신호 기반 판정이며 사람 평가가 아닙니다. 처음 소리가 난 뒤 0.15초는 음을 찾아가는 구간이라 빼고, 이어지는 0.6초 동안 음높이(cent)의 중앙값이 목표에서 ±50 cent 안이면 「맞음」입니다. 한 옥타브 차이는 따로 알려 줍니다. 소리가 흔들리거나 짧으면 판정하지 않고 기록하지 않습니다. 기준음이 마이크에 섞이지 않도록 이어폰을 권장합니다. 마이크는 한 번 부를 때마다 열었다가 닫으며, 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다.</p></details>
   </div>
+  <div class="panel sp" data-sp="sight pitch" id="vrPanel">
+    <details id="vrDet"><summary><b>음역 찾기</b> · 내 음역으로 연습</summary>
+      <p class="note">편한 소리로 낮은 음과 높은 음을 각각 3초 동안 길게 내면 음역을 재서 시창·음정 부르기 문제를 그 안에서 냅니다. 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다.</p>
+      <div class="row" style="gap:.5rem"><button class="btn" type="button" id="vrLow">① 낮은 음 재기</button><button class="btn" type="button" id="vrHigh">② 높은 음 재기</button><button class="btn" type="button" id="vrStop" hidden>■ 그만</button></div>
+      <p class="note" id="vrMsg" role="status" aria-live="polite"></p>
+      <p class="score" id="vrRes" aria-live="polite"></p>
+      <div class="row" style="gap:.5rem"><button class="btn primary" type="button" id="vrApply" disabled>이 음역으로 연습</button><button class="btn sm ghost" type="button" id="vrClear" hidden>내 음역 지우기</button></div>
+    </details>
+  </div>
   <div class="panel sp" data-sp="quiz" id="earPanel">
     <div class="head"><h2>청음 퀴즈 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정·3화음·7화음 성질, 또는 키 안의 음계 도수를 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem">
@@ -631,7 +631,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
       <div class="opt" id="eDirOpt"><span class="lb">방향</span><div class="seg" id="eDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="true" data-v="asc">상행</button><button type="button" aria-pressed="false" data-v="desc">하행</button><button type="button" aria-pressed="false" data-v="har">동시</button><button type="button" aria-pressed="false" data-v="mix">섞기</button></div></div>
       <div class="opt"><span class="lb">난이도</span><div class="seg" id="eLevel" role="group" aria-label="청음 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
     </div>
-    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">다음 문제</button><label class="chk" title="기록에서 오답률이 높은 항목을 더 자주 냅니다"><input type="checkbox" id="eWeak"><span>약점 위주</span></label></div>
+    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">새 문제</button><label class="chk" title="기록에서 오답률이 높은 항목을 더 자주 냅니다"><input type="checkbox" id="eWeak"><span>약점 위주</span></label></div>
     <div class="choices" id="eChoices" role="group" aria-label="보기"></div>
     <p class="score" id="eFb" role="status"></p>
     <p class="note" id="eAcc"></p>
