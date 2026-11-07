@@ -1,5 +1,5 @@
 /* 오선보 렌더러 (의존성 없음, 약 8KB). window.Staff 로 노출, node 에서는 module.exports.
-   - layout(notes,{key,beatsPerBar,bars,clef}): [시작박,길이박,midi] 목록 → 마디별 글리프 기술자(순수 함수, DOM 없음). 높은음/낮은음자리표 자동, 조표(장조 12키), 임시표(조표 기준, 마디 안 유지), 쉼표 채움, 마디 넘는 음은 붙임줄, 한 박 안 8분·16분은 보 묶음
+   - layout(notes,{key,beatsPerBar,bars,clef}): [시작박,길이박,midi] 목록 → 마디별 글리프 기술자(순수 함수, DOM 없음). 높은음/낮은음자리표 자동(중앙값 53–59 는 한 옥타브 낮게 읽는 높은음자리표 treble8, 남성 음역 성악 관례), 조표(장조 12키), 임시표(조표 기준, 마디 안 유지), 쉼표 채움, 마디 넘는 음은 붙임줄, 한 박 안 8분·16분은 보 묶음
    - place(lay,{width}): 줄바꿈(시스템 나누기)과 x 좌표. svg(lay,{width,marks,labels}): SVG 문자열. render(el,lay,opts): el.innerHTML 에 넣거나 문자열 반환
    - 길이는 16분음표 단위로 반올림한다(0.25박). 4/4 기준이며 다른 박자는 숫자만 바꿔 그린다(정렬 규칙은 4/4 만 다룸) */
 (function(root){
@@ -17,7 +17,7 @@ const okAt=(u,p)=>u===16||u===12?p===0:u===8||u===6?p%8===0:u===4||u===3?p%4===0
 function split(pos,len,rest){const set=rest?[16,8,4,2,1]:[16,12,8,6,4,3,2,1],r=[];while(len>0){const u=set.find(x=>x<=len&&okAt(x,pos));r.push(u);pos+=u;len-=u}return r}
 function layout(notes,o={}){const bpb=o.beatsPerBar||4,U=bpb*4,ks=keySig(o.key||0),ord=notes.map((_,i)=>i).sort((x,y)=>notes[x][0]-notes[y][0]),q=[];let pe=0;
  for(const i of ord){const n=notes[i],a=Math.max(Math.round(n[0]*4),pe),b=Math.max(Math.round((n[0]+n[1])*4),a+1);q.push({i,a,b,m:n[2]});pe=b}
- const ps=notes.map(n=>n[2]).sort((a,b)=>a-b),med=ps.length?ps[ps.length>>1]:67,clef=o.clef||(med<60?'bass':'treble'),bstep=clef==='bass'?18:30,mid=bstep+4,nb=o.bars||Math.max(1,Math.ceil(pe/U)),bars=[];
+ const ps=notes.map(n=>n[2]).sort((a,b)=>a-b),med=ps.length?ps[ps.length>>1]:67,clef=o.clef||(med>=60?'treble':med>=53?'treble8':'bass'),bstep=clef==='bass'?18:clef==='treble8'?23:30,mid=bstep+4,nb=o.bars||Math.max(1,Math.ceil(pe/U)),bars=[];
  for(let b=0;b<nb;b++){const s0=b*U,s1=s0+U,items=[],sg=[];for(const e of q)if(e.b>s0&&e.a<s1)sg.push({e,a:Math.max(e.a,s0)-s0,z:Math.min(e.b,s1)-s0,tp:e.a<s0,tn:e.b>s1});
   const fill=(a,z)=>{let p=a;for(const u of split(a,z-a,true)){items.push({k:'r',pos:p,u,dur:DUR[u],dots:0});p+=u}};let cur=0;
   for(const s of sg){if(s.a>cur)fill(cur,s.a);const us=split(s.a,s.z-s.a,false);let p=s.a;const sp=spell(s.e.m,ks.pc);
@@ -46,12 +46,12 @@ const CSS='.st-l{stroke:var(--text-muted,#666);stroke-width:1;fill:none}.st-s{st
 const VG={ok:'✓',hi:'↑',lo:'↓',oct:'8',none:'–'};
 function svg(lay,o={}){const pl=place(lay,o),mk=o.marks||{},lb=o.labels,hasV=!!(mk.v&&mk.v.length),yv=mk.v||[],P=[],r1=x=>Math.round(x*10)/10;let Y=0,nh=0;
  const nbar=lay.bars.length;lay.bars.forEach(b=>b.items.forEach(it=>{if(it.k==='n'&&!it.tiePrev)nh++}));
- for(const s of pl.systems){const its=s.bars.flatMap(b=>b.items).filter(x=>x.k==='n');let te=18,be=14;
+ for(const s of pl.systems){const its=s.bars.flatMap(b=>b.items).filter(x=>x.k==='n');let te=18,be=lay.clef==='treble8'?26:14;
   for(const n of its){const off=n.step-lay.bstep;te=Math.max(te,n.dir==='u'?off*4+28-32:off*4+6-32);be=Math.max(be,n.dir==='d'?-off*4+28:-off*4+6)}
   const yb=Y+te+8+32,y=st=>yb-(st-lay.bstep)*4,top=yb-32,x1=s.x1;let g='';
   g+=`<path class="st-l" d="${[0,1,2,3,4].map(i=>`M${s.x0} ${yb-i*8}H${x1}`).join('')}M${s.x0} ${top}V${yb}"/>`;
-  const gy=lay.clef==='bass'?y(24):y(32);g+=lay.clef==='bass'?`<g transform="translate(${s.x0+16} ${gy}) scale(.8)"><path d="${BASS}" class="st-s" style="stroke-width:2.6"/><circle cx="-8" cy="0" r="3.6" class="st-f"/><circle cx="14" cy="-5" r="1.8" class="st-f"/><circle cx="14" cy="5" r="1.8" class="st-f"/></g>`:`<g transform="translate(${s.x0+15} ${gy}) scale(.8)"><path d="${TREB}" class="st-s" style="stroke-width:2.4"/></g>`;
-  lay.key.steps.forEach((st,k)=>{g+=`<g class="st-g" transform="translate(${s.x0+32+k*7} ${y(st-(lay.clef==='bass'?14:0))}) scale(.85)">${ACC[lay.key.kind]}</g>`});
+  const cv=lay.clef==='bass'?14:lay.clef==='treble8'?7:0,gy=lay.clef==='bass'?y(24):y(32-cv);g+=lay.clef==='bass'?`<g transform="translate(${s.x0+16} ${gy}) scale(.8)"><path d="${BASS}" class="st-s" style="stroke-width:2.6"/><circle cx="-8" cy="0" r="3.6" class="st-f"/><circle cx="14" cy="-5" r="1.8" class="st-f"/><circle cx="14" cy="5" r="1.8" class="st-f"/></g>`:`<g transform="translate(${s.x0+15} ${gy}) scale(.8)"><path d="${TREB}" class="st-s" style="stroke-width:2.4"/></g>${lay.clef==='treble8'?`<text class="st-n" x="${s.x0+12}" y="${yb+22}" style="font-size:10px">8</text>`:''}`;
+  lay.key.steps.forEach((st,k)=>{g+=`<g class="st-g" transform="translate(${s.x0+32+k*7} ${y(st-cv)}) scale(.85)">${ACC[lay.key.kind]}</g>`});
   if(s.first){const tx=s.x0+32+lay.key.n*7+9;g+=`<text class="st-n" x="${tx}" y="${yb-20}">${lay.bpb}</text><text class="st-n" x="${tx}" y="${yb-4}">4</text>`}
   const beams={};
   for(const b of s.bars){for(const it of b.items){const hx=it.x;
