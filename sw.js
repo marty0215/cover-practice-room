@@ -1,6 +1,6 @@
 /* 커버 연습실 서비스 워커: 코드(index.html·sing.js·manifest 등 같은 출처 비미디어)는 네트워크 우선(HTTP 캐시 우회, 실패하면 캐시), 큰 정적 자원(audio/·vendor/·icons/·samples/)은 캐시 우선, 외부 CDN·글꼴은 stale-while-revalidate.
    코드가 네트워크 우선이라 sing.js 를 고쳐도 낡은 파일이 남지 않는다. 캐시 우선 자원(audio·vendor·icons·samples)을 바꿀 때만 V 를 올리면 옛 캐시는 정리된다 */
-const V='pr-v4',SHELL=['./','index.html','help.html','sing.js','vendor/basicpitch.js','vendor/model/model.json','vendor/model/weights.json','audio/onedream_s59.mp3','samples/index.json','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/apple-touch-icon.png'];
+const V='pr-v4',SHELL=['./','index.html','help.html','sing.js','vocal.js','vendor/basicpitch.js','vendor/model/model.json','vendor/model/weights.json','audio/onedream_s59.mp3','samples/index.json','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/apple-touch-icon.png'];
 const CDN=['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js'];
 const EXT=u=>u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'||u.hostname==='cdn.jsdelivr.net';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(V);await Promise.all(SHELL.map(u=>fetch(new Request(u,{cache:'reload'})).then(r=>{if(!r.ok)throw new Error(u);return c.put(u,r)})));

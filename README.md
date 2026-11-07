@@ -54,6 +54,7 @@
 - `index.html`: 화면과 앱 로직 전체.
 - `sw.js`, `manifest.webmanifest`: 오프라인 사용·설치(코드는 네트워크 우선, 음원·모델·아이콘·샘플은 캐시 우선. 캐시 우선 자원을 바꾸면 `sw.js`의 `V`를 올립니다).
 - `help.html`: 사용 설명서(독립 페이지). `404.html`, `robots.txt`, `sitemap.xml`, `icons/og-image.png`(공유 미리보기 1200×630).
+- `vocal.js`: 원곡 보컬 멜로디(추정) — 가운데 채널 하모닉 살리언스 + 채보 음 후보를 합친 비터비 추적. 업로드 때 한 번 계산해 `song.parts.vocal`(기본 꺼짐)로 둔다. 측정은 `bench_20261107/README_ko.md` 보컬 절.
 - `sing.js`: 시창·청음 코어(음높이 추정, 멜로디 생성, 판정, 지연 추정, 청음 문제).
   적응형 청음(오늘의 10분 연습): 항목별 세부 통계 `pr-stats2`(옛 `pr-stats`에서 이관), 약점 계산(`weakness`), 약점 가중 출제, 틀린 문제 2–4문제 뒤 재출제, 혼동 쌍 기반 설명.
 - `vendor/`: Basic Pitch 1.0.1 (Apache-2.0)와 모델. TensorFlow.js 3.21은 CDN에서 불러옵니다.
