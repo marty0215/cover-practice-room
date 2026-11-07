@@ -49,7 +49,7 @@ function yin(buf,sr,fmin=70,fmax=1100,thr=.12){const n=buf.length,maxL=Math.min(
 /* 유성 판정(순수). yin 은 c[tau]<0.12 일 때만 값을 내므로 conf=1−c[tau] 는 항상 0.88 초과라 conf 문턱(예전 minConf .5·.6)은 아무것도 거르지 않았다.
    그래서 유성 여부는 "연속성"으로 정한다: 값이 있는 프레임이 이웃 유성 프레임과 ±cent(100) 안으로 이어진 묶음이 minRun(3)프레임 이상일 때만 유성.
    숨소리·배경 소리의 홀로 튀는 프레임과 옥타브 튐 프레임은 묶음이 짧아 빠진다. minConf 는 YIN 이 아닌 다른 신뢰도 출처(합성 곡선 등)용 안전 문턱으로만 남긴다(YIN 곡선에는 영향 없음). 반환: 프레임별 boolean 배열 */
-function voicedMask(track,{cent=100,minRun=3,minConf=.5}={}){const T=track||[],n=T.length,m=new Array(n).fill(false),vo=f=>!!f&&f[1]!=null&&f[2]>=minConf;let i=0;
+function voicedMask(track,{cent=100,minRun=3,minConf=.5}={}){const T=track||[],n=T.length;minRun=Math.ceil(minRun*frameScale(T)-1e-9);const m=new Array(n).fill(false),vo=f=>!!f&&f[1]!=null&&f[2]>=minConf;let i=0;
  while(i<n){if(!vo(T[i])){i++;continue}let j=i;while(j+1<n&&vo(T[j+1])&&Math.abs(T[j+1][1]-T[j][1])*100<=cent)j++;if(j-i+1>=minRun)for(let k=i;k<=j;k++)m[k]=true;i=j+1}
  return m}
 /* 옥타브 점프 억제(스트리밍). 직전 유성 프레임 n(5)개 중앙값에서 ±1200±band(80) cent 떨어진 프레임은 의심: 이웃과 ±1 반음 안으로 persist(4)프레임 이상 이어질 때만 인정한다.
@@ -75,15 +75,42 @@ const lowWin=sr=>{let w=LOW.win;while(w<.085*(sr||48000)&&w<32768)w*=2;return w}
 /* 73 Hz(D2, MIDI 38) 미만 음이 반복 잡히거나, 잰 가장 낮은 안정 음이 그 바닥(≤D2)이면 낮은 음 모드를 권한다(순수) */
 const LOW_FLOOR=38;
 function lowModeAdvice(track,lowMidi,{minFrames=5}={}){let n=0;for(const f of track||[])if(f&&f[1]!=null&&f[1]<LOW_FLOOR-.5)n++;return n>=minFrames||(lowMidi!=null&&lowMidi<=LOW_FLOOR)}
+/* ---- 균일 프레임(AudioWorklet) 보조: 순수 함수 ----
+   hopFor(sr): 약 11 ms 를 128 샘플(렌더 양자) 배수로 맞춘 hop(48 kHz → 512 = 10.7 ms).
+   frameCentre(end,win,sr): 창 끝 표본 번호 → 창 중심 시각(초, 오디오 시계). 예전 경로는 폴링 시각(≈창 끝)을 썼다.
+   workletAllowed(env): AudioWorklet 가능 + iOS 17 미만(WebKit 251091: getUserMedia 직후 worklet 왜곡 보고)·판독 불가 iOS 는 예전 경로. env={hasWorklet,ua,platform,touch,force} */
+const hopFor=sr=>Math.max(128,128*Math.round(.011*(sr||48000)/128));
+const frameCentre=(end,win,sr)=>(end-win/2)/sr;
+function iosVersion(ua,platform,touch){ua=String(ua||'');const ios=/iPhone|iPad|iPod/.test(ua)||(platform==='MacIntel'&&touch>1);if(!ios)return null;const m=/OS (\d+)[_.](\d+)/.exec(ua)||/Version\/(\d+)\.(\d+)/.exec(ua);return m?+m[1]+ +m[2]/100:0}
+function workletAllowed(e){e=e||{};if(e.force==='analyser')return {ok:false,why:'forced'};if(!e.hasWorklet)return {ok:false,why:'no-worklet'};const v=iosVersion(e.ua,e.platform,e.touch);if(v!==null&&v<17)return {ok:false,why:'ios<17'};return {ok:true,why:v===null?'ok':'ios17+'}}
+/* 기록 간격에 맞춰 프레임 수 기준 값을 늘리는 배율: 예전 20 ms 간격=1, 10.7 ms 간격≈1.9. 간격이 16 ms 이상이면 1 */
+function frameScale(track){const T=track||[],d=[];for(let i=1;i<T.length&&d.length<40;i++){const x=T[i][0]-T[i-1][0];if(x>0)d.push(x)}if(d.length<3)return 1;d.sort((a,b)=>a-b);const m=d[d.length>>1];return m<.016?Math.round(.02/m*100)/100:1}
+const _wl=new WeakMap();
+function loadWorklet(ctx,url){if(!_wl.has(ctx))_wl.set(ctx,ctx.audioWorklet.addModule(url).catch(e=>{_wl.delete(ctx);throw e}));return _wl.get(ctx)}
+const envNow=()=>{const n=typeof navigator!=='undefined'?navigator:{};let force=null;try{force=localStorage.getItem('pr-pitchpath')}catch(_){}return {ua:n.userAgent,platform:n.platform,touch:n.maxTouchPoints,force}};
 /* 마이크 → 음높이 기록. ctx 는 호출 쪽 AudioContext. stop() 은 트랙과 노드를 정리한다.
    opts.analyser: 공용 마이크가 만든 AnalyserNode 를 그대로 읽는다(스트림·노드는 호출 쪽 소유라 stop() 은 읽기만 멈춘다).
-   opts.stream: 이미 열린 MediaStream 에서 노드만 새로 만든다(트랙은 끄지 않는다). 둘 다 없으면 예전처럼 직접 연다. */
+   opts.stream: 이미 열린 MediaStream 에서 노드만 새로 만든다(트랙은 끄지 않는다). 둘 다 없으면 예전처럼 직접 연다.
+   opts.workletUrl + opts.source(공용 MediaStreamSource): AudioWorklet 경로. 불가·실패·1초 무응답이면 예전 AnalyserNode 20 ms 폴링으로 돌아간다.
+   반환 info={path:'worklet'|'analyser',hopMs,text}; opts.onInfo(info) 로 경로가 정해질 때 알린다. */
 async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,an=opts.analyser||null,own=false;
  if(!an){if(opts.stream)stream=opts.stream;else{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});own=true}
   try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=opts.low?lowWin(ctx.sampleRate):2048;src.connect(an)}catch(e){if(own)stream.getTracks().forEach(t=>t.stop());throw e}}
- const buf=new Float32Array(an.fftSize),track=[],guard=opts.octave===false?null:octaveGuard(),low=!!opts.low;let on=true; /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임 지속 시 인정) */
- const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=low?yin(buf,ctx.sampleRate,LOW.fmin):yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)},20);
- return {track,stop(){on=false;clearInterval(iv);if(src)try{src.disconnect()}catch(_){}if(own)stream.getTracks().forEach(t=>t.stop())}}}
+ const sr=ctx.sampleRate,low=!!opts.low,win=an.fftSize,track=[],info={path:'analyser',hopMs:20,text:'분석: 기본(20 ms)'};let on=true,iv=0,node=null,zero=null,wd=0;
+ const mkGuard=()=>{if(opts.octave===false)return null;const k=.02/(info.hopMs/1e3);return k>1.2?octaveGuard({n:Math.round(5*k),persist:Math.round(4*k),minHist:Math.round(3*k)}):octaveGuard()};
+ let guard=mkGuard(); /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임=80 ms 지속 시 인정; 균일 프레임 경로는 같은 시간으로 환산) */
+ const emit=fr=>{if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)};
+ const setInfo=(p,hop)=>{info.path=p;info.hopMs=hop;info.text=p==='worklet'?`분석: 오디오 워클릿 ${hop.toFixed(1)} ms 간격`:'분석: 기본(20 ms)';guard=mkGuard();if(opts.onInfo)try{opts.onInfo(info)}catch(_){}};
+ const poll=()=>{setInfo('analyser',20);const buf=new Float32Array(an.fftSize);iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=low?yin(buf,sr,LOW.fmin):yin(buf,sr);emit([ctx.currentTime,r?r.midi:null,r?r.conf:0])},20)};
+ const killNode=()=>{clearTimeout(wd);if(node){try{node.port.postMessage('stop')}catch(_){}try{node.disconnect()}catch(_){}try{opts.source&&opts.source.disconnect(node)}catch(_){}node=null}if(zero){try{zero.disconnect()}catch(_){}zero=null}};
+ let wl=false;if(opts.workletUrl&&opts.source&&ctx.audioWorklet&&typeof AudioWorkletNode!=='undefined'){const env=envNow();wl=workletAllowed({hasWorklet:true,...env}).ok}
+ if(wl){try{await loadWorklet(ctx,opts.workletUrl);if(!on)throw new Error('stopped');const hop=hopFor(sr);
+   node=new AudioWorkletNode(ctx,'pitch-frames',{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:'explicit',outputChannelCount:[1],processorOptions:{win,hop}});
+   let got=0;node.port.onmessage=e=>{if(!on)return;const d=e.data;if(!d||!d.buf)return;if(!got++)clearTimeout(wd);const r=low?yin(d.buf,sr,LOW.fmin):yin(d.buf,sr);emit([frameCentre(d.end,d.buf.length,sr),r?r.midi:null,r?r.conf:0])};
+   zero=ctx.createGain();zero.gain.value=0;node.connect(zero);zero.connect(ctx.destination);opts.source.connect(node);setInfo('worklet',hop/sr*1e3);
+   wd=setTimeout(()=>{if(on&&!got){killNode();poll()}},1000)}catch(e){killNode();wl=false}}
+ if(!wl)poll();
+ return {track,info,stop(){on=false;clearInterval(iv);killNode();if(src)try{src.disconnect()}catch(_){}if(own)stream.getTracks().forEach(t=>t.stop())}}}
 
 function rng(seed){let s=seed>>>0||1;return ()=>(s=(s*1664525+1013904223)>>>0)/4294967296}
 /* 키(0–11)·장단조·마디 수·음역[lo,hi] → 으뜸음에서 시작해 으뜸음으로 끝나는 멜로디. 도약은 3도 이하 위주(1단계는 3도까지), 2단계는 가끔 4·5도.
@@ -610,7 +637,7 @@ function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null,k
 function pmJudge(track,{target,t0=0,tol=TOL_DEFAULT,minConf=.5,skip=.15,win=.6,run=3,spread=160}={}){const tr=track.filter(f=>f[0]>=t0),mk=voicedMask(tr,{minRun:run,minConf}),vs=new Set(tr.filter((f,i)=>mk[i])),vo=f=>vs.has(f),on=mk.indexOf(true);
  const base={target,tol,onset:null,frames:0,voiced:0,medCents:null,devCents:null,spread:null,octave:false,ok:false,tier:null};if(on<0)return {...base,verdict:'소리 없음'};
  const a=tr[on][0]+skip,b=a+win,fr=tr.filter(f=>f[0]>=a&&f[0]<=b),v=fr.filter(vo),r={...base,onset:tr[on][0]-t0,frames:fr.length,voiced:v.length};
- if(v.length<8||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
+ if(v.length<Math.ceil(8*frameScale(tr))||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
  const c=v.map(f=>(f[1]-target)*100).sort((x,y)=>x-y),med=c[c.length>>1],sp=c[Math.floor(.9*(c.length-1))]-c[Math.floor(.1*(c.length-1))];
  if(sp>spread)return {...r,medCents:med,spread:sp,verdict:'불안정'};
  const oct=Math.abs(Math.abs(med)-1200)<tol*2,dev=oct?med-Math.sign(med)*1200:med,ok=!oct&&Math.abs(med)<=tol;
@@ -622,7 +649,7 @@ function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.leak||res.verdi
 /* ---------- 음역 찾기(순수 함수) ----------
    rangeFromTake: 한 번 부른 기록 [초,midi,conf] 에서 안정된 유성 프레임만 모아 p10(낮은 음) 또는 p90(높은 음)을 낸다.
    안정 = voicedMask 유성(이웃 유성 프레임과 ±100 cent 로 이어진 3프레임 이상 묶음, 잡음·옥타브 튐 제외)이고 MIDI 28–96. minConf 는 YIN 곡선에선 효력 없는 안전 문턱. 그 뒤 중앙값에서 ±maxDev 반음 넘는 프레임도 뺀다. 안정 프레임이 minFrames(20 ms 간격 기준 0.5초) 미만이면 ok:false. */
-function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[],mk=voicedMask(T,{minConf});let st=[];
+function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[];minFrames=Math.ceil(minFrames*frameScale(T)-1e-9);const mk=voicedMask(T,{minConf});let st=[];
  for(let i=0;i<T.length;i++){if(mk[i]&&T[i][1]>=28&&T[i][1]<=96)st.push(T[i][1])}
  if(st.length>=minFrames){const o=st.slice().sort((x,y)=>x-y),med=o[o.length>>1];st=st.filter(m=>Math.abs(m-med)<=maxDev)}
  if(st.length<minFrames)return {ok:false,n:st.length,reason:'소리가 짧거나 불안정했습니다'};
@@ -704,5 +731,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
