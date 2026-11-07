@@ -439,7 +439,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
   <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰세요.</p>
   <details><summary>자세히 보기</summary>
-    <p>곡을 올리면 베이스·드럼·건반을 새로 만든 반주 초안과 채보, 박자, 코드·키를 브라우저 안에서 계산합니다. 데모 곡은 이 프로젝트에서 실제로 만든 반주(One Dream 후렴 4마디)입니다. 파일은 서버로 가지 않습니다.</p>
+    <p>곡을 올리면 베이스·드럼·건반을 새로 만든 반주 초안과 채보, 박자, 코드·키를 브라우저 안에서 계산합니다. 들어 있는 곡은 이 프로젝트에서 만든 것입니다. One Dream 후렴 4마디(실제 렌더 음원이 붙은 데모)와 원작 연습곡 1(16마디, 브라우저 합성). 파일은 서버로 가지 않습니다.</p>
     <p>모든 수치는 신호 기반 분석이며 청취로 검증한 결과가 아닙니다.</p>
   </details>
 </div></section>
@@ -626,7 +626,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
       <summary class="sh">도움말 · 이 브라우저에서 되는 것 / 서버가 필요한 것</summary>
       <div><span class="k">지금</span><span><b>채보</b> Basic Pitch 모델이 전체 믹스의 음을 받아 적습니다(보컬 포함, 악기 분리 없음).</span></div>
       <div><span class="k">지금</span><span><b>박자</b> 에너지 변화의 주기성으로 BPM과 첫 박을 추정합니다. 틀리면 결과 카드에서 고칠 수 있습니다.</span></div>
-      <div><span class="k">지금</span><span><b>코드·키</b> 마디별 음 분포로 메이저·마이너 3화음과 키를 추정합니다.</span></div>
+      <div><span class="k">지금</span><span><b>코드·키</b> 마디별 음 분포로 코드와 키를 추정합니다. 메이저·마이너가 기본이고, 근거가 충분할 때만 7·maj7·m7·sus·dim·슬래시 베이스를 붙이며 마디 안에서 코드가 바뀌면 반마디로 나눕니다. 틀릴 수 있어 가이드 탭에서 고칠 수 있습니다.</span></div>
       <div><span class="k">지금</span><span><b>반주 초안</b> 코드에서 베이스·건반·드럼을 생성해 브라우저 합성으로 재생합니다. 기타는 원곡 구성을 모르는 상태라 넣지 않습니다.</span></div>
       <div><span class="k">서버</span><span><b>분리</b>(Demucs) → 파트별 정밀 채보 → 원곡 악기 구성 반영 편곡 → 실제 음원 렌더(WAV·스템·MIDI). 정식 버전에서 제공합니다.</span></div>
       <p class="muted small">모든 수치는 신호 분석 결과이며 청취 검증이 아닙니다. 보컬 멜로디도 채보에 섞여 들어오므로 코드 추정이 흔들리는 마디가 있습니다.</p>
@@ -649,7 +649,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="msg" id="waitMsg" role="status"></div></div>
 </div></section>
 
-<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다.음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다. <a href="help.html">사용 설명서</a> · <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
+<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 원작 연습곡 1은 브라우저 합성 반주입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다. 음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다. <a href="help.html">사용 설명서</a> · <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
 
 <div class="tp" id="transport" role="region" aria-label="재생 컨트롤"><div class="tp-in">
   <div class="tp-r1">
