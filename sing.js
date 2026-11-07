@@ -38,13 +38,28 @@ function romanOf(c,key=0){const r0=RM[pcm(c.root-key)],mn=isMinQ(c.q);let r=Arra
 const BF=['1','♭2','2','♭3','3','4','♯4','5','♯5','6','♭7','7']; /* 먼 조에서 겹임시표 도수가 나올 때만 쓰는 대체(선율 음 철자와 같음) */
 const noteNmK=(m,key=0)=>pcName(m,key)+(Math.floor(m/12)-1);
 
+/* YIN. 차분 함수를 lag 순서로 한 칸씩 계산하면서 문턱 아래 골을 찾으면 골 바닥+다음 lag 까지만 계산하고 멈춘다(조기 종료).
+   결과는 전 lag 를 계산하던 예전 구현과 비트 단위로 같다(d·c 를 Float32 로 저장하는 것까지 동일). */
+const _yb={d:null,c:null};
 function yin(buf,sr,fmin=70,fmax=1100,thr=.12){const n=buf.length,maxL=Math.min(Math.floor(sr/fmin),n>>1),minL=Math.max(2,Math.floor(sr/fmax));
  let rms=0;for(let i=0;i<n;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/n);if(rms<.008)return null;
- const W=n-maxL,d=new Float32Array(maxL+1);for(let L=1;L<=maxL;L++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+L];s+=x*x}d[L]=s}
- let run=0,tau=-1;const c=new Float32Array(maxL+1);c[0]=1;for(let L=1;L<=maxL;L++){run+=d[L];c[L]=run?d[L]*L/run:1}
- for(let L=minL;L<=maxL;L++){if(c[L]<thr){while(L+1<=maxL&&c[L+1]<c[L])L++;tau=L;break}}
- if(tau<0)return null;const a=c[tau-1]??c[tau],b=c[tau],e=c[tau+1]??c[tau],den=a-2*b+e;const t=den?tau+.5*(a-e)/den:tau;
+ if(!_yb.d||_yb.d.length<maxL+2){_yb.d=new Float32Array(maxL+2);_yb.c=new Float32Array(maxL+2)}
+ const d=_yb.d,c=_yb.c,W=n-maxL;c[0]=1;let run=0,tau=-1,hi=0,L=1;
+ const cl=L=>{let s=0,i=0;const B=buf;for(;i<W-3;i+=4){const x0=B[i]-B[i+L],x1=B[i+1]-B[i+L+1],x2=B[i+2]-B[i+L+2],x3=B[i+3]-B[i+L+3];s+=x0*x0;s+=x1*x1;s+=x2*x2;s+=x3*x3}for(;i<W;i++){const x=B[i]-B[i+L];s+=x*x}d[L]=s;run+=d[L];c[L]=run?d[L]*L/run:1;hi=L};
+ for(;L<=maxL;L++){cl(L);if(L>=minL&&c[L]<thr){let T=L;while(T+1<=maxL){cl(T+1);if(c[T+1]<c[T])T++;else break}tau=T;break}}
+ if(tau<0)return null;const a=c[tau-1]??c[tau],b=c[tau],e=tau+1<=hi?c[tau+1]:c[tau],den=a-2*b+e;const t=den?tau+.5*(a-e)/den:tau;
  const f=sr/t;return {f,midi:69+12*Math.log2(f/440),conf:1-b,rms}}
+
+/* 부하 조절(순수). 분석 한 번의 소요 시간 EMA 를 기본 hop 에 견준 부하 u=ema/hop 로 건너뛰기 배수 k(1·2·3)를 정한다.
+   u>0.35 → 2, u>0.70 → 3. 되돌아올 때는 히스테리시스(k=2→1: u<0.25, k=3→2: u<0.55). 표본 8개 전에는 바꾸지 않는다.
+   take() 는 도착한 프레임을 분석할지 알린다(마지막 분석 뒤 k 프레임이 지났을 때). 타임스탬프는 분석한 프레임의 것을 그대로 쓰므로 정확하다. */
+const LOAD={budget:.35,budget3:.70,down2:.25,down3:.55,alpha:.1,minN:8};
+function loadCtl(hopMs,o){o={...LOAD,...(o||{})};let ema=null,n=0,k=1,since=1e9;
+ const upd=()=>{const u=ema/hopMs;if(k<2&&u>o.budget)k=2;if(k<3&&u>o.budget3)k=3;if(k===3&&u<o.down3)k=2;if(k===2&&u<o.down2)k=1};
+ return {get k(){return k},get ema(){return ema},get load(){return ema==null?0:ema/hopMs},get hopMs(){return hopMs},
+  take(){if(++since>=k){since=0;return true}return false},
+  record(ms){if(!(ms>=0))return k;ema=ema==null?ms:ema+o.alpha*(ms-ema);if(++n>=o.minN)upd();return k}}}
+
 
 /* 유성 판정(순수). yin 은 c[tau]<0.12 일 때만 값을 내므로 conf=1−c[tau] 는 항상 0.88 초과라 conf 문턱(예전 minConf .5·.6)은 아무것도 거르지 않았다.
    그래서 유성 여부는 "연속성"으로 정한다: 값이 있는 프레임이 이웃 유성 프레임과 ±cent(100) 안으로 이어진 묶음이 minRun(3)프레임 이상일 때만 유성.
@@ -85,6 +100,7 @@ function iosVersion(ua,platform,touch){ua=String(ua||'');const ios=/iPhone|iPad|
 function workletAllowed(e){e=e||{};if(e.force==='analyser')return {ok:false,why:'forced'};if(!e.hasWorklet)return {ok:false,why:'no-worklet'};const v=iosVersion(e.ua,e.platform,e.touch);if(v!==null&&v<17)return {ok:false,why:'ios<17'};return {ok:true,why:v===null?'ok':'ios17+'}}
 /* 기록 간격에 맞춰 프레임 수 기준 값을 늘리는 배율: 예전 20 ms 간격=1, 10.7 ms 간격≈1.9. 간격이 16 ms 이상이면 1 */
 function frameScale(track){const T=track||[],d=[];for(let i=1;i<T.length&&d.length<40;i++){const x=T[i][0]-T[i-1][0];if(x>0)d.push(x)}if(d.length<3)return 1;d.sort((a,b)=>a-b);const m=d[d.length>>1];return m<.016?Math.round(.02/m*100)/100:1}
+const _now=()=>typeof performance!=='undefined'?performance.now():Date.now();
 const _wl=new WeakMap();
 function loadWorklet(ctx,url){if(!_wl.has(ctx))_wl.set(ctx,ctx.audioWorklet.addModule(url).catch(e=>{_wl.delete(ctx);throw e}));return _wl.get(ctx)}
 const envNow=()=>{const n=typeof navigator!=='undefined'?navigator:{};let force=null;try{force=localStorage.getItem('pr-pitchpath')}catch(_){}return {ua:n.userAgent,platform:n.platform,touch:n.maxTouchPoints,force}};
@@ -100,13 +116,13 @@ async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,
  const mkGuard=()=>{if(opts.octave===false)return null;const k=.02/(info.hopMs/1e3);return k>1.2?octaveGuard({n:Math.round(5*k),persist:Math.round(4*k),minHist:Math.round(3*k)}):octaveGuard()};
  let guard=mkGuard(); /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임=80 ms 지속 시 인정; 균일 프레임 경로는 같은 시간으로 환산) */
  const emit=fr=>{if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)};
- const setInfo=(p,hop)=>{info.path=p;info.hopMs=hop;info.text=p==='worklet'?`분석: 오디오 워클릿 ${hop.toFixed(1)} ms 간격`:'분석: 기본(20 ms)';guard=mkGuard();if(opts.onInfo)try{opts.onInfo(info)}catch(_){}};
+ const setInfo=(p,hop)=>{info.path=p;info.hopMs=hop;info.text=p==='worklet'?`분석: 오디오 워클릿 ${hop.toFixed(1)} ms 간격${ctl&&ctl.k>1?'(부하 조절)':''}`:'분석: 기본(20 ms)';guard=mkGuard();if(opts.onInfo)try{opts.onInfo(info)}catch(_){}};
  const poll=()=>{setInfo('analyser',20);const buf=new Float32Array(an.fftSize),hw=win/2/sr;iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=low?yin(buf,sr,LOW.fmin):yin(buf,sr);emit([ctx.currentTime-hw,r?r.midi:null,r?r.conf:0])},20)/* 창 중심 시각(워클릿 frameCentre 와 같은 기준) */};
  const killNode=()=>{clearTimeout(wd);if(node){try{node.port.postMessage('stop')}catch(_){}try{node.disconnect()}catch(_){}try{opts.source&&opts.source.disconnect(node)}catch(_){}node=null}if(zero){try{zero.disconnect()}catch(_){}zero=null}};
  let wl=false;if(opts.workletUrl&&opts.source&&ctx.audioWorklet&&typeof AudioWorkletNode!=='undefined'){const env=envNow();wl=workletAllowed({hasWorklet:true,...env}).ok}
- if(wl){try{await loadWorklet(ctx,opts.workletUrl);if(!on)throw new Error('stopped');const hop=hopFor(sr);
+ if(wl){try{await loadWorklet(ctx,opts.workletUrl);if(!on)throw new Error('stopped');const hop=hopFor(sr);wlHop=hop/sr*1e3;ctl=loadCtl(wlHop);
    node=new AudioWorkletNode(ctx,'pitch-frames',{numberOfInputs:1,numberOfOutputs:1,channelCount:1,channelCountMode:'explicit',outputChannelCount:[1],processorOptions:{win,hop}});
-   let got=0;node.port.onmessage=e=>{if(!on)return;const d=e.data;if(!d||!d.buf)return;if(!got++)clearTimeout(wd);const r=low?yin(d.buf,sr,LOW.fmin):yin(d.buf,sr);emit([frameCentre(d.end,d.buf.length,sr),r?r.midi:null,r?r.conf:0])};
+   let got=0;node.port.onmessage=e=>{if(!on)return;const d=e.data;if(!d||!d.buf)return;if(!got++)clearTimeout(wd);if(!ctl.take())return;const t0=_now(),r=low?yin(d.buf,sr,LOW.fmin):yin(d.buf,sr);const k0=ctl.k;ctl.record(_now()-t0);if(ctl.k!==k0)setInfo('worklet',wlHop*ctl.k);emit([frameCentre(d.end,d.buf.length,sr),r?r.midi:null,r?r.conf:0])};
    zero=ctx.createGain();zero.gain.value=0;node.connect(zero);zero.connect(ctx.destination);opts.source.connect(node);setInfo('worklet',hop/sr*1e3);
    wd=setTimeout(()=>{if(on&&!got){killNode();poll()}},1000)}catch(e){killNode();wl=false}}
  if(!wl)poll();
@@ -757,5 +773,5 @@ const MIX_VOICES=['sing','keys','guitar','score'],MIX_KO={sing:'기본 합성',k
 function octaveShifts(ps){const a=(ps||[]).filter(Number.isFinite);if(!a.length)return [0];const lo=Math.min(...a),hi=Math.max(...a);return [-1,0,1].filter(s=>lo+12*s>=MIX_LO&&hi+12*s<=MIX_HI)}
 function mixPlan(ps,rnd=Math.random){const sh=octaveShifts(ps),v=MIX_VOICES[Math.floor(rnd()*MIX_VOICES.length)%MIX_VOICES.length],s=sh.length?sh[Math.floor(rnd()*sh.length)%sh.length]:0;return {voice:v,shift:s}}
 function qPitches(q){const o=[];if(!q)return o;for(const k of ['notes','scale','melody'])if(Array.isArray(q[k]))o.push(...q[k]);if(Array.isArray(q.cad))for(const c of q.cad){if(c.notes)o.push(...c.notes);if(Number.isFinite(c.bass))o.push(c.bass)}if(q.target){if(q.target.notes)o.push(...q.target.notes);if(Number.isFinite(q.target.bass))o.push(q.target.bass)}return o.filter(Number.isFinite)}
-const api={jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={loadCtl,LOAD,jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
