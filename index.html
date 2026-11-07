@@ -1074,7 +1074,9 @@ function neUi(msg){const ls=neLayers(),on=ne.on&&!!ne.layer;ne.on=on;el('neOn').
 const neSelTxt=()=>{const n=neNotes()[ne.sel];return n?`선택: ${noteName(n[2])} · ${Math.floor(n[0]/4)+1}마디 ${+(n[0]%4+1).toFixed(2)}박 · 길이 ${+n[1].toFixed(2)}박.`:''};
 /* 층의 음이 바뀐 뒤: 판단 캐시 비우기 → 내 곡이면 초 단위 저장 → 파생 화면·재생 위치 갱신 → 시창 곡 윗선율 새로 뽑기 */
 function neCommit(msg,l){l=l||ne.layer;ne.dc={};if(song.id==='user'){const d=neDiff(l);U.nedit=U.nedit||{};if(d.count>0)U.nedit[l]={n:d.count,notes:NoteEdit.toSec(song.parts[l],song.bpm,U.off)};else delete U.nedit[l];if(!Object.keys(U.nedit).length)U.nedit=null;persist()}
- afterSongEdit();try{if(sing&&sing.src==='song'&&!sing.busy)singNew()}catch(_){}neUi((msg||'')+(ne.sel>=0?' '+neSelTxt():''));draw()}
+ afterSongEdit();try{if(sing&&sing.src==='song'&&!sing.busy)singNew()}catch(_){}neHear(l);neUi((msg||'')+(ne.sel>=0?' '+neSelTxt():''));draw()}
+/* 고친 음 미리 듣기: 정지 중일 때만 고른 음을 0.35초 울린다(재생 중엔 곡과 겹치므로 생략) */
+function neHear(l){try{const n=ne.sel>=0&&song.parts[l][ne.sel];if(!n||S.playing)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();tone(l,ctx.currentTime+.02,.35,n[2],100)}catch(_){}}
 function neEnsureAudible(l){if(mute[l]){mute[l]=false;syncMS();applyAllGains();updExp();return true}return false}
 function neToggle(on){if(on&&!ne.layer)return;ne.on=on;ne.sel=-1;ne.drag=null;if(on){neOrig(ne.layer);const u=neEnsureAudible(ne.layer);neUi(`음 고치기를 켰습니다(${neName(ne.layer)}). 빈 칸을 누르면 음을 넣고, 음을 누르면 고릅니다.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`)}else neUi('음 고치기를 껐습니다.');draw()}
 function neSetLayer(l){if(!neLayers().includes(l)||l===ne.layer)return;ne.layer=l;ne.sel=-1;neOrig(l);const u=ne.on&&neEnsureAudible(l);neUi(`고칠 층: ${neName(l)}.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`);draw()}
