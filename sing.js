@@ -394,5 +394,69 @@ function voiceHint(lo,hi){const c=(lo+hi)/2;return c<56?'낮은 음역':c<62?'�
 /* 연습용 음역: 양 끝에서 margin 반음 안쪽. 안쪽이 6반음 미만으로 줄면 여유 0 */
 function rangeWithMargin(lo,hi,margin=1){return hi-lo>=6+2*margin?[lo+margin,hi-margin]:[lo,hi]}
 
-const api={rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+/* ---------- 연습 기록(pr-days1) · 진도 백업/복원 ----------
+   log = {v:1, last:<마지막 답 ms>, days:{'YYYY-MM-DD':{n:답 수, ms:활동 ms}}}. 날짜 키는 로컬 달력(DST 안전: 시각이 아니라 연·월·일 성분으로만 계산) */
+const DAY_CAP=400,GAP_CAP=120000,pad2=n=>String(n).padStart(2,'0');
+const dayKey=ts=>{const d=ts instanceof Date?ts:new Date(ts);return isFinite(d)?d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()):null};
+const isKey=k=>typeof k==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(k)&&dayKey(new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10),12))===k;
+const toKey=t=>typeof t==='string'?(isKey(t)?t:null):dayKey(t);
+const shiftKey=(k,n)=>{const y=+k.slice(0,4),m=+k.slice(5,7)-1,d=+k.slice(8,10);return dayKey(new Date(y,m,d+n,12))}; // 정오 기준이라 DST 날도 하루씩 정확히 이동
+const newLog=()=>({v:1,last:0,days:{}});
+/* 깨진 값·이상한 키·음수는 버리고 최근 400일만 남긴다 */
+function pruneLog(log,cap=DAY_CAP){const o=newLog();if(!log||typeof log!=='object'||Array.isArray(log)||!log.days||typeof log.days!=='object')return o;
+ const ks=Object.keys(log.days).filter(isKey).sort().slice(-cap);for(const k of ks){const r=log.days[k];if(!r||typeof r!=='object')continue;const n=Math.floor(+r.n),ms=Math.floor(+r.ms||0);if(n>=1&&isFinite(n)&&n<1e6)o.days[k]={n,ms:isFinite(ms)&&ms>0?Math.min(ms,864e5):0}}
+ o.last=isFinite(+log.last)&&+log.last>0?+log.last:0;return o}
+/* 답 하나 기록. 활동 시간 = 직전 답과의 간격(같은 날, 0 초과 capMs 이하일 때만 더함). 자정을 넘긴 간격·시계가 되돌아간 경우는 더하지 않는다 */
+function addAnswer(log,ts,capMs=GAP_CAP){const o=pruneLog(log),k=dayKey(ts);if(!k||!isFinite(+ts))return o;
+ const d=o.days[k]||(o.days[k]={n:0,ms:0});d.n++;if(o.last>0&&ts>o.last&&ts-o.last<=capMs&&dayKey(o.last)===k)d.ms=Math.min(864e5,d.ms+(ts-o.last));
+ o.last=+ts;return pruneLog(o)}
+/* 연속 일수: 오늘 답이 1개 이상이면 오늘부터, 아직 없으면 어제부터 거슬러 센다(오늘 안 풀었다고 바로 끊기지 않음) */
+function streak(log,today){const o=pruneLog(log);let k=toKey(today);if(!k)return 0;if(!o.days[k])k=shiftKey(k,-1);let n=0;while(o.days[k]&&n<=DAY_CAP){n++;k=shiftKey(k,-1)}return n}
+/* 오늘까지 7일: [{key,dow(0=일),n,min}] 오래된 날부터 */
+function week(log,today){const o=pruneLog(log),t=toKey(today),out=[];if(!t)return out;for(let i=6;i>=0;i--){const k=shiftKey(t,-i),r=o.days[k];out.push({key:k,dow:new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10),12).getDay(),n:r?r.n:0,min:r?Math.round(r.ms/60000):0})}return out}
+/* 백업 파일: 허용 키만, 키마다 검증·정리 후 문자열로 보관 */
+const BK_APP='cover-practice-room',BK_VER=1,BK_MAX=2e6,BK_KEYS=['pr-stats','pr-stats2','pr-days1','pr-ear','pr-myrange','pr-miclat','pr-rt-pm','pr-stview','pr-stlab'];
+const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
+const clean1=(k,raw)=>{if(typeof raw!=='string'||raw.length>BK_MAX/2)return null;let v;try{v=JSON.parse(raw)}catch(e){return null}
+ switch(k){
+  case 'pr-stats':{if(!isObj(v))return null;const o={};for(const id of Object.keys(v).slice(0,200)){const r=v[id];if(r&&Array.isArray(r.h)){const h=r.h.filter(x=>typeof x==='number'&&isFinite(x)).map(clamp01).slice(-30);o[id]={n:Math.max(h.length,Math.min(1e7,+r.n|0)),h}}}return JSON.stringify(o)}
+  case 'pr-stats2':{if(!isObj(v)||v.v!==2||!isObj(v.items))return null;return JSON.stringify(migrateStats(v,null))}
+  case 'pr-days1':{if(!isObj(v)||!isObj(v.days))return null;return JSON.stringify(pruneLog(v))}
+  case 'pr-ear':{if(!isObj(v))return null;const o={};for(const id of Object.keys(v).slice(0,100)){const r=v[id];if(!(isObj(r)&&isFinite(r.n)&&isFinite(r.ok)&&r.n>=0&&r.ok>=0&&r.ok<=r.n))return null;o[id]={n:Math.floor(r.n),ok:Math.floor(r.ok)}}return JSON.stringify(o)}
+  case 'pr-myrange':return Array.isArray(v)&&v.length===2&&Number.isInteger(v[0])&&Number.isInteger(v[1])&&v[0]>=28&&v[1]<=96&&v[1]-v[0]>=5?JSON.stringify(v):null;
+  case 'pr-miclat':return typeof v==='number'&&isFinite(v)&&v>=0&&v<=500?String(v):null;
+  case 'pr-rt-pm':return v===0||v===1?String(v):null;
+  case 'pr-stview':return v==='staff'||v==='roll'?v==='staff'?'"staff"':'"roll"':null;
+  case 'pr-stlab':return v==='sol'||v==='name'?JSON.stringify(v):null}
+ return null};
+/* 저장소엔 pr-stview/pr-stlab 이 따옴표 없는 문자열로 있으므로 파일 안에서는 JSON 문자열로 감싸 다룬다 */
+const RAW_STR=new Set(['pr-stview','pr-stlab']),toFileVal=(k,s)=>s==null?null:RAW_STR.has(k)?JSON.stringify(s):s,fromFileVal=(k,s)=>RAW_STR.has(k)?JSON.parse(s):s;
+/* get(key) -> 저장 문자열|null. 허용 키만 담는다 */
+function buildBackup(get,now=Date.now()){const data={};for(const k of BK_KEYS){let s=null;try{s=get(k)}catch(e){}const f=toFileVal(k,s);if(f==null)continue;const c=clean1(k,f);if(c!=null)data[k]=fromFileVal(k,c)}
+ return {app:BK_APP,kind:'progress',v:BK_VER,exported:new Date(now).toISOString(),data}}
+/* 파일 글자 -> {ok,err,data:{키:저장 문자열},sum:{answers,days,keys}}. 던지지 않는다 */
+function parseBackup(text){const bad=err=>({ok:false,err});if(typeof text!=='string'||!text.trim())return bad('빈 파일입니다.');if(text.length>BK_MAX)return bad('파일이 너무 큽니다(2MB 초과). 진도 파일이 아닌 것 같습니다.');
+ let j;try{j=JSON.parse(text)}catch(e){return bad('JSON 형식이 아닙니다. 「진도 파일로 저장」으로 만든 파일을 골라 주세요.')}
+ if(!isObj(j)||j.app!==BK_APP||j.kind!=='progress')return bad('이 앱의 진도 파일이 아닙니다.');if(j.v!==BK_VER)return bad('지원하지 않는 파일 버전입니다(v'+String(j.v).slice(0,8)+').');if(!isObj(j.data))return bad('진도 데이터가 없습니다.');
+ const foreign=Object.keys(j.data).filter(k=>!BK_KEYS.includes(k));if(foreign.length)return bad('허용되지 않은 항목이 들어 있습니다: '+foreign.slice(0,3).map(k=>k.slice(0,20)).join(', '));
+ const data={};for(const k of BK_KEYS){if(!(k in j.data))continue;const f=toFileVal(k,j.data[k]),c=clean1(k,typeof j.data[k]==='string'&&!RAW_STR.has(k)?j.data[k]:f);if(c==null)return bad('항목 「'+k+'」의 내용이 올바르지 않습니다.');data[k]=RAW_STR.has(k)?fromFileVal(k,c):c}
+ if(!Object.keys(data).length)return bad('가져올 진도 항목이 없습니다.');
+ return {ok:true,data,sum:backupSummary(data)}}
+function backupSummary(data){let answers=0,days=0;try{if(data['pr-stats2']){const s=JSON.parse(data['pr-stats2']);for(const id of Object.keys(s.items))answers+=s.items[id].n}}catch(e){}try{if(data['pr-days1'])days=Object.keys(JSON.parse(data['pr-days1']).days).length}catch(e){}return {answers,days,keys:Object.keys(data)}}
+/* 합치기 규칙(단순): 항목 횟수 n 은 더한다. 최근 결과 h 는 더 긴 쪽(같으면 가져온 쪽)을 쓴다. 혼동 횟수·청음 정답 수는 더한다. 연습 일수는 날마다 큰 쪽(같은 파일을 두 번 합쳐도 부풀지 않게). 음역·보정·보기 설정은 지금 값이 있으면 지금 값을 둔다.
+   cur/inc: {키:저장 문자열}. 반환: {키:저장 문자열} (inc 에 있는 키만) */
+function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(e){return null}};cur=cur||{};
+ const mItems=(a,b,cap)=>{const o={};for(const id of new Set([...Object.keys(a||{}),...Object.keys(b||{})])){const x=a&&a[id],y=b&&b[id];if(x&&y){const h=(y.h.length>=x.h.length?y.h:x.h).slice(-cap);o[id]={n:Math.max(h.length,(+x.n||0)+(+y.n||0)),h}}else o[id]=x||y}return o};
+ for(const k of Object.keys(inc)){const a=cur[k]==null?null:J(cur[k]),b=J(inc[k]);
+  if(cur[k]==null){out[k]=inc[k];continue}
+  if(!['pr-stats','pr-stats2','pr-days1','pr-ear'].includes(k)){out[k]=cur[k];continue}
+  if(a==null||b==null){out[k]=inc[k];continue}
+  if(k==='pr-stats'){out[k]=JSON.stringify(mItems(a,b,30))}
+  else if(k==='pr-stats2'){const m=migrateStats(a,null),n=migrateStats(b,null),s=newStats();s.items=mItems(m.items,n.items,60);for(const id of new Set([...Object.keys(m.conf),...Object.keys(n.conf)])){const c={},x=m.conf[id]||{},y=n.conf[id]||{};for(const q of new Set([...Object.keys(x),...Object.keys(y)]))c[q]=(x[q]||0)+(y[q]||0);s.conf[id]=c}out[k]=JSON.stringify(migrateStats(s,null))}
+  else if(k==='pr-days1'){const x=pruneLog(a),y=pruneLog(b),o=newLog();o.last=Math.max(x.last,y.last);for(const d of new Set([...Object.keys(x.days),...Object.keys(y.days)])){const p=x.days[d]||{n:0,ms:0},q=y.days[d]||{n:0,ms:0};o.days[d]={n:Math.max(p.n,q.n),ms:Math.max(p.ms,q.ms)}}out[k]=JSON.stringify(pruneLog(o))}
+  else if(k==='pr-ear'){const o={};for(const id of new Set([...Object.keys(a),...Object.keys(b)])){const x=a[id],y=b[id];o[id]=x&&y?{n:x.n+y.n,ok:x.ok+y.ok}:x||y}out[k]=JSON.stringify(o)}
+  else out[k]=cur[k]}
+ return out}
+
+const api={dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);

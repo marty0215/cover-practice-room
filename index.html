@@ -399,6 +399,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 .tap-pad.on{background:var(--surface-2);border-color:var(--accent)}
 .tap-pad.hit{background:var(--accent);color:var(--on-accent)}
 #rhBeat{font-family:var(--mono);font-size:1.3rem;min-height:1.8rem;margin-top:.5rem}
+.wk{display:flex;gap:.4rem;align-items:flex-end;height:96px;margin:.3rem 0;max-width:360px}.wk .d{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:.72rem;color:var(--text-muted);font-family:var(--mono)}.wk .b{width:100%;max-width:28px;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}.wk .d.z .b{background:var(--border)}.wk .d.t{color:var(--text);font-weight:700}
 .stt{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:.6rem}
 .stt th{font-weight:600;text-align:left;color:var(--text-muted);font-size:.78rem;padding:.25rem .4rem}
 .stt td{padding:.3rem .4rem;border-top:1px solid var(--border);vertical-align:middle}
@@ -683,9 +684,19 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   </div>
   <div class="panel sp" data-sp="stat" id="statPanel">
     <div class="head"><h2>진도 기록</h2><p class="muted small">항목별 최근 10회 정답률입니다. 이 브라우저에만 저장됩니다.</p></div>
+    <h3 class="sh">연습 기록</h3>
+    <p class="small" id="logSum">아직 오늘 푼 문제가 없습니다.</p>
+    <div class="wk" id="logWeek" role="img" aria-label="이번 주 연습 기록"></div>
+    <p class="muted small">답을 낸 문제 수와, 답 사이 간격이 2분 이내인 시간의 합(활동 분)입니다. 최근 400일만 이 브라우저에 남습니다.</p>
     <p class="empty" id="statEmpty">아직 기록이 없습니다. 청음 퀴즈나 받아쓰기를 한 번 풀면 여기에 정답률이 쌓입니다.</p><div style="overflow-x:auto"><table class="stt" id="statTbl"></table></div>
     <h3 class="sh" style="margin-top:1rem">지금 약한 항목</h3><div id="weakBox" class="small"></div>
     <div class="row" style="margin-top:.6rem"><button class="btn sm ghost" type="button" id="statReset">기록 지우기</button></div>
+    <h3 class="sh" style="margin-top:1rem">진도 백업·복원</h3>
+    <p class="muted small">진도 데이터(정답 기록·연습 기록·음역·연습 설정)만 담습니다. 곡 분석 결과와 녹음은 들어가지 않습니다. 데이터는 이 브라우저 안에서만 처리되고, 파일은 직접 고른 곳에만 저장됩니다.</p>
+    <div class="row"><button class="btn sm" type="button" id="bkSave">진도 파일로 저장</button><button class="btn sm" type="button" id="bkLoad">진도 파일 불러오기</button><input type="file" id="bkFile" accept=".json,application/json" hidden aria-label="진도 파일 고르기"></div>
+    <div class="row" id="bkConfirm" role="group" aria-label="가져오기 확인" hidden><span class="small" id="bkSumm"></span><button class="btn sm primary" type="button" id="bkMerge">합치기</button><button class="btn sm" type="button" id="bkRepl">바꾸기</button><button class="btn sm ghost" type="button" id="bkCancel">취소</button></div>
+    <p class="muted small" id="bkHelp" hidden>합치기: 항목 횟수는 더하고 최근 결과는 더 긴 쪽을 씁니다(같은 파일을 두 번 합치면 횟수가 겹쳐 더해집니다). 연습 일수는 날마다 큰 쪽을 씁니다. 바꾸기: 파일에 있는 항목을 지금 값 대신 씁니다. 음역·보정·보기 설정은 페이지를 다시 열면 반영됩니다.</p>
+    <p class="small" id="bkMsg" role="status" aria-live="polite"></p>
   </div>
 </div></div></div>
 
@@ -1859,13 +1870,31 @@ const jget=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return nu
 let STAT2=window.SingLab?SingLab.migrateStats(jget('pr-stats2'),jget('pr-stats')):null;
 const saveStat2=()=>{try{localStorage.setItem('pr-stats2',JSON.stringify(STAT2))}catch(_){}};
 if(STAT2&&!(jget('pr-stats2')||{}).v)saveStat2();
+/* 연습 기록 pr-days1: 답 하나마다 statRec 에서 부른다(로컬 날짜·활동 시간, 400일 유지) */
+let DAYS=SingLab.pruneLog(jget('pr-days1'));
+function dayRec(){DAYS=SingLab.addAnswer(DAYS,Date.now());try{localStorage.setItem('pr-days1',JSON.stringify(DAYS))}catch(_){}}
+function logRender(){const now=Date.now(),w=SingLab.week(DAYS,now),t=w[6],st=SingLab.streak(DAYS,now),mx=Math.max(1,...w.map(x=>x.n)),DN='일월화수목금토';el('logSum').textContent=`연속 연습 ${st}일 · 오늘 ${t.n}문제 · ${t.min}분`;
+ el('logWeek').setAttribute('aria-label','이번 주 연습 기록: '+w.map((x,i)=>`${i==6?'오늘':DN[x.dow]} ${x.n}문제 ${x.min}분`).join(', '));el('logWeek').innerHTML=w.map((x,i)=>`<div class="d${x.n?'':' z'}${i==6?' t':''}" aria-hidden="true"><span>${x.n}</span><div class="b" style="height:${Math.round(x.n/mx*64)}px"></div><span>${i==6?'오늘':DN[x.dow]}</span></div>`).join('')}
 function fine(id,frac,chosen){if(!STAT2)return;STAT2=SingLab.recItem(STAT2,id,frac,chosen);saveStat2()}
 const relK=p=>((p-singKeyPc())%12+12)%12;
 function spark(h){if(h.length<2)return '<span class="muted">—</span>';const W=72,H=20,p=h.map((v,i)=>`${(2+i*(W-4)/(h.length-1)).toFixed(1)},${(H-3-v*(H-6)).toFixed(1)}`).join(' ');return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${h.length}회 추이"><polyline points="${p}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${p.split(' ').pop().split(',')[0]}" cy="${p.split(' ').pop().split(',')[1]}" r="2.2" fill="var(--accent)"/></svg>`}
-function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');{const none=DRILLS.every(([id])=>!(STAT[id]&&STAT[id].n));el('statEmpty').hidden=!none;el('statTbl').parentElement.hidden=none;el('rtEmpty').hidden=!none}el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows;
+function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');{const none=DRILLS.every(([id])=>!(STAT[id]&&STAT[id].n));el('statEmpty').hidden=!none;el('statTbl').parentElement.hidden=none;el('rtEmpty').hidden=!none}logRender();el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows;
  const w=STAT2?SingLab.topWeak(STAT2,{n:5}):[];el('weakBox').innerHTML=w.length?`<ol class="wl">${w.map(x=>`<li>${esc(x.text)}</li>`).join('')}</ol>`:'<p class="muted">아직 뚜렷한 약점이 없습니다. 항목마다 2번 이상 풀면 계산합니다.</p>'}
-function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}statRender()}
-let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2')}catch(_){}statRender()};
+function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}dayRec();statRender()}
+let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};DAYS=SingLab.newLog();if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2');localStorage.removeItem('pr-days1')}catch(_){}statRender()};
+/* 진도 백업·복원: 허용 키만 담은 JSON 을 내려받고(Blob), 고른 파일은 sing.js parseBackup 으로 검증 후 화면 안 확인 줄에서 합치기/바꾸기. 곡 분석·녹음은 대상 아님 */
+const bkCur=()=>{const o={};for(const k of SingLab.BK_KEYS){let v=null;try{v=k==='pr-stats'?JSON.stringify(STAT):k==='pr-stats2'?JSON.stringify(STAT2):k==='pr-days1'?JSON.stringify(DAYS):localStorage.getItem(k)}catch(_){}if(v!=null)o[k]=v}return o};
+let bkPend=null;const bkMsg=(t,bad)=>{el('bkMsg').textContent=(bad?'오류: ':'')+t},bkClose=()=>{bkPend=null;el('bkConfirm').hidden=true;el('bkHelp').hidden=true};
+el('bkSave').onclick=()=>{try{const cur=bkCur(),b=SingLab.buildBackup(k=>cur[k]==null?null:cur[k]),n=Object.keys(b.data).length;if(!n){bkMsg('저장할 진도가 아직 없습니다.');return}const u=URL.createObjectURL(new Blob([JSON.stringify(b,null,1)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='연습실-진도-'+SingLab.dayKey(Date.now())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);bkMsg(`진도 ${n}개 항목을 파일로 저장했습니다. 파일은 직접 고른 위치에만 저장됩니다.`)}catch(e){bkMsg('파일을 만들지 못했습니다.',1)}};
+el('bkLoad').onclick=()=>{bkClose();el('bkFile').value='';el('bkFile').click()};
+el('bkFile').onchange=async()=>{const f=el('bkFile').files&&el('bkFile').files[0];bkClose();if(!f)return;if(f.size>2e6){bkMsg('파일이 너무 큽니다(2MB 초과). 진도 파일이 아닌 것 같습니다.',1);return}
+ let t='';try{t=await f.text()}catch(e){bkMsg('파일을 읽지 못했습니다.',1);return}const r=SingLab.parseBackup(t);if(!r.ok){bkMsg(r.err+' 지금 기록은 그대로입니다.',1);return}
+ bkPend=r.data;el('bkSumm').textContent=`파일 내용: 푼 문제 ${r.sum.answers}개 · 연습 ${r.sum.days}일 · 항목 ${r.sum.keys.length}개. 어떻게 가져올까요?`;el('bkConfirm').hidden=false;el('bkHelp').hidden=false;bkMsg('')};
+function bkApply(merge){if(!bkPend)return;try{const cur=bkCur(),out=merge?SingLab.mergeBackup(cur,bkPend):bkPend,p=k=>{try{return JSON.parse(out[k])}catch(e){return null}};
+ for(const k of Object.keys(out))try{localStorage.setItem(k,out[k])}catch(_){}
+ if(out['pr-stats']){STAT=p('pr-stats')||{}}if(out['pr-stats2'])STAT2=SingLab.migrateStats(p('pr-stats2'),null);if(out['pr-days1'])DAYS=SingLab.pruneLog(p('pr-days1'));if(out['pr-ear'])earA=p('pr-ear')||{};
+ bkClose();statRender();bkMsg(`${merge?'합쳤습니다':'바꿨습니다'}(항목 ${Object.keys(out).length}개). 음역·보정·보기 설정은 페이지를 다시 열면 반영됩니다.`)}catch(e){bkClose();bkMsg('가져오지 못했습니다. 지금 기록은 그대로입니다.',1)}}
+el('bkMerge').onclick=()=>bkApply(true);el('bkRepl').onclick=()=>bkApply(false);el('bkCancel').onclick=()=>{bkClose();bkMsg('가져오기를 취소했습니다. 기록은 그대로입니다.')};
 
 /* 청음: 음정 / 3화음. 정답률은 localStorage(실패해도 동작) */
 const ear={type:'interval',level:1,dir:'asc',weak:false,q:null,done:false};
