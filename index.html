@@ -561,13 +561,13 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <section aria-labelledby="hSec"><h3 class="sh" id="hSec">구간 <span class="muted small" style="font-weight:400">누르면 그 구간으로 이동해 반복합니다</span></h3><div class="secs" id="sections"></div><div class="progmore" id="secMore" hidden><button class="btn sm" type="button" id="secMoreBtn">나머지 구간 모두 보기</button><span class="muted small" id="secMoreInfo"></span></div></section>
   <section class="panel" id="arrPanel" aria-labelledby="hArr"><h3 class="sh" id="hArr">편곡 점검</h3>
     <div class="arrsum" id="arrSum" role="list" aria-label="점검 요약"></div>
-    <p class="muted small" id="arrHelp">비화성음 비율·반음 부딪힘·파트 음역·병행 5도 8도는 이 프로젝트의 화성·음역 학습 노트(편곡 검사 도구)에서 일부를 옮긴 것입니다. 비화성음 상한(베이스는 1·3박 음 5%·건반/기타 25%·멜로디 40%; 베이스 약박 경과음은 세지 않음), 베이스 권장 음역(E1–A2) 같은 기준값은 규칙이 아니라 출발점입니다. 병행 5도·8도는 참고용 개수일 뿐이며 팝에서는 옥타브 겹침이 의도일 수 있습니다. 모두 음표 데이터 검사이며 직접 들은 평가가 아닙니다.</p>
+    <p class="muted small" id="arrHelp">비화성음 비율·반음 부딪힘·파트 음역·병행 5도 8도는 이 프로젝트의 화성·음역 학습 노트(편곡 검사 도구)에서 일부를 옮긴 것입니다. 비화성음 상한(베이스는 1·3박 음 5%·건반/기타 25%·멜로디 40%; 베이스 약박 경과음은 세지 않음), 베이스 권장 음역(E1–A2) 같은 기준값은 규칙이 아니라 출발점입니다. 병행 5도·8도와 보이스 리딩 이동량(반주 화음의 반음 이동 합, 공통음 유지)은 참고용일 뿐이며 팝에서는 옥타브 겹침이 의도일 수 있습니다. 베이스 근음(1박 베이스가 코드 근음·슬래시 베이스인 마디 95% 미만이면 주의; 앞뒤로 순차인 3음 베이스는 전위로 보고 제외)도 음표 데이터 검사입니다. 모두 직접 들은 평가가 아닙니다.</p>
     <details class="arrlist" id="arrList"><summary id="arrSumm">마디별 주의 목록</summary><p class="muted small" id="arrNote"></p><div class="arrbars" id="arrBars" tabindex="0" role="region" aria-label="주의가 있는 마디 목록 (누르면 그 마디로 이동해 1마디 반복)"></div></details>
     <div class="tips" style="margin-top:1rem" id="arrTips"></div>
     <details class="arrlist" id="arrBasics"><summary>기본기 점검표</summary>
       <ol class="arrbasics">
         <li><b>박·그루브</b><span>자동 점검: 빈 구간. 박 느낌은 직접 들어 확인</span></li>
-        <li><b>화성</b><span>자동 점검: 비화성음 비율, 반음 부딪힘(병행 5도·8도는 참고)</span></li>
+        <li><b>화성</b><span>자동 점검: 비화성음 비율, 반음 부딪힘, 베이스 근음(병행 5도·8도, 보이스 리딩 이동량은 참고)</span></li>
         <li><b>보컬 공간</b><span>자동 점검: 베이스–멜로디 간격, 리듬 겹침, 바쁜 반주 윗선</span></li>
         <li><b>음역 배치</b><span>자동 점검: 음역 교차, 파트 음역</span></li>
         <li><b>강약</b><span>직접 들어 확인</span></li>
@@ -1242,7 +1242,26 @@ function arrExt(sg,pf,mel,src){
    if(m===null||x===null){prev=null;continue}
    if(prev&&(m!==prev.m||x!==prev.x)){const dm=m-prev.m,db=x-prev.x,i0=Math.abs(prev.m-prev.x)%12,i1=Math.abs(m-x)%12;if(dm*db>0&&i0===i1&&(i1===7||i1===0)){n++;const bi2=Math.floor(t/4+E);if(bi2>=0&&bi2<B)pb[bi2]++}}
    prev={m,x}}}
- return{bars,sum2,par:{n,bars:pb,on:!!(mel.length&&bass.length)}}}
+ /* 보이스 리딩 이동량(참고): 반주 파트(건반·기타)의 동시 온셋(0.06박 이내)을 화음으로 묶고, 피치클래스 집합이 바뀔 때 윗성부를 최단 이동으로 짝지어 반음 합·유지한 공통음을 센다. 왼손 베이스(다음 음보다 12반음 이상 아래 최저음)는 뺀다 */
+ const asg=(sm,lg)=>{const m=new Map(),f=(i,k)=>{if(i===sm.length)return[0,0];const key=i*65536+k;let v=m.get(key);if(v)return v;v=[1e9,0];for(let j=0;j<lg.length;j++){if(k>>j&1)continue;const d=Math.abs(sm[i]-lg[j]),[c,z]=f(i+1,k|1<<j),cc=c+d,zz=z+(d===0?1:0);if(cc<v[0]||(cc===v[0]&&zz>v[1]))v=[cc,zz]}m.set(key,v);return v};return f(0,0)},
+ vlAll=[],vlBars=Array.from({length:B},()=>[]);
+ for(const p of comp){const gs=[];for(const n of P[p].slice().sort((a,b)=>a[0]-b[0])){const g=gs[gs.length-1];if(g&&n[0]-g.t<=.06)g.n.push(n[2]);else gs.push({t:n[0],n:[n[2]]})}
+  let prev=null;for(const g of gs){let u=[...new Set(g.n)].sort((a,b)=>a-b);if(u.length>1&&u[1]-u[0]>=12)u=u.slice(1);if(u.length<2||u.length>8){prev=null;continue}
+   const key=[...new Set(u.map(x=>x%12))].sort((a,b)=>a-b).join(),cur={t:g.t,u,key};
+   if(prev&&prev.key!==key){const [sm,lg]=prev.u.length<=u.length?[prev.u,u]:[u,prev.u],[c,z]=asg(sm,lg),sh=prev.key.split(',').some(x=>key.split(',').includes(x)),bi=Math.floor(g.t/4+E),ev={bar:bi+1,sum:c,common:z,shared:sh,part:p};vlAll.push(ev);if(c>=8&&bi>=0&&bi<B)vlBars[bi].push(ev)}
+   prev=cur}}
+ const med=a=>{if(!a.length)return null;const x=a.slice().sort((p,q)=>p-q),h=x.length>>1;return x.length%2?x[h]:(x[h-1]+x[h])/2},shN=vlAll.filter(e=>e.shared).length,vl={on:comp.length>0&&vlAll.length>0,n:vlAll.length,med:med(vlAll.map(e=>e.sum)),big:vlAll.filter(e=>e.sum>=8).length,shN,keepN:vlAll.filter(e=>e.shared&&e.common>0).length};
+ vl.keepPct=shN?Math.round(100*vl.keepN/shN):null;
+ /* 베이스 근음(경고 가능): 1박 베이스 음이 코드 근음 또는 슬래시 베이스인 마디의 비율. 3음이 베이스인데 앞뒤로 순차(1–2반음)로 이어지면 전위로 보고 감점하지 않는다 */
+ const rb={ok:0,miss:0,exempt:0,n:0};
+ for(let b=0;b<B;b++){bars[b].br=null;if(sg.silent&&sg.silent[b])continue;const t=b*4,idx=[];bass.forEach((n,i)=>{if(n[0]<=t+.06&&n[0]+n[1]>t+.05)idx.push(i)});if(!idx.length)continue;
+  const last=Math.max(...idx.map(i=>bass[i][0])),cs=idx.filter(i=>bass[i][0]===last).sort((x,y)=>bass[x][2]-bass[y][2]),i0=cs[0],pc=((bass[i0][2]%12)+12)%12,sp=sg.split&&sg.split[b],cstr=sp?sp.a:sg.chords[b];let ch;try{ch=parseChord(cstr)}catch(e){continue}
+  const okPc=new Set([ch.root,ch.bass!=null?ch.bass:ch.root]),iv=(QT[ch.q]||QT[''])[1],third=(ch.q==='sus4'||ch.q==='sus2')?-1:(ch.root+iv)%12,pv=bass[i0-1],nx=bass[i0+1],st=(a,c)=>a&&Math.abs(a[2]-c[2])>=1&&Math.abs(a[2]-c[2])<=2;
+  const o={bass:NAMES[pc],chord:cstr,ok:okPc.has(pc),exempt:false};if(!o.ok&&pc===third&&st(pv,bass[i0])&&st(nx,bass[i0])){o.exempt=true}
+  bars[b].br=o;rb.n++;if(o.ok)rb.ok++;else if(o.exempt){rb.exempt++;rb.ok++}else rb.miss++}
+ rb.pct=rb.n?Math.round(1000*rb.ok/rb.n)/10:null;rb.flag=rb.n>0&&rb.ok/rb.n<.95;
+ bars.forEach((o,i)=>{o.vl=vlBars[i]});
+ return{bars,sum2,vl,rb,par:{n,bars:pb,on:!!(mel.length&&bass.length)}}}
 /* 베이스 음역 문구(순수) */
 const arrHMsg=h=>{const t=[];if(h.low)t.push(`베이스 최저 MIDI ${h.lo}(약 ${h.hz} Hz)`+(h.lo<28?' · 약 41 Hz 아래, 작은 스피커에서 잘 안 들림':''));if(h.high)t.push(`베이스 최고 MIDI ${h.hi}(하드 상한 52 초과)`);if(h.mud)t.push(`베이스 바로 위(7반음 이내) G3 아래 건반·기타 ${h.mud}곳(저역 탁함)`);return t};
 function arrCheck(sg,pf=chordPcs){
@@ -1265,22 +1284,27 @@ function arrCheck(sg,pf=chordPcs){
   o.g=gaps.filter(g=>g.bar===b+1);o.e=on.length?{n:o.g.length,flag:o.g.length>0}:null;
   for(const k of 'abcde')if(o[k])sum[k][o[k].flag?'warn':'ok']++;bars.push(o)}
  const X=arrExt(sg,pf,mel,src);bars.forEach((o,i)=>Object.assign(o,X.bars[i]));
- return{src,acc:accP,hasBass:bass.length>0,bars,sum,gaps,sum2:X.sum2,par:X.par,est:sg.id==='user'}}/*ARR-END*/
+ return{src,acc:accP,hasBass:bass.length>0,bars,sum,gaps,sum2:X.sum2,par:X.par,vl:X.vl,rb:X.rb,est:sg.id==='user'}}/*ARR-END*/
 const ARR_L2={f:'비화성음 비율(코드 밖 음, 파트별 상한)',g:'반음 부딪힘(다른 파트끼리 m2·M7)',h:'파트 음역(베이스 저음·탁한 저역)'},ARR_L={a:'베이스–멜로디 간격(12반음 미만)',b:'리듬 겹침(같은 16분 위치 60% 초과)',c:'음역 교차(건반·기타가 베이스 아래)',d:'멜로디보다 바쁜 반주 윗선',e:'1박 넘는 빈 구간(새 음 없음)'};
 function renderArr(){const R=arrCheck(song),sc=R.src?PARTDEF[R.src].name.replace(/ \(.*$/,''):'없음',nA=R.bars.length;
  const chip=(k,L,s)=>{const n=s.ok+s.warn;return `<span class="achip ${n?s.warn?'warn':'ok':'na'}" role="listitem" data-k="${k}">${n?s.warn?'주의':'통과':'해당 없음'} · ${L} <b>${n?`주의 ${s.warn} · 통과 ${s.ok}`:'-'}</b></span>`};
- el('arrSum').innerHTML=Object.keys(ARR_L).map(k=>chip(k,ARR_L[k],R.sum[k])).join('')+Object.keys(ARR_L2).map(k=>chip(k,ARR_L2[k],R.sum2[k])).join('')+`<span class="achip ${R.par.on?'info':'na'}" role="listitem" data-k="i">${R.par.on?'참고':'해당 없음'} · 병행 5도·8도(베이스–멜로디) <b>${R.par.on?R.par.n+'쌍':'-'}</b></span>`;
- const rows=R.bars.filter(o=>'abcdefh'.split('').some(k=>o[k]&&o[k].flag)||(o.cl&&o.cl.flag)).map(o=>{const t=[];
+ el('arrSum').innerHTML=Object.keys(ARR_L).map(k=>chip(k,ARR_L[k],R.sum[k])).join('')+Object.keys(ARR_L2).map(k=>chip(k,ARR_L2[k],R.sum2[k])).join('')+`<span class="achip ${R.par.on?'info':'na'}" role="listitem" data-k="i">${R.par.on?'참고':'해당 없음'} · 병행 5도·8도(베이스–멜로디) <b>${R.par.on?R.par.n+'쌍':'-'}</b></span>`
+  +`<span class="achip ${R.vl.on?'info':'na'}" role="listitem" data-k="j">${R.vl.on?'참고':'해당 없음'} · 보이스 리딩 이동량(건반·기타) <b>${R.vl.on?`${R.vl.n}회 · 중앙값 ${R.vl.med}반음 · 8반음 이상 ${R.vl.big}회`+(R.vl.keepPct!==null?` · 공통음 유지 ${R.vl.keepPct}%`:''):'-'}</b></span>`
+  +`<span class="achip ${R.rb.n?R.rb.flag?'warn':'ok':'na'}" role="listitem" data-k="k">${R.rb.n?R.rb.flag?'주의':'통과':'해당 없음'} · 베이스 근음(1박) <b>${R.rb.n?`${R.rb.ok}/${R.rb.n}마디 · ${R.rb.pct}%`+(R.rb.exempt?` · 순차 전위 ${R.rb.exempt}`:''):'-'}</b></span>`;
+ const rows=R.bars.filter(o=>'abcdefh'.split('').some(k=>o[k]&&o[k].flag)||(o.cl&&o.cl.flag)||(o.vl&&o.vl.length)||(o.br&&!o.br.ok)).map(o=>{const t=[];
   if(o.a&&o.a.flag)t.push(`베이스–멜로디 최소 ${o.a.min}반음`);if(o.b&&o.b.flag)t.push(`멜로디 ${o.b.n}음 중 ${Math.round(o.b.share*100)}%가 베이스와 같은 16분 위치`);if(o.c&&o.c.flag)t.push(`베이스보다 낮은 반주 음 ${o.c.n}개`);if(o.d&&o.d.flag)t.push(`멜로디 ${o.d.mel}음 < 반주 윗선 ${o.d.acc}음`);
   if(o.f&&o.f.flag)t.push(o.f.parts.filter(q=>q.flag).map(q=>`${q.nm} 코드 밖 음 ${q.out}/${q.n}개(${Math.round(q.share*100)}%, 상한 ${Math.round(q.cap*100)}%)`).join(', ')+(R.est?' · 추정 코드 기준':''));
   if(o.cl&&o.cl.flag)t.push(`반음 부딪힘 ${o.cl.n}곳`+(R.est?' (추정 코드 기준)':''));
   if(o.h&&o.h.flag)t.push(...arrHMsg(o.h));
+  if(o.vl)for(const v of o.vl)t.push(`성부 이동 합 ${v.sum}반음(공통음 ${v.common}개 유지, 참고)`);
+  if(o.br&&!o.br.ok)t.push(o.br.exempt?`1박 베이스 ${o.br.bass}는 ${o.br.chord}의 3음: 순차 베이스 전위(괜찮음)`:`1박 베이스 ${o.br.bass}가 ${o.br.chord}의 근음·슬래시 베이스가 아님`);
   for(const g of o.g)t.push(`${g.bar}마디 ${g.beat}박 이후 ${g.len}박 새 음 없음`);
   return `<button type="button" class="arrbar" data-b="${o.bar}"><b>${o.bar}마디</b><span>${t.join(' · ')}</span></button>`});
  el('arrSumm').textContent=`마디별 주의 목록 (${rows.length}/${nA}마디)`;el('arrBars').innerHTML=rows.join('');el('arrBars').hidden=!rows.length;
  el('arrNote').textContent=`멜로디 기준: ${sc} 윗선${R.hasBass?'':' · 베이스 파트 없음(간격·리듬·교차 검사 생략)'}${R.est?' · 코드는 추정값이라 f·g 는 추정 코드 기준입니다':''}. ${rows.length?'마디를 누르면 그곳으로 이동해 1마디를 반복합니다.':'주의가 있는 마디가 없습니다.'}`;
  const up=song.id==='user';
  el('arrTips').innerHTML=[['원곡 구성',up?'이 반주는 코드에서 생성한 초안이라 원곡의 실제 악기 구성은 알 수 없습니다. 원곡에 없는 악기를 더해 저음이나 빈틈을 채우기보다, 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하세요.':`${song.inventory||'원곡 구성 정보가 없습니다.'} 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하고, 원곡에 없는 악기를 더해 채우지 마세요.`],
+  ['보이스 리딩 기초','화음이 바뀔 때 겹치는 공통음은 그대로 두고, 나머지 음은 가장 가까운 음으로 옮기세요. 이끈음(7음)은 보통 위로 해결합니다. 베이스는 근음이 기본이고, 베이스가 순차(계단식)로 이어질 때만 전위(3음을 베이스로)를 씁니다. 이 점검의 이동량·근음 기준은 출발점이며 규칙이 아닙니다.'],
   ['저음 밸런스','이 프로젝트의 청취에서는 저음 영역(베이스 약 150 Hz, 건반 약 250 Hz)을 −4 dB쯤 낮춘 쪽이 선호됐습니다. 규칙이 아니라 출발점이며, 곡과 스피커에 따라 직접 들어 조정하세요.']].map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
 el('arrBars').addEventListener('click',e=>{const c=e.target.closest('.arrbar');if(!c)return;const b=+c.dataset.b;setLoopBars(b,b);seekTo((b-1)*4)});
 
