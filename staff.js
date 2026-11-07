@@ -14,8 +14,8 @@ function keySig(pc){pc=mod(pc);const [n,k]=KS[pc],ls=(k==='#'?SH:k==='b'?FL:[]).
    조 밖 검은 건반은 으뜸음 기준 도수로: ♭3·♭7 은 플랫, ♯1·♯4·♯5 는 샤프(C 장조 Eb·Bb, F 장조 F#·C#; 예전 규칙은 C 장조 ♭7 을 A#, F 장조 ♯1 을 Gb 로 적었다). sing.js SOLF·pcName 과 같은 규칙 */
 function spell(m,pc,minor){const ks=keySig(pc),A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const p=mod(m);
  const mk=(l,a)=>{const o=Math.floor((m-a-LP[l])/12)-1;return {l,acc:a,oct:o,step:o*7+l}};
- for(let l=0;l<7;l++)if(mod(LP[l]+A[l])===p)return mk(l,A[l]);const w=LP.indexOf(p);if(w>=0)return mk(w,0);
- const r=mod(p-pc);if(minor&&r===8)return mk(LP.indexOf((p+11)%12),1);/* 단조 보기: 화성단음계 올린 7음(A 단조의 G#)은 샤프 */
+ const r=mod(p-pc),u7=minor&&r===8?LP.indexOf((p+11)%12):-1;/* 단조 보기: 화성단음계 올린 7음(A 단조의 G#, F#m 의 E#, C#m 의 B#)은 흰 건반이어도 샤프. 이중샤프가 되는 G#m·D#m 은 제자리로 둔다 */
+ for(let l=0;l<7;l++)if(mod(LP[l]+A[l])===p)return mk(l,A[l]);if(u7>=0)return mk(u7,1);const w=LP.indexOf(p);if(w>=0)return mk(w,0);
  return r===3||r===10?mk(LP.indexOf((p+1)%12),-1):mk(LP.indexOf((p+11)%12),1)}
 const NSH=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 /* 조 이름: pc = 조표를 정하는 으뜸음(장조 기준). minor 면 나란한단조 이름(A 단조 ← C). 조표 종류(#/b)대로 철자 */
@@ -140,8 +140,8 @@ function render(el,lay,o){const h=svg(lay,o);if(el){el.innerHTML=h;return h}retu
 /* ---------- 큰보표(건반): 같은 시작(±1 칸)의 음을 화음으로 묶고 중앙 도(60)에서 두 손으로 가른다. 한 손에 겹친 음은 한 줄기(화음)로 그린다.
    hands(notes) → {t:[{a,b,ms}],b:[…]} (칸 단위 a,b, ms=오름차순 midi). 손 가르기: 60 이상 오른손(높은음), 미만 왼손(낮은음). 58–61 은 그 손의 직전 음에 더 가까우면 건너편 손이 가져갈 수 있다(2도 이내 교차, 덧줄 줄이기).
    한 화음 길이는 가장 긴 음(다음 화음 시작에서 자름). grand(notes,o) → 마디별 {t,b} 항목(화음 항목은 k:'n', notes[] 오름차순, fl=2도 어긋남 머리, col=임시표 열). svgGrand(lay,{width}) */
-function hands(notes){const q=notes.map(n=>{const a=Math.round(n[0]*4);return {a,b:Math.max(Math.round((n[0]+n[1])*4),a+1),m:n[2]}}).sort((x,y)=>x.a-y.a||x.m-y.m),g=[];
- for(const e of q){const l=g[g.length-1];if(l&&e.a-l.a<=1)l.ns.push(e);else g.push({a:e.a,ns:[e]})}
+function hands(notes){const q=notes.map(n=>{const a=Math.round(n[0]*4);return {a,s:n[0],b:Math.max(Math.round((n[0]+n[1])*4),a+1),m:n[2]}}).sort((x,y)=>x.a-y.a||x.m-y.m),g=[];
+ for(const e of q){const l=g[g.length-1];if(l&&(e.a===l.a||Math.abs(e.s-l.s)<.06))l.ns.push(e);else g.push({a:e.a,s:e.s,ns:[e]})}
  const T=[],B=[];let lt=null,lb=null;
  for(const x of g){let t=[],b=[];
   for(const e of x.ns){const m=e.m;let h=m>=60?'t':'b';
