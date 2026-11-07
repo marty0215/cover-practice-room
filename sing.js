@@ -354,23 +354,32 @@ const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40,pitch:30}; // 문제당 예상 
    강등 없음(약점 가중이 처리). 시작 항목 수: 음정·음계 도수 4, 3화음 2(메이저·마이너), 7화음 3. 순서는 서로 확연히 다른 것부터(음정: 5도·8도·3도 / 도수: 1·3·5·2 …, 반음계 음은 단3→단7→단6→감5→단2) */
 const LAD_TYPES=['interval','triad','seventh','degree'],LAD_WIN=20,LAD_MIN=12,LAD_PCT=.9,LAD_N0={interval:4,triad:2,seventh:3,degree:4};
 const LAD_ORDER={interval:['완전5도','옥타브','장3도','단3도','완전4도','장2도','장6도','단6도','장7도','단7도','단2도','증4도'],triad:['메이저','마이너','디미니시','오그먼트'],seventh:['도미넌트7','메이저7','마이너7','하프 디미니시','디미니시7'],degree:[0,4,7,2,5,9,11,3,10,8,6,1]};
+const LAD_DIRS=['asc','desc','har'],LAD_DIR_KO=['상행','하행','화성(동시)'];/* 음정만 방향 단계 d: 0 상행 → 1 하행 → 2 화성(동시). 각 방향에서 항목을 4→12개로 열고 12개가 다 열린 뒤 승급 기준을 채우면 다음 방향(항목 4개부터, 화성은 12개 전부). d 없는 옛 저장은 상행 */
 const ladNew=()=>({v:1,t:{}}),ladOf=(L,ty)=>L&&L.t&&L.t[ty]||null;
 function ladClean(v){const o=ladNew();if(!v||typeof v!=='object'||Array.isArray(v)||v.v!==1||!v.t||typeof v.t!=='object')return o;
- for(const ty of LAD_TYPES){const r=v.t[ty];if(!r||typeof r!=='object')continue;const n=LAD_ORDER[ty].length,kk=Math.floor(+r.k);o.t[ty]={on:r.on?1:0,k:Math.max(LAD_N0[ty],Math.min(n,isFinite(kk)?kk:LAD_N0[ty])),h:(Array.isArray(r.h)?r.h:[]).filter(x=>x===0||x===1).slice(-LAD_WIN)}}
+ for(const ty of LAD_TYPES){const r=v.t[ty];if(!r||typeof r!=='object')continue;const n=LAD_ORDER[ty].length,kk=Math.floor(+r.k);o.t[ty]={on:r.on?1:0,k:Math.max(LAD_N0[ty],Math.min(n,isFinite(kk)?kk:LAD_N0[ty])),h:(Array.isArray(r.h)?r.h:[]).filter(x=>x===0||x===1).slice(-LAD_WIN)};
+  if(ty==='interval'){const dd=Math.floor(+r.d);o.t[ty].d=Math.max(0,Math.min(2,isFinite(dd)?dd:0));if(o.t[ty].d===2)o.t[ty].k=n}}
  return o}
-function ladSet(L,ty,on){const o=ladClean(L),r=o.t[ty]||(o.t[ty]={on:0,k:LAD_N0[ty],h:[]});r.on=on?1:0;return o}
+function ladSet(L,ty,on){const o=ladClean(L),r=o.t[ty]||(o.t[ty]=ty==='interval'?{on:0,k:LAD_N0[ty],h:[],d:0}:{on:0,k:LAD_N0[ty],h:[]});r.on=on?1:0;return o}
 const ladOn=(L,ty)=>!!(ladOf(L,ty)&&ladOf(L,ty).on);
+/* 음정 사다리가 켜져 있을 때 방향 단계의 방향('asc'|'desc'|'har'), 아니면 null */
+const ladDir=L=>{const r=ladOf(L,'interval');return r&&r.on?LAD_DIRS[r.d|0]||'asc':null};
 /* 켠 종류의 활성 항목 목록(음정·3화음·7화음은 이름, 도수는 반음 수). 꺼져 있으면 null */
 function ladItems(L,ty){const r=ladOf(L,ty);return r&&r.on&&LAD_ORDER[ty]?LAD_ORDER[ty].slice(0,r.k):null}
 /* 한 문제 결과 기록 → {L,promoted:새로 열린 항목|null}. 꺼진 종류는 그대로 */
 function ladRec(L,ty,ok){const o=ladClean(L),r=o.t[ty];if(!r||!r.on)return {L:o,promoted:null};const ord=LAD_ORDER[ty];r.h=r.h.concat(ok?1:0).slice(-LAD_WIN);
  const acc=r.h.reduce((a,x)=>a+x,0)/r.h.length;let promoted=null;
- if(r.k<ord.length&&r.h.length>=LAD_MIN&&acc>=LAD_PCT-1e-9){promoted=ord[r.k];r.k++;r.h=[]}
- return {L:o,promoted}}
+ let stageUp=null;if(r.h.length>=LAD_MIN&&acc>=LAD_PCT-1e-9){if(r.k<ord.length){promoted=ord[r.k];r.k++;r.h=[]}
+  else if(ty==='interval'&&(r.d|0)<2){r.d=(r.d|0)+1;r.k=r.d===2?ord.length:LAD_N0[ty];r.h=[];stageUp=LAD_DIR_KO[r.d]}}
+ return {L:o,promoted,stageUp}}
 const ladLab=(ty,it)=>ty==='degree'?'「'+SOLF[it]+'」':String(it);
 function ladStatus(L,ty){const r=ladOf(L,ty),ord=LAD_ORDER[ty];if(!ord)return null;const on=!!(r&&r.on),k=r?r.k:LAD_N0[ty],h=r?r.h:[],n=h.length,acc=n?h.reduce((a,x)=>a+x,0)/n:null,next=k<ord.length?ord[k]:null;
- const text=on?`활성 ${k}/${ord.length} 항목 · 최근 20문제 ${acc==null?'—':Math.round(acc*100)+'%'}${n?` (${n}문제 답함)`:''} · ${next==null?'모든 항목이 열렸습니다':'다음 항목: '+ladLab(ty,next)}`:'';
- return {on,k,total:ord.length,n,acc,next,nextLabel:next==null?null:ladLab(ty,next),text}}
+ const d=ty==='interval'&&r?r.d|0:0,dk=ty==='interval'?LAD_DIR_KO[d]:null,nd=ty==='interval'&&d<2?LAD_DIR_KO[d+1]:null;
+ const text=on?`${dk?'단계: '+dk+' · ':''}활성 ${k}/${ord.length} 항목 · 최근 20문제 ${acc==null?'—':Math.round(acc*100)+'%'}${n?` (${n}문제 답함)`:''} · ${next==null?(nd?'모든 항목이 열렸습니다 · 다음 단계: '+nd:'모든 항목이 열렸습니다'):'다음 항목: '+ladLab(ty,next)}`:'';
+ return {on,k,total:ord.length,n,acc,next,nextLabel:next==null?null:ladLab(ty,next),text,dir:dk?LAD_DIRS[d]:null,dirLabel:dk,stage:d}}
+/* 음정 소리 느낌 한마디(기억 보조: 개인차 있음) */
+const IV_FEEL={'단2도':'거칠게 부딪힘','장7도':'거칠게 부딪힘','장2도':'살짝 부딪힘','단7도':'살짝 부딪힘','단3도':'달콤함','장3도':'달콤함','단6도':'달콤함','장6도':'달콤함','완전4도':'비어 있는 소리','완전5도':'비어 있는 소리','옥타브':'비어 있는 소리','증4도':'불안정'};
+const ivFeel=n=>IV_FEEL[n]?'소리 느낌(기억 보조): 「'+IV_FEEL[n]+'」':null;
 const kindOf=id=>KIND_OF[String(id).split(':')[0]]||null;
 const clamp01=x=>Math.max(0,Math.min(1,+x||0));
 const newStats=()=>({v:2,items:{},conf:{}});
@@ -731,7 +740,7 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else if(k==='pr-days1'){const x=pruneLog(a),y=pruneLog(b),o=newLog();o.last=Math.max(x.last,y.last);for(const d of new Set([...Object.keys(x.days),...Object.keys(y.days)])){const p=x.days[d]||{n:0,ms:0},q=y.days[d]||{n:0,ms:0};o.days[d]={n:Math.max(p.n,q.n),ms:Math.max(p.ms,q.ms)}}out[k]=JSON.stringify(pruneLog(o))}
   else if(k==='pr-ear'){const o={};for(const id of new Set([...Object.keys(a),...Object.keys(b)])){const x=a[id],y=b[id];o[id]=x&&y?{n:x.n+y.n,ok:x.ok+y.ok}:x||y}out[k]=JSON.stringify(o)}
   else if(k==='pr-primerlog'){const x=primerClean(a),y=primerClean(b),o=primerNew();for(const p of PRIMERS){const u=x.p[p],w=y.p[p];if(u||w)o.p[p]=!u?w:!w?u:w.length>=u.length?w:u}out[k]=JSON.stringify(o)}
-  else if(k==='pr-ladder1'){const x=ladClean(a),y=ladClean(b),o=ladNew();for(const ty of LAD_TYPES){const p=x.t[ty],q=y.t[ty];if(p&&q){const w=q.k>p.k||(q.k===p.k&&q.h.length>=p.h.length)?q:p;o.t[ty]={on:p.on||q.on?1:0,k:w.k,h:w.h}}else if(p||q)o.t[ty]=p||q}out[k]=JSON.stringify(o)}
+  else if(k==='pr-ladder1'){const x=ladClean(a),y=ladClean(b),o=ladNew();for(const ty of LAD_TYPES){const p=x.t[ty],q=y.t[ty];if(p&&q){const pd=p.d|0,qd=q.d|0,w=qd>pd||(qd===pd&&(q.k>p.k||(q.k===p.k&&q.h.length>=p.h.length)))?q:p;o.t[ty]=ty==='interval'?{on:p.on||q.on?1:0,k:w.k,h:w.h,d:w.d|0}:{on:p.on||q.on?1:0,k:w.k,h:w.h}}else if(p||q)o.t[ty]=p||q}out[k]=JSON.stringify(o)}
   else out[k]=cur[k]}
  return out}
 
@@ -757,5 +766,5 @@ const MIX_VOICES=['sing','keys','guitar','score'],MIX_KO={sing:'기본 합성',k
 function octaveShifts(ps){const a=(ps||[]).filter(Number.isFinite);if(!a.length)return [0];const lo=Math.min(...a),hi=Math.max(...a);return [-1,0,1].filter(s=>lo+12*s>=MIX_LO&&hi+12*s<=MIX_HI)}
 function mixPlan(ps,rnd=Math.random){const sh=octaveShifts(ps),v=MIX_VOICES[Math.floor(rnd()*MIX_VOICES.length)%MIX_VOICES.length],s=sh.length?sh[Math.floor(rnd()*sh.length)%sh.length]:0;return {voice:v,shift:s}}
 function qPitches(q){const o=[];if(!q)return o;for(const k of ['notes','scale','melody'])if(Array.isArray(q[k]))o.push(...q[k]);if(Array.isArray(q.cad))for(const c of q.cad){if(c.notes)o.push(...c.notes);if(Number.isFinite(c.bass))o.push(c.bass)}if(q.target){if(q.target.notes)o.push(...q.target.notes);if(Number.isFinite(q.target.bass))o.push(q.target.bass)}return o.filter(Number.isFinite)}
-const api={jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,LAD_DIRS,LAD_DIR_KO,ladDir,IV_FEEL,ivFeel,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
