@@ -631,6 +631,8 @@ const fmtChord=c=>tn(c.root)+c.q+(c.bass!=null?'/'+tn(c.bass):'');
 const chordName=i=>fmtChord(CH[i]);
 /* 반마디로 나뉜 마디(song.split[i]={a,b}: 앞·뒤 반마디 코드)는 'C │ G' 로 보여 준다. song.chords[i] 는 마디 대표 코드로 그대로 둔다 */
 const chordFull=i=>{const sp=song.split&&song.split[i];return sp?fmtChord(parseChord(sp.a))+' │ '+fmtChord(parseChord(sp.b)):chordName(i)};
+/* 지금 박(마디 안 0..3)에 울리는 코드 이름: 반마디 분할이면 앞 2박은 앞 코드, 뒤 2박은 뒤 코드 */
+const chordAt=(i,beat)=>{const sp=song.split&&song.split[i];return sp?fmtChord(parseChord(beat>=2?sp.b:sp.a)):chordName(i)};
 const noteName=p=>{const q=p+transpose;return NAMES[q%12]+(Math.floor(q/12)-1)};
 const spb0=()=>60/song.bpm;
 
@@ -648,7 +650,7 @@ function loadSong(id){if(S.playing)stop();song=SONGS[id];song.id=id;BARS=song.ba
  document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));
  el('songdesc').textContent=song.desc;el('inventory').textContent=song.inventory||'';el('cedNote').textContent='';
  el('legend').innerHTML=PARTS.map(p=>`<span style="--c:var(--${p})">${PARTDEF[p].name}${p==='drums'?' (킥·스네어·하이햇)':''}</span>`).join('');
- buildStems();applyMode();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderArr();renderBar();syncUserUi();updExp();draw()}
+ recRender();buildStems();applyMode();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderArr();renderBar();syncUserUi();updExp();draw()}
 
 /* ---------- 반주 생성 (스타일 프리셋: 같은 베이스·건반·드럼 3파트 안에서만 패턴을 바꾼다. 기타 없음) ---------- */
 const STYLES={ballad:'발라드',pop:'팝',rock:'록',acoustic:'어쿠스틱'};
@@ -798,7 +800,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  if(drag&&drag.moved){const a=Math.min(drag.a,drag.b),c=Math.max(drag.a,drag.b)+1;cx.fillStyle=css('--loop');cx.globalAlpha=.28;cx.fillRect(x(a*4),0,xw((c-a)*4),H);cx.globalAlpha=1}
  cx.save();cx.beginPath();cx.rect(0,0,W,H);cx.clip();
  cx.strokeStyle=line;cx.lineWidth=1;for(let bt=v0;bt<=Math.min(TOTAL,v0+vb);bt++){cx.globalAlpha=bt%4?.5:1;cx.beginPath();cx.moveTo(x(bt),top-4);cx.lineTo(x(bt),H);cx.stroke()}cx.globalAlpha=1;
- cx.textBaseline='top';for(let i=view.start;i<Math.min(BARS,view.start+view.len);i++){cx.fillStyle=fg;cx.font='600 15px "JetBrains Mono",monospace';cx.fillText(chordName(i),x(i*4)+6,6);cx.fillStyle=mu;cx.font='11px "JetBrains Mono",monospace';cx.fillText(String(i+1),x(i*4)+6,22)}
+ cx.textBaseline='top';for(let i=view.start;i<Math.min(BARS,view.start+view.len);i++){cx.fillStyle=fg;cx.font='600 15px "JetBrains Mono",monospace';{const sp=song.split&&song.split[i];if(sp&&x(i*4+2)-x(i*4)>=64){cx.fillText(chordAt(i,0),x(i*4)+6,6);cx.fillText(chordAt(i,2),x(i*4+2)+6,6)}else cx.fillText(sp?chordAt(i,0)+'│':chordName(i),x(i*4)+6,6)}cx.fillStyle=mu;cx.font='11px "JetBrains Mono",monospace';cx.fillText(String(i+1),x(i*4)+6,22)}
  const nm=el('vNames').checked;const y=p=>top+(hi-p)/(hi-lo)*melH;const rh=Math.max(3,melH/(hi-lo)-1);
  for(const p of mel){cx.fillStyle=css('--'+p);cx.globalAlpha=!audible(p)&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts[p]){if(s+d<v0||s>v0+vb)continue;cx.fillRect(x(s)+.5,y(pitch)-rh/2,Math.max(2,xw(d)-1),rh);if(nm&&rh>=9&&xw(d)>=22){cx.save();cx.fillStyle=css('--bg');cx.font='9px "JetBrains Mono",monospace';cx.textBaseline='middle';cx.fillText(noteName(pitch),x(s)+3,y(pitch));cx.restore()}}}cx.globalAlpha=1;
  const dy={36:H-14,38:H-14-drumH/3,42:H-14-2*drumH/3};if(song.parts.drums){cx.fillStyle=css('--drums');cx.globalAlpha=!audible('drums')&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts.drums){if(s<v0||s>v0+vb)continue;const r=pitch===36?6:pitch===38?5:3.5;cx.beginPath();cx.arc(x(s),dy[pitch]??H-14,r,0,Math.PI*2);cx.fill()}cx.globalAlpha=1}
@@ -809,7 +811,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  cx.strokeStyle=line;cx.beginPath();cx.moveTo(0,H-drumH-6);cx.lineTo(W,H-drumH-6);cx.stroke();
  if(S.loop){cx.fillStyle=css('--bg');cx.globalAlpha=.62;const l=Math.max(0,Math.min(W,x(S.a))),r=Math.max(0,Math.min(W,x(S.b)));cx.fillRect(0,0,l,H);cx.fillRect(r,0,W-r,H);cx.globalAlpha=1;cx.strokeStyle=css('--loop');cx.lineWidth=2;cx.beginPath();if(x(S.a)>=0&&x(S.a)<=W){cx.moveTo(x(S.a),0);cx.lineTo(x(S.a),H)}if(x(S.b)>=0&&x(S.b)<=W){cx.moveTo(x(S.b),0);cx.lineTo(x(S.b),H)}cx.stroke()}
  if(b>=v0&&b<=v0+vb){cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke()}
- const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordName(bar);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;el('scrub').setAttribute('aria-valuetext',`마디 ${bar+1} 박 ${beat+1}, ${chordName(bar)}`);updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
+ const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordAt(bar,b-bar*4);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;el('scrub').setAttribute('aria-valuetext',`마디 ${bar+1} 박 ${beat+1}, ${chordName(bar)}`);updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
  if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
 const barAt=e=>{const r=cv.getBoundingClientRect();return Math.max(0,Math.min(BARS-1,view.start+Math.floor((e.clientX-r.left)/r.width*view.len)))};
 cv.addEventListener('pointerdown',e=>{if(e.button)return;drag={x:e.clientX,a:barAt(e),b:barAt(e),moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
@@ -1245,14 +1247,14 @@ function recDisarm(){recStop();const was=!!rec.st;if(rec.st){rec.st.getTracks().
 function recBegin(){clearTimeout(rec.tm);rec.tm=0;if(!rec.st||rec.pb)return;if(rec.tk.length>=RMAX){recM(`녹음이 ${RMAX}개라 이번에는 녹음하지 않습니다. 하나를 지워 주세요.`);return}
  rec.tm=setTimeout(()=>{rec.tm=0;if(!S.playing||!rec.st)return;const mt=RMIME.find(t=>MediaRecorder.isTypeSupported(t));let mr;
   try{mr=mt?new MediaRecorder(rec.st,{mimeType:mt}):new MediaRecorder(rec.st)}catch(e){recM('녹음을 시작하지 못했습니다: '+e.message);return}
-  const ch=[],meta={lead:ctx.currentTime-S.anchorT,startB:S.startB,rate:rate(),tr:transpose,lp:{on:S.loop,a:S.a,b:S.b},t0:performance.now()};
+  const ch=[],meta={sg:song,lead:ctx.currentTime-S.anchorT,startB:S.startB,rate:rate(),tr:transpose,lp:{on:S.loop,a:S.a,b:S.b},t0:performance.now()};
   mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data)};
   mr.onstop=()=>{const type=mr.mimeType||mt||'audio/webm',blob=new Blob(ch,{type});if(!blob.size){recM('녹음이 비어 있습니다.');return}
    rec.tk.push({id:++rec.n,blob,url:URL.createObjectURL(blob),ext:/mp4/.test(type)?'mp4':/ogg/.test(type)?'ogg':'webm',dur:(performance.now()-meta.t0)/1000,...meta});recRender();recM(rec.tk.length>=RMAX?`녹음 ${rec.n}을 담았습니다. 이제 ${RMAX}개라 더 녹음하려면 하나를 지워 주세요.`:`녹음 ${rec.n}을 담았습니다. 아래에서 반주와 함께 들어 보세요.`)};
   try{mr.start();rec.mr=mr;recM('녹음 중입니다. 정지를 누르면 끝납니다.')}catch(e){recM('녹음을 시작하지 못했습니다: '+e.message)}},Math.max(0,(S.anchorT-ctx.currentTime)*1000))}
 function recStop(){clearTimeout(rec.tm);rec.tm=0;if(rec.mr){const m=rec.mr;rec.mr=null;if(m.state==='recording')try{m.stop()}catch(e){}}
  if(rec.pb){const p=rec.pb;rec.pb=null;try{p.src.stop()}catch(e){}p.g.disconnect();applyBack();recRender()}}
-async function recPlay(id){const t=rec.tk.find(x=>x.id===id);if(!t||(sing&&sing.busy))return;const again=rec.pb&&rec.pb.id===id;if(S.playing)stop();if(again)return;
+async function recPlay(id){const t=rec.tk.find(x=>x.id===id);if(!t||(sing&&sing.busy))return;if(t.sg!==song){recM('이 녹음은 다른 곡 반주 위에서 녹음했습니다. 그 곡으로 돌아가면 반주와 함께 들을 수 있습니다(받기는 됩니다).');return}const again=rec.pb&&rec.pb.id===id;if(S.playing)stop();if(again)return;
  ensureCtx();let buf;try{if(ctx.state==='suspended')await ctx.resume();buf=await ctx.decodeAudioData(await t.blob.arrayBuffer())}catch(e){recM('이 녹음을 재생하지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}
  if(!rec.tk.includes(t))return;
  el('tempo').value=Math.round(t.rate*100);el('tempo').oninput();if(t.tr!==transpose){el('transpose').value=t.tr;el('transpose').oninput()}
@@ -1261,7 +1263,7 @@ async function recPlay(id){const t=rec.tk.find(x=>x.id===id);if(!t||(sing&&sing.
  play({noCount:true});if(!S.playing){rec.pb=null;g.disconnect();return}
  const d=t.lead-(sing.lat||0);d>=0?src.start(S.anchorT+d):src.start(S.anchorT,-d);recRender();recM(`녹음 ${id}을 반주와 함께 듣는 중입니다. 지연 ${Math.round((sing.lat||0)*1000)} ms를 뺐습니다.`)}
 const mmss=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-function recRender(){el('takes').innerHTML=rec.tk.map(t=>`<li><b>녹음 ${t.id}</b><span class="mono small muted">${mmss(t.dur)} · ${Math.floor(t.startB/4+1e-6)+1}마디부터 · 속도 ${Math.round(t.rate*100)}%${t.tr?` · 키 ${t.tr>0?'+':''}${t.tr}`:''}</span><button class="btn sm" type="button" data-a="play" data-i="${t.id}" aria-label="녹음 ${t.id} ${rec.pb&&rec.pb.id===t.id?'정지':'반주와 듣기'}">${rec.pb&&rec.pb.id===t.id?'■ 정지':'▶ 반주와 듣기'}</button><a class="btn sm" href="${t.url}" download="take-${t.id}.${t.ext}" aria-label="녹음 ${t.id} 받기 (${t.ext})">받기</a><button class="btn sm" type="button" data-a="del" data-i="${t.id}" aria-label="녹음 ${t.id} 지우기">지우기</button></li>`).join('')}
+function recRender(){el('takes').innerHTML=rec.tk.map(t=>`<li><b>녹음 ${t.id}</b><span class="mono small muted">${mmss(t.dur)} · ${Math.floor(t.startB/4+1e-6)+1}마디부터 · 속도 ${Math.round(t.rate*100)}%${t.tr?` · 키 ${t.tr>0?'+':''}${t.tr}`:''}${t.sg!==song?' · 다른 곡':''}</span><button class="btn sm" type="button" data-a="play" data-i="${t.id}" aria-label="녹음 ${t.id} ${rec.pb&&rec.pb.id===t.id?'정지':'반주와 듣기'}">${rec.pb&&rec.pb.id===t.id?'■ 정지':'▶ 반주와 듣기'}</button><a class="btn sm" href="${t.url}" download="take-${t.id}.${t.ext}" aria-label="녹음 ${t.id} 받기 (${t.ext})">받기</a><button class="btn sm" type="button" data-a="del" data-i="${t.id}" aria-label="녹음 ${t.id} 지우기">지우기</button></li>`).join('')}
 el('takes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const id=+b.dataset.i;if(b.dataset.a==='play')recPlay(id);else{const t=rec.tk.find(x=>x.id===id);if(!t)return;if(rec.pb&&rec.pb.id===id)stop();rec.tk=rec.tk.filter(x=>x!==t);URL.revokeObjectURL(t.url);recRender();recM(`녹음 ${id}을 지웠습니다.`)}});
 el('recOn').onchange=()=>el('recOn').checked?recArm():recDisarm();
 el('recEc').onchange=()=>{if(!rec.st)return;if(rec.mr){recM('녹음 중에는 바꿀 수 없습니다. 정지한 뒤 다시 바꿔 주세요.');return}recDisarm();el('recOn').checked=true;recArm()};
