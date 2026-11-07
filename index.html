@@ -312,6 +312,15 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 .legend .ln::before{height:3px;width:18px;vertical-align:3px;border-radius:2px}
 .legend .bx::before{background:none;border:2px solid var(--c)}
 
+/* 따라 부르기 */
+.fu{margin-top:.8rem;display:grid;gap:.6rem}
+.tuner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.2rem 1rem;align-items:center}
+.tuner .tn{font:500 2rem var(--mono);min-width:3.6ch;line-height:1.1}
+.tuner .tc{font-family:var(--mono);font-size:.9rem;color:var(--text-muted);grid-column:1/-1}
+.tbar{position:relative;height:14px;border-radius:7px;border:1px solid var(--control-border);background:linear-gradient(to right,transparent 25%,var(--accent-soft) 25% 75%,transparent 75%)}
+.tbar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--text-muted)}
+.tbar i{position:absolute;left:50%;top:-4px;bottom:-4px;width:6px;margin-left:-3px;border-radius:3px;background:var(--text-muted)}
+.tbar i.ok{background:var(--ok)}.tbar i.bad{background:var(--warn)}
 /* 단축키 시트 */
 dialog{background:var(--surface);color:var(--text);border:1px solid var(--control-border);border-radius:14px;padding:1.1rem 1.2rem;max-width:min(520px,calc(100vw - 32px));width:100%}
 dialog::backdrop{background:rgba(0,0,0,.55)}
@@ -413,6 +422,10 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <div class="row" style="justify-content:space-between;margin-bottom:.5rem"><div class="row"><button class="btn sm" id="vPrev">◀ 이전</button><span class="mono small" id="vRange"></span><button class="btn sm" id="vNext">다음 ▶</button><div class="seg" id="vLen" role="group" aria-label="보이는 마디 수"><button aria-pressed="false" data-n="4">4마디</button><button aria-pressed="true" data-n="8">8마디</button><button aria-pressed="false" data-n="16">16마디</button></div></div><div class="row"><label class="chk"><input type="checkbox" id="vNames"> 음이름 표시</label><label class="chk"><input type="checkbox" id="vFollow" checked> 재생 따라가기</label></div></div>
   <div class="rollwrap" tabindex="0" role="region" aria-label="채보 롤 (가로로 스크롤)"><canvas class="cv" id="roll" width="1200" height="520" role="img" aria-label="채보 롤: 파트별 음 위치와 재생 위치. 같은 내용을 아래 마디 상세 표와 글로 볼 수 있습니다" aria-describedby="bardetail"></canvas></div>
   <div class="legend" id="legend"></div>
+  <div class="panel fu" id="fuPanel"><div class="row"><label class="chk"><input type="checkbox" id="fuOn"><span>마이크로 따라 부르기</span></label><label class="chk" title="체크하면 한 옥타브 위·아래로 불러도 맞은 것으로 셉니다"><input type="checkbox" id="fuFold" checked><span>옥타브 무시</span></label><span class="legend" style="margin:0"><span class="ln" style="--c:var(--loop)">내 음높이</span></span></div>
+    <div class="tuner" id="tuner"><span class="tn" id="tuNote" aria-hidden="true">–</span><div class="tbar" id="tuBar" aria-hidden="true"><i id="tuNeedle"></i></div><span class="tc" id="tuTxt">마이크가 꺼져 있습니다.</span></div>
+    <p class="note" id="fuMsg" role="status" style="margin:0">멜로디(채보 윗선)에 맞춰 부르면 내 음높이가 롤 위에 선으로 그려집니다. 이어폰을 쓰면 반주가 마이크로 새어 들어가지 않아 더 정확합니다. 마이크 소리는 브라우저 안에서만 처리하고 저장하거나 보내지 않습니다. 정지하면 마이크가 꺼지고 마디별 결과가 나옵니다.</p>
+    <div id="fuSumm" style="overflow-x:auto"></div></div>
   <div class="panel bardetail" id="bardetail"></div>
 </div></div>
 
@@ -680,7 +693,7 @@ function play(){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx(
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
  if(mode==='synth'){seekIdx(start);S.timer=setInterval(tick,30)}
  draw()}
-function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');draw()}
+function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');fuStop();draw()}
 real.addEventListener('ended',()=>{if(S.playing&&mode==='real'){stop();S.anchorB=0;draw()}});
 el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';if(masterGain)masterGain.gain.setTargetAtTime(masterLevel(),ctx.currentTime,.02);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel()};
 el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(mode==='synth'){real.volume=masterLevel()*origLevel();if(S.playing&&!S.withAudio&&origLevel()>0&&song.audio){S.withAudio=true;real.currentTime=nowBeat()*spb0();real.play().catch(()=>{})}}};
@@ -770,6 +783,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  const nm=el('vNames').checked;const y=p=>top+(hi-p)/(hi-lo)*melH;const rh=Math.max(3,melH/(hi-lo)-1);
  for(const p of mel){cx.fillStyle=css('--'+p);cx.globalAlpha=!audible(p)&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts[p]){if(s+d<v0||s>v0+vb)continue;cx.fillRect(x(s)+.5,y(pitch)-rh/2,Math.max(2,xw(d)-1),rh);if(nm&&rh>=9&&xw(d)>=22){cx.save();cx.fillStyle=css('--bg');cx.font='9px "JetBrains Mono",monospace';cx.textBaseline='middle';cx.fillText(noteName(pitch),x(s)+3,y(pitch));cx.restore()}}}cx.globalAlpha=1;
  const dy={36:H-14,38:H-14-drumH/3,42:H-14-2*drumH/3};if(song.parts.drums){cx.fillStyle=css('--drums');cx.globalAlpha=!audible('drums')&&mode==='synth'?.25:1;for(const [s,d,pitch] of song.parts.drums){if(s<v0||s>v0+vb)continue;const r=pitch===36?6:pitch===38?5:3.5;cx.beginPath();cx.arc(x(s),dy[pitch]??H-14,r,0,Math.PI*2);cx.fill()}cx.globalAlpha=1}
+ if(fu.fr.length)fuLine(x,y,rh);
  cx.restore();
  if(nm){cx.font='10px "JetBrains Mono",monospace';cx.textBaseline='middle';for(let p=lo;p<=hi;p++)if(((p+transpose)%12+12)%12===0){cx.globalAlpha=.35;cx.strokeStyle=mu;cx.beginPath();cx.moveTo(0,y(p));cx.lineTo(W,y(p));cx.stroke();cx.globalAlpha=1;cx.fillStyle=mu;cx.fillText(noteName(p),4,y(p)-6)}}
  cx.fillStyle=mu;cx.font='11px "Noto Sans KR",sans-serif';cx.textBaseline='middle';cx.fillText('킥',4,dy[36]);cx.fillText('스네어',4,dy[38]);cx.fillText('햇',4,dy[42]);
@@ -837,10 +851,12 @@ function renderTips(){const vi=NAMES[(KEY+9+transpose)%12]+'m',IV=NAMES[(KEY+5+t
 
 /* ---------- 편곡 점검: 채보·생성 데이터로만 계산하는 신호 기반 검사(청취 평가 아님). 순수 함수 ---------- */
 /* 멜로디 = score 윗선(없으면 guitar, keys). SingLab.topLine 은 음역에 맞춰 옥타브를 옮기므로 간격 계산에 쓸 수 없어 원래 높이 그대로 뽑는 윗선을 따로 둔다 */
+const topOf=ns=>{const o=[];for(const n of ns.slice().sort((a,b)=>a[0]-b[0])){const c=o[o.length-1];if(c&&n[0]-c[0]<=.06){if(n[2]>c[2]||(n[2]===c[2]&&n[1]>c[1])){c[1]=n[1];c[2]=n[2]}}else o.push([n[0],n[1],n[2]])}return o},
+ melSrc=sg=>['score','guitar','keys'].find(p=>sg.parts[p]&&sg.parts[p].length)||null;
 function arrCheck(sg){
  const P=sg.parts,B=sg.bars,E=1e-6,has=p=>P[p]&&P[p].length,r2=x=>Math.round(x*100)/100,
- top=ns=>{const o=[];for(const n of ns.slice().sort((a,b)=>a[0]-b[0])){const c=o[o.length-1];if(c&&n[0]-c[0]<=.06){if(n[2]>c[2]||(n[2]===c[2]&&n[1]>c[1])){c[1]=n[1];c[2]=n[2]}}else o.push([n[0],n[1],n[2]])}return o},
- src=['score','guitar','keys'].find(has)||null,mel=src?top(P[src]):[],accP=['keys','guitar'].filter(p=>p!==src&&has(p)),accAll=accP.flatMap(p=>P[p]),acc=top(accAll),bass=P.bass||[],
+ top=topOf,
+ src=melSrc(sg),mel=src?top(P[src]):[],accP=['keys','guitar'].filter(p=>p!==src&&has(p)),accAll=accP.flatMap(p=>P[p]),acc=top(accAll),bass=P.bass||[],
  inB=(ns,b)=>ns.filter(n=>n[0]>=b*4-E&&n[0]<b*4+4-E),touch=(ns,b)=>ns.filter(n=>n[0]<b*4+4-E&&n[0]+n[1]>b*4+E),
  ov=(x,y)=>Math.min(x[0]+x[1],y[0]+y[1])-Math.max(x[0],y[0])>.05,st=(x,y,b)=>{const t=Math.max(x[0],y[0]);return t>=b*4-E&&t<b*4+4-E},
  on=[...new Set(['bass','keys','drums','guitar'].filter(has).flatMap(p=>P[p].map(n=>Math.round(n[0]*1e3)/1e3)))].filter(t=>t<B*4-E).sort((a,b)=>a-b),gaps=[];
@@ -1128,6 +1144,38 @@ function singDraw(){const c=el('sRoll');if(!c)return;const g=c.getContext('2d'),
 window.singDraw=singDraw;
 /* 탭을 옮기거나 화면이 가려지면 녹음을 멈추고 마이크를 닫는다 */
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&sing.abort)sing.abort()});addEventListener('pagehide',()=>{if(sing.abort)sing.abort()});
+/* ---------- 따라 부르기: 마이크 음높이를 채보 롤 위에 겹쳐 그린다(신호 기반 판정). 멜로디 = arrCheck 와 같은 윗선(원래 옥타브). 마이크 소리는 저장하지 않는다 ---------- */
+const fu={tr:null,on:false,busy:false,fr:[],st:{},tot:{n:0,k:0},last:-1,ps:0,mel:[],ui:0};
+const fuNm=m=>NAMES[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);
+function fuTarget(b){for(const n of fu.mel){if(n[0]>b)break;if(b<n[0]+n[1])return n}return null}
+function fuNear(b){let r=fu.mel[0]||null;for(const n of fu.mel){if(n[0]>b)break;r=n}return r}
+function fuFrame(f){if(!fu.on)return;const m=f[1],vo=m!=null&&f[2]>=.5;let b=null,tn=null;
+ if(S.playing&&(mode==='synth'?ctx.currentTime>=S.anchorT:!real.paused)){const nb=nowBeat();if(fu.last<0)fu.ps=nb;else if(nb<fu.last-.5){fu.fr=[];fu.ps=nb}fu.last=nb;b=nb-(sing.lat||0)/S.spb;if(b<fu.ps||b>TOTAL)b=null;else tn=fuTarget(b)}
+ let c=null,tp=null;if(vo){if(tn){tp=tn[2]+transpose;c=m-tp;if(el('fuFold').checked)c-=12*Math.round(c/12)}else c=m-Math.round(m);c*=100;
+  if(b!=null){const nr=tn||fuNear(b);fu.fr.push([b,m-transpose,nr?nr[2]:null]);if(fu.fr.length>8000)fu.fr.shift();
+   if(tn&&b>=tn[0]+tn[1]*.15&&b<=tn[0]+tn[1]*.9){const bar=Math.min(BARS-1,Math.floor(b/4)),o=fu.st[bar]||(fu.st[bar]={n:0,k:0,sum:0});o.n++;o.sum+=c;fu.tot.n++;if(Math.abs(c)<=50){o.k++;fu.tot.k++}}}}
+ else if(b!=null)fu.fr.push(null);
+ const t=performance.now();if(t-fu.ui<60)return;fu.ui=t;fuUi(vo?m:null,c,tp)}
+function fuUi(m,c,tp){const nt=el('tuNote'),nd=el('tuNeedle'),tx=el('tuTxt'),pc=fu.tot.n?` · 맞은 비율 ${Math.round(100*fu.tot.k/fu.tot.n)}% (${fu.tot.n}프레임)`:'';
+ if(m==null){nt.textContent='–';nd.style.left='50%';nd.className='';tx.textContent='소리가 없거나 음높이를 잡지 못했습니다'+pc;return}
+ nt.textContent=fuNm(m);nd.style.left=(50+Math.max(-100,Math.min(100,c))/2)+'%';nd.className=Math.abs(c)<=50?'ok':'bad';
+ tx.textContent=`${tp!=null?'목표 '+fuNm(tp)+' 기준 ':'가장 가까운 반음 기준 '}${c>0?'+':''}${Math.round(c)} cent${pc}`}
+function fuLine(x,y,rh){const g=cx,fold=el('fuFold').checked,c0=(lo+hi)/2;let seg=[],prev=null;const flush=()=>{if(seg.length>1){for(const [w,col] of [[5,css('--bg')],[3,css('--loop')]]){g.strokeStyle=col;g.lineWidth=w;g.lineJoin='round';g.lineCap='round';g.beginPath();seg.forEach(([px,py],i)=>i?g.lineTo(px,py):g.moveTo(px,py));g.stroke()}}else if(seg.length){g.fillStyle=css('--loop');g.beginPath();g.arc(seg[0][0],seg[0][1],2,0,7);g.fill()}seg=[]};
+ for(const f of fu.fr){if(!f||(prev&&f[0]-prev[0]>.5)){flush();prev=null;if(!f)continue}let p=f[1];if(fold)p-=12*Math.round((p-(f[2]!=null?f[2]:c0))/12);seg.push([x(f[0]),y(p)]);prev=f}flush()}
+function fuSumm(){const bs=Object.keys(fu.st).map(Number).sort((a,b)=>a-b),T=fu.tot;
+ el('fuSumm').innerHTML=bs.length?`<table class="stt"><caption class="note" style="text-align:left;caption-side:top;margin:0">마디별 결과 (±50 cent 안 비율${el('fuFold').checked?', 옥타브 무시':''}) · 전체 <b>${Math.round(100*T.k/T.n)}%</b></caption><tr><th scope="col">마디</th><th scope="col">맞은 비율</th><th scope="col">평균 편차(cent)</th><th scope="col">프레임</th></tr>${bs.map(b=>{const o=fu.st[b];return `<tr><td class="n">${b+1}</td><td class="n">${Math.round(100*o.k/o.n)}%</td><td class="n">${o.sum/o.n>0?'+':''}${Math.round(o.sum/o.n)}</td><td class="n">${o.n}</td></tr>`}).join('')}</table>`:''}
+async function fuStart(){if(fu.on||fu.busy)return;const msg=el('fuMsg');if(!window.SingLab){el('fuOn').checked=false;msg.textContent='시창 모듈(sing.js)을 불러오지 못했습니다.';return}
+ fu.busy=true;ensureCtx();let tr;
+ try{if(ctx.state==='suspended')await ctx.resume();tr=await SingLab.tracker(ctx,fuFrame)}catch(e){fu.busy=false;el('fuOn').checked=false;const n=e&&e.name;
+  msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 켜 주세요.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 연결을 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ fu.busy=false;if(!el('fuOn').checked||document.hidden||el('tab-score').hidden){tr.stop();el('fuOn').checked=false;return}
+ fu.tr=tr;fu.on=true;fu.fr=[];fu.st={};fu.tot={n:0,k:0};fu.last=-1;fu.ui=0;const k=melSrc(song);fu.mel=k?topOf(song.parts[k]):[];el('fuSumm').innerHTML='';
+ msg.textContent=fu.mel.length?`마이크가 켜졌습니다. 재생하며 ${PARTDEF[k].name.replace(/ \(.*$/,'')} 윗선을 따라 부르세요. 다 부르면 정지를 누르세요.`:'마이크가 켜졌습니다. 이 곡에는 멜로디 기준 파트가 없어 가장 가까운 반음 기준으로만 보여 줍니다.';fuUi(null,0,null);draw()}
+function fuStop(){if(!fu.tr)return;const had=fu.tot.n;fu.tr.stop();fu.tr=null;fu.on=false;el('fuOn').checked=false;el('tuNote').textContent='–';el('tuNeedle').style.left='50%';el('tuNeedle').className='';
+ el('tuTxt').textContent='마이크가 꺼져 있습니다.';fuSumm();el('fuMsg').textContent=had?'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다. 마이크 소리는 저장하지 않았습니다.':'마이크를 껐습니다. 목표 음이 있는 구간에서 잡힌 소리가 없어 결과 표는 없습니다.';draw()}
+el('fuOn').onchange=()=>el('fuOn').checked?fuStart():fuStop();
+el('fuFold').onchange=()=>{if(!S.playing)draw()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)fuStop()});addEventListener('pagehide',fuStop);
 function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
@@ -1241,7 +1289,7 @@ el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;md.done=true;const n
 /* 컴퓨터 키 입력: 시창·청음 탭이 보이고 입력칸에 포커스가 없을 때만. 전역 단축키보다 먼저 가로챈다(캡처 단계) */
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||!md.ex.length||md.done||sing.busy||typing(e.target)||el('keysheet').open)return;
  const p=MD_KEYS[e.code];if(p==null&&e.key!=='Backspace')return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;if(p==null)mdUndo();else{mdAdd(p);const b=el('mdKeys').querySelector(`[data-p="${p}"]`);b.classList.add('on');setTimeout(()=>b.classList.remove('on'),120)}},true);
-window.onTabShown=t=>{if(t!=='sing'&&sing.abort)sing.abort();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
+window.onTabShown=t=>{if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
 loadSong('onedream');checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 fromHash(true);ready=true;
