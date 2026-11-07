@@ -1938,10 +1938,10 @@ function sdTU(){if(sd.aud&&real.currentTime>=sd.t1-.01)sdStop()}
 function sdStop(){clearTimeout(sd.tm);sd.tm=0;if(sd.aud){sd.aud=false;real.removeEventListener('timeupdate',sdTU);try{real.pause()}catch(_){}real.playbackRate=rate()}
  for(const o of sd.vo)try{o.stop(0)}catch(_){}sd.vo=[];if(sd.g){try{sd.g.gain.value=0;sd.g.disconnect()}catch(_){}sd.g=null}}
 function sdUi(){const on=sd.on&&!RT.on;el('mdSrcRow').hidden=!!RT.on;el('sdBox').hidden=!on;if(!on)return;
- const has=!!song.audio;el('sdHear').querySelector('[data-v=real]').disabled=!has;if(!has&&sd.hear==='real')sd.hear='synth';segPress('sdHear',el('sdHear').querySelector(`[data-v=${sd.hear}]`));
+ const has=!!song.audio&&!(sd.layer==='bass'&&sdEst()); /* 올린 곡의 베이스는 코드에서 만든 초안이라 원곡 음원에는 그 정답이 없다 → 합성만 */el('sdHear').querySelector('[data-v=real]').disabled=!has;segPress('sdHear',el('sdHear').querySelector(`[data-v=${has?sd.hear:'synth'}]`)); /* 고른 값(sd.hear)은 두고 화면만 합성으로: 보컬로 돌아가면 원곡 선택이 살아난다 */
  el('sdSlow').checked=sd.slow;segPress('sdSize',el('sdSize').querySelector(`[data-v="${sd.size}"]`));
  const l=sd.layer,est=sdEst();el('sdEst').textContent=!l?'':est?(l==='bass'?'베이스는 코드에서 만든 초안이라 원곡 베이스와 다를 수 있습니다(정답은 이 초안입니다).':'정답은 자동 채보(추정)입니다. 들리는 것과 다르면 채보 탭 「음 고치기」로 고칠 수 있습니다.'):'정답은 이 곡에 들어 있는 악보 층입니다.';
- el('sdEst').hidden=!l;el('sdFix').hidden=!(l&&neLayers().includes(l));if(!has)el('sdHear').title='이 곡에는 원곡 음원 파일이 없어 합성음으로만 들려줍니다'}
+ el('sdEst').hidden=!l;el('sdFix').hidden=!(l&&neLayers().includes(l));el('sdHear').title=has?'':song.audio?'베이스 초안은 원곡에 없는 음이라 합성음으로만 들려줍니다':'이 곡에는 원곡 음원 파일이 없어 합성음으로만 들려줍니다'}
 function sdShow(){if(sd.on&&!RT.on&&window.SingLab)sdRefresh()}
 /* 창 목록을 현재 곡 층에서 다시 만든다(음 고치기 뒤 반영). keep: 지금 창(같은 마디·같은 음이면 입력 유지) */
 function sdRefresh(){if(sd.song!==song){sd.song=song;sd.done={};sd.layer=null;sd.i=-1;sdStop()}
@@ -1960,7 +1960,7 @@ function sdSet(i){sdStop();sd.i=i;const w=sd.wins[i],r=SingLab.dictRef(w);md.src
 function sdNew(){if(!sd.wins.length)return;sdSet(SingLab.dictNext(sd.wins,sdDone(),sd.i,1));sdPlay()}
 function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();pmDroneStop();sdStop();
  const w=sd.wins[sd.i],r=sd.slow?.75:1;
- if(sd.hear==='real'&&song.audio){const {t0,t1}=SingLab.dictSpan(w,song.bpm);real.playbackRate=r;real.preservesPitch=true;real.webkitPreservesPitch=true;real.volume=masterLevel();sd.aud=true;sd.t1=t1;
+ if(sd.hear==='real'&&song.audio&&!(sd.layer==='bass'&&sdEst())){const {t0,t1}=SingLab.dictSpan(w,song.bpm);real.playbackRate=r;real.preservesPitch=true;real.webkitPreservesPitch=true;real.volume=masterLevel();sd.aud=true;sd.t1=t1;
   try{real.currentTime=t0}catch(_){}real.addEventListener('timeupdate',sdTU);const pr=real.play();if(pr&&pr.catch)pr.catch(()=>{sdStop();el('mdFb').textContent='원곡 음원을 재생하지 못했습니다. 「합성만」으로 들어 보세요.'});
   sd.tm=setTimeout(sdStop,((t1-t0)/r+4)*1000);return}
  const spb=60/(song.bpm||100)/r,t=ctx.currentTime+.1,g=sd.g=ctx.createGain();g.connect(gains.sing||master);
