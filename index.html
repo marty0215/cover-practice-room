@@ -652,7 +652,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div id="sdBox" hidden>
       <div class="row" style="gap:.6rem 1.2rem;align-items:flex-end;margin-top:.4rem"><div class="opt"><span class="lb">층</span><div class="seg" id="sdLayer" role="group" aria-label="받아쓸 층"></div></div><div class="opt"><span class="lb">길이</span><div class="seg" id="sdSize" role="group" aria-label="구간 길이"><button type="button" aria-pressed="false" data-v="1">1마디</button><button type="button" aria-pressed="true" data-v="2">2마디</button></div></div></div>
       <div class="row" style="gap:.5rem;margin-top:.4rem;align-items:center"><button class="btn sm" type="button" id="sdPrev" aria-label="앞 구간">◀</button><span class="mono small" id="sdWin" role="status"></span><button class="btn sm" type="button" id="sdNext" aria-label="다음 구간">▶</button></div>
-      <div class="row" style="gap:.6rem 1.2rem;align-items:flex-end;margin-top:.4rem"><div class="opt"><span class="lb">들려줄 소리</span><div class="seg" id="sdHear" role="group" aria-label="들려줄 소리"><button type="button" aria-pressed="true" data-v="real">원곡 음원</button><button type="button" aria-pressed="false" data-v="synth">합성만(쉬움)</button></div></div><label class="chk" title="원곡 음원은 재생 속도 0.75(음높이 유지), 합성은 템포 75%"><input type="checkbox" id="sdSlow"><span>천천히(75%)</span></label></div>
+      <div class="row" style="gap:.6rem 1.2rem;align-items:flex-end;margin-top:.4rem"><div class="opt"><span class="lb">들려줄 소리</span><div class="seg" id="sdHear" role="group" aria-label="들려줄 소리"><button type="button" aria-pressed="true" data-v="real">원곡 음원</button><button type="button" aria-pressed="false" data-v="synth">합성만(쉬움)</button></div></div><label class="chk" title="음원은 재생 속도 0.75(음높이 유지), 합성은 템포 75%"><input type="checkbox" id="sdSlow"><span>천천히(75%)</span></label></div>
       <p class="muted small" id="sdEst" style="margin-top:.4rem"></p><div class="row" style="margin-top:.2rem"><button class="btn sm" type="button" id="sdFix">채보 탭에서 고치기</button></div>
     </div>
     <div class="row" style="margin-top:.4rem"><button class="btn primary" type="button" id="mdPlay">▶ 들어보기</button><button class="btn ghost" type="button" id="mdUndo">⌫ 되돌리기</button><button class="btn" type="button" id="mdCheck">확인</button><button class="btn" type="button" id="mdNext">새 문제</button></div>
@@ -1938,7 +1938,7 @@ function sdTU(){if(sd.aud&&real.currentTime>=sd.t1-.01)sdStop()}
 function sdStop(){clearTimeout(sd.tm);sd.tm=0;if(sd.aud){sd.aud=false;real.removeEventListener('timeupdate',sdTU);try{real.pause()}catch(_){}real.playbackRate=rate()}
  for(const o of sd.vo)try{o.stop(0)}catch(_){}sd.vo=[];if(sd.g){try{sd.g.gain.value=0;sd.g.disconnect()}catch(_){}sd.g=null}}
 function sdUi(){const on=sd.on&&!RT.on;el('mdSrcRow').hidden=!!RT.on;el('sdBox').hidden=!on;if(!on)return;
- const has=!!song.audio&&!(sd.layer==='bass'&&sdEst()); /* 올린 곡의 베이스는 코드에서 만든 초안이라 원곡 음원에는 그 정답이 없다 → 합성만 */el('sdHear').querySelector('[data-v=real]').disabled=!has;segPress('sdHear',el('sdHear').querySelector(`[data-v=${has?sd.hear:'synth'}]`)); /* 고른 값(sd.hear)은 두고 화면만 합성으로: 보컬로 돌아가면 원곡 선택이 살아난다 */
+ const has=!!song.audio&&!(sd.layer==='bass'&&sdEst()); /* 올린 곡의 베이스는 코드에서 만든 초안이라 원곡 음원에는 그 정답이 없다 → 합성만 */el('sdHear').querySelector('[data-v=real]').disabled=!has;el('sdHear').querySelector('[data-v=real]').textContent=song.id==='user'?'원곡 음원':'실제 렌더 음원'; /* 데모의 음원은 원곡이 아니라 우리 렌더 */segPress('sdHear',el('sdHear').querySelector(`[data-v=${has?sd.hear:'synth'}]`)); /* 고른 값(sd.hear)은 두고 화면만 합성으로: 보컬로 돌아가면 원곡 선택이 살아난다 */
  el('sdSlow').checked=sd.slow;segPress('sdSize',el('sdSize').querySelector(`[data-v="${sd.size}"]`));
  const l=sd.layer,est=sdEst();el('sdEst').textContent=!l?'':est?(l==='bass'?'베이스는 코드에서 만든 초안이라 원곡 베이스와 다를 수 있습니다(정답은 이 초안입니다).':'정답은 자동 채보(추정)입니다. 들리는 것과 다르면 채보 탭 「음 고치기」로 고칠 수 있습니다.'):'정답은 이 곡에 들어 있는 악보 층입니다.';
  el('sdEst').hidden=!l;el('sdFix').hidden=!(l&&neLayers().includes(l));el('sdHear').title=has?'':song.audio?'베이스 초안은 원곡에 없는 음이라 합성음으로만 들려줍니다':'이 곡에는 원곡 음원 파일이 없어 합성음으로만 들려줍니다'}
@@ -1961,7 +1961,7 @@ function sdNew(){if(!sd.wins.length)return;sdSet(SingLab.dictNext(sd.wins,sdDone
 function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();pmDroneStop();sdStop();
  const w=sd.wins[sd.i],r=sd.slow?.75:1;
  if(sd.hear==='real'&&song.audio&&!(sd.layer==='bass'&&sdEst())){const {t0,t1}=SingLab.dictSpan(w,song.bpm);real.playbackRate=r;real.preservesPitch=true;real.webkitPreservesPitch=true;real.volume=masterLevel();sd.aud=true;sd.t1=t1;
-  try{real.currentTime=t0}catch(_){}real.addEventListener('timeupdate',sdTU);const pr=real.play();if(pr&&pr.catch)pr.catch(()=>{sdStop();el('mdFb').textContent='원곡 음원을 재생하지 못했습니다. 「합성만」으로 들어 보세요.'});
+  try{real.currentTime=t0}catch(_){}real.addEventListener('timeupdate',sdTU);const pr=real.play();if(pr&&pr.catch)pr.catch(()=>{sdStop();el('mdFb').textContent='음원을 재생하지 못했습니다. 「합성만」으로 들어 보세요.'});
   sd.tm=setTimeout(sdStop,((t1-t0)/r+4)*1000);return}
  const spb=60/(song.bpm||100)/r,t=ctx.currentTime+.1,g=sd.g=ctx.createGain();g.connect(gains.sing||master);
  for(const [s0,d,p] of md.ex){const st=t+s0*spb,du=Math.max(.1,d*spb*.92),e=ctx.createGain();e.gain.setValueAtTime(0,st);e.gain.linearRampToValueAtTime(.16*.72,st+.012);e.gain.setTargetAtTime(.09*.72,st+.1,.35);e.gain.setTargetAtTime(0,st+du,.08);e.connect(g);
