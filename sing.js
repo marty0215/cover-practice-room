@@ -137,7 +137,7 @@ const newStats=()=>({v:2,items:{},conf:{}});
 function migrateStats(v2,old,cap=60){const s=newStats();
  if(v2&&typeof v2==='object'&&v2.v===2&&v2.items&&typeof v2.items==='object'){
   for(const id of Object.keys(v2.items)){const r=v2.items[id];if(r&&Array.isArray(r.h)){const h=r.h.filter(x=>typeof x==='number'&&isFinite(x)).map(clamp01).slice(-cap);s.items[id]={n:Math.max(h.length,+r.n|0),h}}}
-  if(v2.conf&&typeof v2.conf==='object')for(const id of Object.keys(v2.conf)){const c=v2.conf[id];if(c&&typeof c==='object'){const o={};for(const k of Object.keys(c))if(isFinite(c[k])&&c[k]>0)o[k]=Math.floor(c[k]);if(Object.keys(o).length)s.conf[id]=o}}
+  if(v2.conf&&typeof v2.conf==='object')for(const id of Object.keys(v2.conf)){const c=v2.conf[id];if(c&&typeof c==='object'){const o={};for(const k of Object.keys(c))if(isFinite(c[k])&&c[k]>0)o[k]=Math.floor(c[k]);const ks=Object.keys(o).sort((a,b)=>o[b]-o[a]);for(const k of ks.slice(12))delete o[k];if(ks.length)s.conf[id]=o}} /* 기록 때와 같은 상한 12(가져오기·합치기 후에도) */
   return s}
  if(old&&typeof old==='object')for(const k of Object.keys(old)){const r=old[k];if(r&&Array.isArray(r.h)){const h=r.h.filter(x=>typeof x==='number'&&isFinite(x)).map(clamp01).slice(-cap);if(h.length)s.items['all:'+k]={n:Math.max(h.length,+r.n|0),h}}}
  return s}
