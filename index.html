@@ -599,8 +599,9 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
       <div class="opt"><span class="lb">마디</span><div class="seg" id="sBars" role="group" aria-label="마디 수"><button type="button" aria-pressed="false" data-v="2">2</button><button type="button" aria-pressed="true" data-v="4">4</button><button type="button" aria-pressed="false" data-v="8">8</button></div></div>
       <div class="opt"><span class="lb">음역</span><div class="seg" id="sRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button><button type="button" aria-pressed="false" data-lo="0" data-hi="0" data-my="1" hidden>내 음역</button></div></div>
-      <div class="opt"><span class="lb">난이도</span><div class="seg" id="sLevel" role="group" aria-label="난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+      <div class="opt"><span class="lb">난이도</span><div class="seg" id="sLevel" role="group" aria-label="난이도" title="입문 1·2는 60 BPM 고정, 도–레–미 / 도–솔 순차 위주"><button type="button" aria-pressed="false" data-v="0">입문 1</button><button type="button" aria-pressed="false" data-v="0.5">입문 2</button><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
       <div class="opt"><span class="lb">허용폭</span><div class="seg" id="sTol" role="group" aria-label="음 허용폭" title="맞음 판정의 cent 허용폭. 쉬움은 이전과 같은 ±50"><button type="button" aria-pressed="true" data-v="50">쉬움 ±50</button><button type="button" aria-pressed="false" data-v="35">보통 ±35</button><button type="button" aria-pressed="false" data-v="25">어려움 ±25</button></div></div>
+      <div class="opt"><span class="lb">기준음</span><label class="chk" title="부르기 전에 으뜸음 2초 뒤에 으뜸 3화음을 1초 더 들려 줍니다"><input type="checkbox" id="sRefTri"><span>으뜸 화음도 듣기</span></label></div>
       <div class="opt"><span class="lb">키</span><div class="seg" id="sKey" role="group" aria-label="키"><button type="button" aria-pressed="true" data-v="song" id="sKeySong">곡 키</button><button type="button" aria-pressed="false" data-v="C">C</button></div></div>
       <div class="opt"><span class="lb">문제 출처</span><div class="seg" id="sSrc" role="group" aria-label="시창 문제 출처"><button type="button" aria-pressed="true" data-v="gen">생성 멜로디</button><button type="button" aria-pressed="false" data-v="song">이 곡에서</button></div></div>
       <div class="opt" id="sSongOpt" hidden><span class="lb">마디 범위 (최대 8)</span><span class="row" style="gap:.4rem"><input type="number" class="numin" id="sFrom" min="1" step="1" aria-label="시작 마디"> – <input type="number" class="numin" id="sTo" min="1" step="1" aria-label="끝 마디"><button class="btn sm" type="button" id="sFromLoop" title="연습 탭의 반복 구간(없으면 1–4마디)">반복 구간</button></span></div>
@@ -613,7 +614,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="legend" id="sLegend"><span style="--c:var(--keys)">목표 음</span><span class="ln" style="--c:var(--loop)">내 음높이</span><span class="bx" style="--c:var(--ok)">맞음</span><span class="bx" style="--c:var(--warn)">어긋남</span></div>
     <p class="note" id="sMsg" role="status"></p>
     <div id="sResult" aria-live="polite"></div>
-    <details class="help"><summary>도움말 · 판정 기준과 마이크</summary><p>신호 기반 판정이며 사람 평가가 아닙니다. 음마다 허용폭(쉬움 ±50 · 보통 ±35 · 어려움 ±25 cent, 기본 쉬움) 안에 든 소리 프레임이 60% 이상이면 「맞음」, 음 중앙값이 허용폭의 2배 안이면 「가까움」, 그 밖은 「벗어남」입니다. 마이크 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다. 이어폰을 쓰면 카운트인 소리가 마이크에 섞이지 않습니다. 「지연 맞추기」는 스피커 소리를 마이크로 다시 들어야 하므로 이어폰을 빼고 하세요. 잰 값은 이 브라우저에만 저장됩니다.</p></details>
+    <details class="help"><summary>도움말 · 판정 기준과 마이크</summary><p>난이도 「입문 1」은 도–레–미 3음을 순차로만(4–6음), 「입문 2」는 도–솔 5음을 순차 위주로 3도 도약 최대 1번(6–8음)이며 둘 다 60 BPM 고정, 으뜸음으로 시작해 끝납니다. 「부르기」를 누르면 으뜸음을 2초 들려 준 뒤(「으뜸 화음도 듣기」를 켜면 으뜸 3화음 1초 추가) 카운트인 4박이 나옵니다(생성 멜로디만). 낮은 목소리는 「음역 찾기」 카드의 「낮은 음 모드」를 켜세요. 신호 기반 판정이며 사람 평가가 아닙니다. 음마다 허용폭(쉬움 ±50 · 보통 ±35 · 어려움 ±25 cent, 기본 쉬움) 안에 든 소리 프레임이 60% 이상이면 「맞음」, 음 중앙값이 허용폭의 2배 안이면 「가까움」, 그 밖은 「벗어남」입니다. 마이크 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다. 이어폰을 쓰면 카운트인 소리가 마이크에 섞이지 않습니다. 「지연 맞추기」는 스피커 소리를 마이크로 다시 들어야 하므로 이어폰을 빼고 하세요. 잰 값은 이 브라우저에만 저장됩니다.</p></details>
   </div>
   <div class="panel sp" data-sp="pitch" id="pmPanel">
     <div class="head"><h2>음정 부르기 · 기준음 듣고 따라 내기</h2><p class="muted small">기준음을 듣고 같은 음, 또는 말한 음정만큼 위·아래 음을 소리 내어 길게 유지하세요.</p></div>
@@ -639,6 +640,8 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
       <p class="note">편한 소리로 낮은 음과 높은 음을 각각 3초 동안 길게 내면 음역을 재서 시창·음정 부르기 문제를 그 안에서 냅니다. 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다.</p>
       <div class="row" style="gap:.5rem"><button class="btn" type="button" id="vrLow">① 낮은 음 재기</button><button class="btn" type="button" id="vrHigh">② 높은 음 재기</button><button class="btn" type="button" id="vrStop" hidden>■ 그만</button></div>
       <p class="note" id="vrMsg" role="status" aria-live="polite"></p>
+      <label class="chk" id="vrLowL" title="분석 하한 55 Hz, 분석 창 4096샘플. 반응이 조금 느려집니다"><input type="checkbox" id="vrLowMode"><span>낮은 음 모드 (베이스 음역)</span></label>
+      <p class="note small" id="vrLowNote">낮은 목소리용: 음높이 검출 하한을 70→55 Hz로 낮추고 분석 창을 4096샘플로 키웁니다. 반응이 느려지고 소리가 짧으면 놓칠 수 있으니 필요할 때만 켜세요. 기본은 꺼짐이며 이 브라우저에만 저장됩니다.</p>
       <p class="score" id="vrRes" aria-live="polite"></p>
       <div class="row" style="gap:.5rem"><button class="btn primary" type="button" id="vrApply" disabled>이 음역으로 연습</button><button class="btn sm ghost" type="button" id="vrClear" hidden>내 음역 지우기</button></div>
     </details>
@@ -930,7 +933,9 @@ const Mic={st:null,ec:false,own:new Map(),pend:null,sctx:null,src:null,an:null,c
  _ui(){const b=document.getElementById('micChip');if(!b)return;const on=!!this.st&&this.own.size>0;b.hidden=!on;b.title=on?'사용 중: '+[...this.own.keys()].join(', '):''}};
 document.getElementById('micChip').onclick=()=>Mic.releaseAll();
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(Mic.st&&!Mic._live())Mic._end('ended')});
-async function micTracker(o,onFrame,onEnd){await Mic.acquire(o,{ec:false,onEnd});let tr;try{tr=await SingLab.tracker(ctx,onFrame,{analyser:Mic.tap(ctx)})}catch(e){Mic.release(o);throw e}
+const LOWV={on:false}; /* 낮은 음 모드(pr-lowvoice): yin 하한 55 Hz + 분석 창 4096샘플. 기본 꺼짐 */
+try{LOWV.on=localStorage.getItem('pr-lowvoice')==='1'}catch(e){}
+async function micTracker(o,onFrame,onEnd){await Mic.acquire(o,{ec:false,onEnd});let tr;try{const an=Mic.tap(ctx),lw=LOWV.on;an.fftSize=lw?SingLab.lowWin(ctx.sampleRate):2048;tr=await SingLab.tracker(ctx,onFrame,{analyser:an,low:lw})}catch(e){Mic.release(o);throw e}
  return {track:tr.track,stop(){tr.stop();Mic.release(o)}}}
 function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(partDest(ctx,p,master))}gains.sing=ctx.createGain();gains.sing.gain.value=2.2;gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
 const hz=m=>440*Math.pow(2,(m-69)/12);
@@ -1701,7 +1706,8 @@ document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+
 Object.assign(sing,{lat:0,bars:4,genBars:4,src:'gen',rangeSong:null,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
 const snKey=src=>src==='song'?((KEY%12)+12)%12:singKeyPc(),sn=(p,src)=>SingLab.noteNmK(p,snKey(src)); /* 시창·받아쓰기 음 이름은 오선보 음 아래 글자(조 철자)와 같게: 곡 윗선율은 곡 키, 그 밖은 고른 키 */
 const singKeyPc=()=>sing.keyMode==='C'?0:((KEY+transpose)%12+12)%12;
-const singSpb=()=>60/(song.bpm*rate());
+const sgBeg=()=>sing.src==="gen"&&sing.level<1; /* 입문 단계(생성 멜로디, 난이도 입문 1·2)는 60 BPM 고정 */
+const singSpb=()=>sgBeg()?60/SingLab.BEG_BPM:60/(song.bpm*rate());
 const VCLS={'맞음':'ok','높음':'hi','낮음':'lo','옥타브 차이':'oct','소리 없음':'none'};
 const seed=()=>((Date.now()^Math.floor(Math.random()*1e9))>>>0)||1;
 function segPress(id,b){document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute('aria-pressed',x===b))}
@@ -1712,13 +1718,14 @@ const PNAME={vocal:'보컬 멜로디(추정)',score:'채보 전체',guitar:'기�
 function songRange(){let a=Math.round(+el('sFrom').value),z=Math.round(+el('sTo').value);if(!(a>=1)||!(z>=1))return syncSongRange();a=Math.min(a,BARS);z=Math.min(Math.max(z,a),BARS);z=Math.min(z,a+7);el('sFrom').value=a;el('sTo').value=z;return {a,b:z,n:z-a+1}}
 function syncSongRange(){let a=1,z=Math.min(4,BARS);if(S.loop){a=Math.floor(S.a/4+1e-6)+1;z=Math.min(Math.ceil(S.b/4-1e-6),a+7)}el('sFrom').value=a;el('sTo').value=z;sing.rangeSong=song.id;return {a,b:z,n:z-a+1}}
 function singNew(){if(sing.busy)return;clearInterval(sing.liv);sing.head=null;const sg=sing.src==='song';el('sSongOpt').hidden=!sg;el('sSrcLab').hidden=!sg;
- for(const x of document.querySelectorAll('#sBars button,#sKey button,#sLevel button'))x.disabled=sg;let msg;
+ for(const x of document.querySelectorAll('#sBars button,#sKey button,#sLevel button'))x.disabled=sg;for(const x of document.querySelectorAll('#sBars button'))x.disabled=sg||sing.level<1;let msg;
  if(sg){if(sing.rangeSong!==song.id)syncSongRange();const r=songRange(),part=melSrc(song);
   sing.bars=r.n;sing.ex=window.SingLab&&part?SingLab.topLine(song.parts[part],{from:(r.a-1)*4,to:r.b*4,lo:sing.range[0],hi:sing.range[1]}):[];
   el('sSrcLab').textContent=`${part==='vocal'?'원곡 보컬 멜로디(추정)':song.melName?'멜로디 가이드':'채보'}에서 뽑은 윗선율${song.melName||part==='vocal'?'':'(추정)'} · ${part?PNAME[part]:'쓸 수 있는 파트 없음'}에서 같은 순간 가장 높은 음, ${r.a}–${r.b}마디, 음 ${sing.ex.length}개. 선택한 음역에 들어오도록 통째로 옥타브를 옮겼습니다(키 선택은 쓰지 않고 곡의 음높이 관계 그대로).`;
   msg=sing.ex.length>=2?`현재 곡 ${r.a}–${r.b}마디 · ${Math.round(song.bpm*rate())} BPM. 먼저 「들어보기」, 준비되면 「부르기」.`:'이 마디 범위에서 뽑을 선율이 없습니다. 범위를 바꿔 보세요.';if(sing.ex.length<2)sing.ex=[]}
  else{sing.bars=sing.genBars;sing.ex=window.SingLab?SingLab.makeExercise({key:singKeyPc(),minor:false,bars:sing.bars,lo:sing.range[0],hi:sing.range[1],seed:seed(),level:sing.level}):[];
-  msg=sing.ex.length?`${SingLab.KEYN[singKeyPc()]} 메이저 · ${sing.bars}마디 · ${Math.round(song.bpm*rate())} BPM(연습 탭의 속도를 따릅니다). 먼저 「들어보기」, 준비되면 「부르기」.`:'이 음역에서는 문제를 만들 수 없습니다. 다른 음역이나 키를 고르세요.'}
+  if(sing.level<1&&sing.ex.length){const e=sing.ex[sing.ex.length-1];sing.bars=Math.max(1,Math.ceil((e[0]+e[1])/4-1e-6))}
+  msg=sing.ex.length?`${SingLab.KEYN[singKeyPc()]} 메이저 · ${sing.bars}마디 · ${sgBeg()?`${SingLab.BEG_BPM} BPM(입문 단계는 느리게 고정) · ${sing.ex.length}음`:`${Math.round(song.bpm*rate())} BPM(연습 탭의 속도를 따릅니다)`}. 먼저 「들어보기」, 준비되면 「부르기」(으뜸음을 먼저 들려 준 뒤 카운트인).`:'이 음역에서는 문제를 만들 수 없습니다. 다른 음역이나 키를 고르세요.'}
  sing.track=[];sing.res=null;el('sResult').innerHTML='';el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;el('sMsg').textContent=msg;singDraw()}
 /* ---------- 오선보 보기: staff.js 는 처음 고를 때만 불러온다. 보기 방식(pr-stview)·음 아래 글자(pr-stlab)는 이 브라우저에만 저장 ---------- */
 const STV={v:'roll',lab:'0',sig:{}},VK={'맞음':'ok','높음':'hi','낮음':'lo','옥타브 차이':'oct','소리 없음':'none'};
@@ -1841,8 +1848,9 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 마이크 없이도 「들어보기」와 청음은 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요. 「들어보기」와 청음은 마이크 없이 쓸 수 있습니다.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
  sing.abort=null;if(cut){tr.stop();singSetBusy(false);msg.textContent='중단했습니다.';return}
  if(el('tab-sing').hidden||document.hidden){tr.stop();singSetBusy(false);msg.textContent='시창 탭을 벗어나 녹음을 시작하지 않았습니다.';return} // 권한 창이 떠 있는 동안 탭을 옮긴 경우 마이크를 바로 닫는다
- const spb=singSpb(),tot=sing.bars*4,t0=ctx.currentTime+.15,rec0=t0+4*spb,end=rec0+tot*spb+.12;
- try{for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0)}catch(e){tr.stop();singSetBusy(false);msg.textContent='녹음을 시작하지 못했습니다: '+e.message;return}
+ const spb=singSpb(),tot=sing.bars*4,tR=ctx.currentTime+.15,rf=sing.src==='gen'?SingLab.refPlan(sing.ex[0][2],{triad:el('sRefTri').checked}):null,t0=tR+(rf?rf.total:0),rec0=t0+4*spb,end=rec0+tot*spb+.12;
+ sing.refInfo=rf?{t:tR,total:rf.total,ev:rf.ev.length,tonic:sing.ex[0][2],count0:t0,rec0,notes:rf.ev.map(([o,d,ms])=>[tR+o,d,ms])}:null; /* 기준음 → 카운트인 4박 순서(시험이 읽는 상태) */
+ try{if(rf)for(const [o,d,ms] of rf.ev)for(const m of ms)tone('sing',tR+o,d*.96,m,ms.length>1?70:92);for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0)}catch(e){tr.stop();singSetBusy(false);msg.textContent='녹음을 시작하지 못했습니다: '+e.message;return}
  sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
  let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
   if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat,{tol:sing.tol});sing.res=res;let sids=null;if(res.notes.some(x=>x.verdict!=='소리 없음')){statRec('sight',res.score/100);sids=sightFine(res)}const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
@@ -1851,8 +1859,8 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
    msg.textContent=res.notes.every(x=>x.verdict==='소리 없음')?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'}
   else msg.textContent='중단했습니다.';singDraw()};
  sing.abort=()=>done(false);
- msg.textContent='카운트인 1마디 뒤에 부르세요…';
- sing.iv=setInterval(()=>{const now=ctx.currentTime;sing.head=now>=rec0?(now-rec0)/spb:null;if(now>=rec0&&msg.textContent.startsWith('카운트인'))msg.textContent='부르는 중…';singDraw();if(now>=end)done(true)},30)}
+ msg.textContent=rf?`기준음(도)을 ${rf.total===2?'2초':'3초(으뜸 화음 포함)'} 들려 줍니다. 그 뒤 카운트인 1마디, 이어서 부르세요…`:'카운트인 1마디 뒤에 부르세요…';let sung=false;
+ sing.iv=setInterval(()=>{const now=ctx.currentTime;sing.head=now>=rec0?(now-rec0)/spb:null;if(now>=rec0&&!sung){sung=true;msg.textContent='부르는 중…'}else if(!sung&&now>=t0&&rf)msg.textContent='카운트인 1마디 뒤에 부르세요…';singDraw();if(now>=end)done(true)},30)}
 /* 지연 맞추기: 스피커 클릭 4번(0.7초 간격)을 마이크로 다시 들어 「예약 시각 → 마이크 기록 시각」 왕복 지연을 잰다. 판정할 때 음 구간을 그만큼 뒤로 민다(= 기록 시각에서 뺀다). 값은 localStorage('pr-miclat', ms) */
 try{const v=+localStorage.getItem('pr-miclat');if(isFinite(v)&&v>=0&&v<=500)sing.lat=v/1000}catch(e){}
 function updLat(){el('sLat').textContent=`지연 보정 ${Math.round(sing.lat*1000)} ms`;el('sCalZero').hidden=!sing.lat}
@@ -1900,7 +1908,7 @@ function pmNew(){if(sing.busy||!window.SingLab)return;pm.q=SingLab.pmQuestion({m
 function pmListen(){if(sing.busy||!pm.q)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);const t=ctx.currentTime+.1;if(pm.q.mode==='har')pmDroneStart(pm.q,t,2.2);tone('sing',t,1.2,pm.q.ref,92)}
 function pmLive(f,q){const m=f[1],nd=el('pmNeedle');if(m==null||f[2]<.5){el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='소리가 없거나 음높이를 잡지 못했습니다';return}
  const c=(m-q.target)*100,k=Math.round(c/1200),cf=c-1200*k;el('pmNote').textContent=fuNm(m);nd.style.left=(50+Math.max(-100,Math.min(100,cf))/2)+'%';nd.className=!k&&Math.abs(cf)<=50?'ok':'bad';
- el('pmTxt').textContent=`목표 ${sn(q.target)} 기준 ${cf>0?'+':''}${Math.round(cf)} cent${k?' · 옥타브 다름':''}`}
+ el('pmTxt').textContent=`목표 ${sn(Math.round(q.target))} 기준 ${cf>0?'+':''}${Math.round(cf)} cent${k?' · 옥타브 다름':''}`}
 async function pmRec(){if(sing.busy||!window.SingLab)return;const inRT=RT.on;if(inRT&&(RT.plan.blocks[RT.bi].kind!=='pitch'||!pm.q))return;if(inRT&&RT.answered){el('pmMsg').textContent='이 문제는 끝났습니다. 「새 문제」로 넘어가세요.';return}if(!pm.q)pmNew();clearInterval(sing.liv);if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
  const msg=el('pmMsg'),q=pm.q;let t0=0,lu=0,tr,cut=false;msg.textContent='마이크를 여는 중입니다…';sing.busy=true;pmBtns(true);sing.abort=()=>{cut=true}; /* 마이크를 여는 동안 「그만」을 눌러도 듣는 쪽에서 끊는다 */
  try{tr=await micTracker('pm',f=>{const n=performance.now();if(!t0||f[0]<t0||n-lu<60)return;lu=n;pmLive(f,q)},()=>{if(sing.abort)sing.abort()})}catch(e){sing.abort=null;sing.busy=false;pmBtns(false);const n=e&&e.name;
@@ -1916,7 +1924,7 @@ async function pmRec(){if(sing.busy||!window.SingLab)return;const inRT=RT.on;if(
   if(inRT&&RT.on&&it.length)rtAnswer(res.ok,[q.id]); /* 소리 없음·불안정은 답으로 세지 않고 다시 부르게 한다 */
   const dv=res.devCents==null?'':`${res.devCents>0?'+':''}${Math.round(res.devCents)} cent`,
    why=res.leak?'반주 소리를 잡은 것 같습니다 — 이어폰을 써 주세요. 목소리가 아니라 반주(또는 기준음)의 고른 음으로 들려 판정하지 않았고 기록도 하지 않았습니다.':res.verdict==='소리 없음'?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':res.verdict==='불안정'?'소리가 흔들리거나 짧아 판정하지 않았고 기록도 하지 않았습니다. 한 음을 0.6초 이상 길게 내 보세요.':res.octave?`음 이름은 가깝지만 한 옥타브 ${res.medCents>0?'높게':'낮게'} 불렀습니다(옥타브 차이).`:res.ok?'':res.medCents>0?'목표보다 높게 불렀습니다.':'목표보다 낮게 불렀습니다.';
-  el('pmResult').innerHTML=`<p class="score"><span class="vc ${VCLS[res.verdict]||'none'}">${res.verdict}</span>${res.tier?` <span class="muted small" id="pmTier">${res.tier} (허용폭 ±${res.tol} cent)</span>`:''} ${dv?`편차 <b>${dv}</b> (0.6초 중앙값) · `:''}목표 ${sn(q.target)}</p>${why?`<p class="note">${why}</p>`:''}`;
+  el('pmResult').innerHTML=`<p class="score"><span class="vc ${VCLS[res.verdict]||'none'}">${res.verdict}</span>${res.tier?` <span class="muted small" id="pmTier">${res.tier} (허용폭 ±${res.tol} cent)</span>`:''} ${dv?`편차 <b>${dv}</b> (0.6초 중앙값) · `:''}목표 ${sn(Math.round(q.target))}</p>${why?`<p class="note">${why}</p>`:''}`;
   msg.textContent='끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'};
  sing.abort=()=>done(false);
  pm.tm=setInterval(()=>{const now=ctx.currentTime;if(now<t0)return;if(msg.textContent.startsWith('기준음'))msg.textContent='지금 한 음을 길게 부르세요…';
@@ -1938,7 +1946,7 @@ async function vrMeasure(which){if(sing.busy||!window.SingLab)return;if(S.playin
  const t0=performance.now();let fin=false,iv=0;const done=ok=>{if(fin)return;fin=true;clearInterval(iv);tr.stop();sing.abort=null;vrBtns(false);
   if(!ok){msg.textContent='중단했습니다.';vrShow();return}
   const r=SingLab.rangeFromTake(tr.track,which);if(!r.ok){msg.textContent=`${nm} 음을 잡지 못했습니다(${r.reason}). 조용한 곳에서 편한 소리로 길게 내고 다시 재 보세요.`;vrShow();return}
-  if(which==='low')vr.lo=r.midi;else vr.hi=r.midi;msg.textContent=`${nm} 음 ${SingLab.noteNm(r.midi)} 확인.`+((which==='low'?vr.hi:vr.lo)==null?` 이어서 ${which==='low'?'② 높은':'① 낮은'} 음도 재 주세요.`:'');vrShow(true)};
+  if(which==='low')vr.lo=r.midi;else vr.hi=r.midi;const adv=which==='low'&&!LOWV.on&&SingLab.lowModeAdvice(tr.track,r.midi);msg.textContent=`${nm} 음 ${SingLab.noteNm(r.midi)} 확인.`+(adv?' 낮은 음이 D2(약 73 Hz) 근처이거나 그 아래로 잡혔습니다. 아래 「낮은 음 모드」를 켜고 다시 재 보세요.':'')+((which==='low'?vr.hi:vr.lo)==null?` 이어서 ${which==='low'?'② 높은':'① 낮은'} 음도 재 주세요.`:'');vrShow(true)};
  sing.abort=()=>done(false);
  iv=setInterval(()=>{const left=Math.max(0,vr.sec-(performance.now()-t0)/1000),m=last&&last[1]!=null&&last[2]>=.6?' · 지금 '+sn(Math.round(last[1])):'';msg.textContent=`${nm} 음을 편하게 길게 내세요… ${Math.ceil(left)}초${m}`;if(left<=0)done(true)},100)}
 el('vrLow').onclick=()=>vrMeasure('low');el('vrHigh').onclick=()=>vrMeasure('high');el('vrStop').onclick=()=>{if(sing.abort)sing.abort()};
@@ -1947,6 +1955,8 @@ function vrSet(lo,hi,press){const [a,z]=SingLab.rangeWithMargin(lo,hi);for(const
 function vrApply(){const r=SingLab.rangeResult(vr.lo,vr.hi);if(!r.ok||vr.busy)return;vrSet(r.lo,r.hi,true);try{localStorage.setItem('pr-myrange',JSON.stringify([r.lo,r.hi]))}catch(e){}singNew();pmNew();el('vrMsg').textContent=`「내 음역 (${SingLab.noteNm(r.lo)}–${SingLab.noteNm(r.hi)})」으로 연습합니다. 양 끝에서 1반음 안쪽에서 문제를 냅니다.`}
 function vrClear(){if(vr.busy)return;try{localStorage.removeItem('pr-myrange')}catch(e){}for(const id of ['sRange','pmRange']){const m=document.querySelector(`#${id} [data-my]`),was=m.getAttribute('aria-pressed')==='true';m.hidden=true;if(was){const d=document.querySelector(`#${id} [data-lo="52"]`);segPress(id,d);if(id==='sRange')sing.range=[52,67];else pm.range=[52,67]}}el('vrClear').hidden=true;vr.lo=vr.hi=null;vrShow();singNew();pmNew();el('vrMsg').textContent='내 음역을 지웠습니다. 기본 음역(중간)으로 돌아갑니다.'}
 el('vrApply').onclick=vrApply;el('vrClear').onclick=vrClear;
+el('vrLowMode').checked=LOWV.on;el('vrLowMode').onchange=()=>{if(sing.busy){el('vrLowMode').checked=LOWV.on;return}LOWV.on=el('vrLowMode').checked;try{localStorage.setItem('pr-lowvoice',LOWV.on?'1':'0')}catch(e){}el('vrMsg').textContent=LOWV.on?'낮은 음 모드를 켰습니다(하한 55 Hz, 창 4096). 다음 측정부터 적용됩니다.':'낮은 음 모드를 껐습니다.'};
+try{el('sRefTri').checked=localStorage.getItem('pr-reftri')==='1'}catch(e){}el('sRefTri').onchange=()=>{try{localStorage.setItem('pr-reftri',el('sRefTri').checked?'1':'0')}catch(e){}};
 try{const v=JSON.parse(localStorage.getItem('pr-myrange')||'null');if(Array.isArray(v)&&v.length===2&&Number.isInteger(v[0])&&Number.isInteger(v[1])&&v[0]>=28&&v[1]<=96&&SingLab.rangeResult(v[0],v[1]).ok){vr.lo=v[0];vr.hi=v[1];vrSet(v[0],v[1],true);vrShow()}}catch(e){}
 el('pmDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.dir=b.dataset.v;segPress('pmDir',b);pmNew()});
 el('pmIv').onchange=()=>{if(sing.busy)return;pm.iv=el('pmIv').value;pmNew()};el('pmWeak').onchange=()=>{pm.weak=el('pmWeak').checked;if(!sing.busy)pmNew()};

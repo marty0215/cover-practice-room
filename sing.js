@@ -68,20 +68,45 @@ const normTol=v=>{v=+v;return TOL_LEVELS.some(x=>x[1]===v)?v:TOL_DEFAULT};
 /* 3단계: |편차| ≤tol 맞음, ≤2·tol 가까움, 그 밖 벗어남. 편차 없음(null)은 null */
 function tolTier(dev,tol=TOL_DEFAULT){if(dev==null||!isFinite(dev))return null;const a=Math.abs(dev);return a<=tol?'맞음':a<=2*tol?'가까움':'벗어남'}
 
+/* 낮은 음 모드(기본 꺼짐): yin 하한 55 Hz + 분석 창 4096샘플(48 kHz 약 85 ms, 반응은 느려진다). 표준 모드는 하한 70 Hz·2048 그대로.
+   창은 표본 수 기준이라 샘플레이트가 높으면 같은 길이(약 85 ms)가 되도록 2의 거듭제곱으로 키운다 */
+const LOW={fmin:55,win:4096};
+const lowWin=sr=>{let w=LOW.win;while(w<.085*(sr||48000)&&w<32768)w*=2;return w};
+/* 73 Hz(D2, MIDI 38) 미만 음이 반복 잡히거나, 잰 가장 낮은 안정 음이 그 바닥(≤D2)이면 낮은 음 모드를 권한다(순수) */
+const LOW_FLOOR=38;
+function lowModeAdvice(track,lowMidi,{minFrames=5}={}){let n=0;for(const f of track||[])if(f&&f[1]!=null&&f[1]<LOW_FLOOR-.5)n++;return n>=minFrames||(lowMidi!=null&&lowMidi<=LOW_FLOOR)}
 /* 마이크 → 음높이 기록. ctx 는 호출 쪽 AudioContext. stop() 은 트랙과 노드를 정리한다.
    opts.analyser: 공용 마이크가 만든 AnalyserNode 를 그대로 읽는다(스트림·노드는 호출 쪽 소유라 stop() 은 읽기만 멈춘다).
    opts.stream: 이미 열린 MediaStream 에서 노드만 새로 만든다(트랙은 끄지 않는다). 둘 다 없으면 예전처럼 직접 연다. */
 async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,an=opts.analyser||null,own=false;
  if(!an){if(opts.stream)stream=opts.stream;else{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});own=true}
-  try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=2048;src.connect(an)}catch(e){if(own)stream.getTracks().forEach(t=>t.stop());throw e}}
- const buf=new Float32Array(an.fftSize),track=[],guard=opts.octave===false?null:octaveGuard();let on=true; /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임 지속 시 인정) */
- const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)},20);
+  try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=opts.low?lowWin(ctx.sampleRate):2048;src.connect(an)}catch(e){if(own)stream.getTracks().forEach(t=>t.stop());throw e}}
+ const buf=new Float32Array(an.fftSize),track=[],guard=opts.octave===false?null:octaveGuard(),low=!!opts.low;let on=true; /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임 지속 시 인정) */
+ const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=low?yin(buf,ctx.sampleRate,LOW.fmin):yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)},20);
  return {track,stop(){on=false;clearInterval(iv);if(src)try{src.disconnect()}catch(_){}if(own)stream.getTracks().forEach(t=>t.stop())}}}
 
 function rng(seed){let s=seed>>>0||1;return ()=>(s=(s*1664525+1013904223)>>>0)/4294967296}
 /* 키(0–11)·장단조·마디 수·음역[lo,hi] → 으뜸음에서 시작해 으뜸음으로 끝나는 멜로디. 도약은 3도 이하 위주(1단계는 3도까지), 2단계는 가끔 4·5도.
    마지막 음(으뜸음)으로 들어가는 진행도 같은 한도 안(1단계 3도, 2단계 5도): 남은 음 수로 닿을 수 없게 멀어지면 가까운 으뜸음 쪽으로 돌린다(음역 안 으뜸음이 하나뿐일 때 6·7도 도약으로 끝나던 문제) */
-function makeExercise({key=0,minor=false,bars=4,lo=57,hi=69,seed=1,level=1}={}){const R=rng(seed),sc=minor?MIN:MAJ,pool=[];
+/* 입문 단계(level 0·0.5): 으뜸음에서 시작해 으뜸음으로 끝나는 짧은 선율. 입문 1(0) = 도–레–미 3음 순차(제자리 반복은 1번까지), 4–6음.
+   입문 2(0.5) = 도–솔 5음 순차 + 3도 도약 최대 1번, 6–8음. 음은 모두 [lo,hi] 안, 도약은 3도(≤4반음) 이하라 끝 으뜸음 진입 한도도 지킨다.
+   박은 음마다 1박, 마지막 음 2박. 도약이 없는 순차 위주라 길이가 한 마디를 조금 넘는다. 조건에 맞는 으뜸음이 음역에 없으면 [] */
+const BEG_BPM=60;
+function beginnerExercise({key,minor,lo,hi,seed,level}){const R=rng(seed),sc=minor?MIN:MAJ;let deg=level<.25?3:5,iv,top,tons;
+ for(;;deg--){iv=sc.slice(0,deg);top=iv[deg-1];tons=[];for(let m=lo;m+top<=hi;m++)if(((m-key)%12+12)%12===0)tons.push(m);if(tons.length||deg<=3)break} /* 음역이 좁아 도–솔이 안 들어가면 도–파·도–미로 줄인다(항상 도–솔의 부분집합) */
+ if(!tons.length)return [];
+ const ctr=(lo+hi)/2,t=tons.reduce((a,x)=>Math.abs(x+top/2-ctr)<Math.abs(a+top/2-ctr)?x:a);
+ const nMin=level<.25?4:6,nMax=level<.25?6:8,maxLeap=level<.25?0:1;let best=null;
+ for(let tr=0;tr<200&&!best;tr++){const n=nMin+Math.floor(R()*(nMax-nMin+1)),ix=[0];let rep=0,lp=0,ok=true;
+  for(let k=1;k<n&&ok;k++){const c=ix[k-1],last=k===n-1,r=R();let step;
+   if(r<.18&&rep<1&&k>1&&!last)step=0;else if(r<.3&&lp<maxLeap&&!last)step=R()<.5?2:-2;else step=R()<.5?-1:1;
+   let j=c+step;if(j<0||j>=deg){j=c-step;if(j<0||j>=deg){ok=false;break}}
+   if(last&&(j!==0||Math.abs(j-c)>2)){ok=false;break}
+   if(Math.abs(j-c)===2)lp++;if(j===c)rep++;ix.push(j)}
+  if(ok&&ix[n-1]===0&&ix.every((x,k)=>k===0||x!==ix[k-1]||k<n-1)&&ix[1]!==0)best=ix}
+ if(!best)best=level<.25||deg<4?[0,1,2,1,0]:[0,1,2,3,2,1,0];
+ const out=[];let b=0;best.forEach((x,k)=>{const d=k===best.length-1?2:1;out.push([b,d,t+iv[x]]);b+=d});return out}
+function makeExercise({key=0,minor=false,bars=4,lo=57,hi=69,seed=1,level=1}={}){if(level<1)return beginnerExercise({key,minor,lo,hi,seed,level});const R=rng(seed),sc=minor?MIN:MAJ,pool=[];
  for(let m=lo;m<=hi;m++)if(sc.includes(((m-key)%12+12)%12))pool.push(m);if(pool.length<3)return [];
  const tonics=pool.filter(m=>((m-key)%12+12)%12===0),tI=tonics.map(m=>pool.indexOf(m)),mx=level<2?2:4;let cur=tonics.length?tonics[Math.floor(tonics.length/2)]:pool[pool.length>>1];
  const rhythms=level<2?[[2,2],[1,1,2],[2,1,1],[4]]:[[1,1,1,1],[1.5,.5,2],[1,1,2],[.5,.5,1,2],[2,1,1]];const out=[];let t=0;
@@ -94,6 +119,9 @@ function makeExercise({key=0,minor=false,bars=4,lo=57,hi=69,seed=1,level=1}={}){
   cur=pool[i];out.push([t,rh[k],cur]);t+=rh[k]}}
  return out}
 
+/* 부르기 전 기준음: 으뜸음 2.0초 + (선택) 으뜸 3화음 1초. 이어서 카운트인 4박. → {ev:[[시작오프셋초,길이초,[midi…]]], total} (순수) */
+const REF_TONIC=2,REF_TRIAD=1;
+function refPlan(tonic,{triad=false,minor=false}={}){const ev=[[0,REF_TONIC,[tonic]]];if(triad)ev.push([REF_TONIC,REF_TRIAD,[tonic,tonic+(minor?3:4),tonic+7]]);return {ev,total:REF_TONIC+(triad?REF_TRIAD:0)}}
 /* 목표 [시작박,길이박,midi] + 기록 [초,midi|null,conf] + 박→초 함수. 각 음의 앞 15%·뒤 10% 는 이동 구간이라 뺀다 */
 function scoreTake(target,track,beatToSec,{tol=TOL_DEFAULT,minConf=.5}={}){const mk=voicedMask(track,{minConf}),per=target.map(([s,d,p])=>{const a=beatToSec(s+d*.15),b=beatToSec(s+d*.9);
   const fr=[],v=[];for(let i=0;i<track.length;i++){const f=track[i];if(f[0]>=a&&f[0]<=b){fr.push(f);if(mk[i])v.push(f)}}
@@ -617,5 +645,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
