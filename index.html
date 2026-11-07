@@ -206,7 +206,8 @@ canvas{display:block;width:100%;height:auto}
 /* 가이드 */
 .arrsum{display:flex;gap:.4rem;flex-wrap:wrap;margin:.6rem 0}
 .achip{font-size:.8rem;border:1px solid var(--border);border-left:4px solid var(--c);border-radius:8px;padding:.15rem .6rem;background:var(--surface);color:var(--text)}
-.achip.ok{--c:var(--ok)}.achip.warn{--c:var(--warn)}.achip.na{--c:var(--border);color:var(--text-muted)}
+.achip.ok{--c:var(--ok)}.achip.warn{--c:var(--warn)}.achip.na{--c:var(--border);color:var(--text-muted)}.achip.info{--c:var(--text-muted)}.achip{max-width:100%}
+.arrbasics{margin:.4rem 0 0;padding-left:1.3rem;font-size:.88rem;display:grid;gap:.35rem}.arrbasics li span{display:block;color:var(--text-muted);font-size:.82rem}
 .arrlist{margin-top:.5rem}.arrlist summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;font-weight:700}
 .arrbars{display:grid;gap:.3rem;max-height:340px;overflow-y:auto;padding-right:.2rem}
 .arrbar{text-align:left;border:1px solid var(--control-border);border-left:4px solid var(--warn);background:var(--surface);border-radius:8px;padding:.4rem .7rem;min-height:var(--hit);font-size:.86rem;display:grid;gap:.1rem}
@@ -559,8 +560,20 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <section aria-labelledby="hSec"><h3 class="sh" id="hSec">구간 <span class="muted small" style="font-weight:400">누르면 그 구간으로 이동해 반복합니다</span></h3><div class="secs" id="sections"></div><div class="progmore" id="secMore" hidden><button class="btn sm" type="button" id="secMoreBtn">나머지 구간 모두 보기</button><span class="muted small" id="secMoreInfo"></span></div></section>
   <section class="panel" id="arrPanel" aria-labelledby="hArr"><h3 class="sh" id="hArr">편곡 점검</h3>
     <div class="arrsum" id="arrSum" role="list" aria-label="점검 요약"></div>
+    <p class="muted small" id="arrHelp">f–i 는 이 프로젝트의 화성·음역 학습 노트(편곡 검사 도구)에서 일부를 옮긴 것입니다. 비화성음 상한(베이스 5%·건반/기타 25%·멜로디 40%), 베이스 권장 음역(E1–A2) 같은 기준값은 규칙이 아니라 출발점입니다. 병행 5도·8도는 참고용 개수일 뿐이며 팝에서는 옥타브 겹침이 의도일 수 있습니다. 모두 음표 데이터 검사이며 직접 들은 평가가 아닙니다.</p>
     <details class="arrlist" id="arrList"><summary id="arrSumm">마디별 주의 목록</summary><p class="muted small" id="arrNote"></p><div class="arrbars" id="arrBars" tabindex="0" role="region" aria-label="주의가 있는 마디 목록 (누르면 그 마디로 이동해 1마디 반복)"></div></details>
-    <div class="tips" style="margin-top:1rem" id="arrTips"></div></section>
+    <div class="tips" style="margin-top:1rem" id="arrTips"></div>
+    <details class="arrlist" id="arrBasics"><summary>기본기 점검표</summary>
+      <ol class="arrbasics">
+        <li><b>박·그루브</b><span>자동 점검: e(빈 구간). 박 느낌은 직접 들어 확인</span></li>
+        <li><b>화성</b><span>자동 점검: f, g (i 참고)</span></li>
+        <li><b>보컬 공간</b><span>자동 점검: a, b, d</span></li>
+        <li><b>음역 배치</b><span>자동 점검: c, h</span></li>
+        <li><b>강약</b><span>직접 들어 확인</span></li>
+        <li><b>악기 선택</b><span>직접 들어 확인</span></li>
+        <li><b>음색·믹스</b><span>직접 들어 확인</span></li>
+        <li><b>신호 기반 주장</b><span>이 점검은 데이터 검사이며 청취 평가가 아닙니다</span></li>
+      </ol></details></section>
   <section aria-labelledby="hRole"><h3 class="sh" id="hRole">파트 역할</h3><p class="muted small" id="inventory" style="margin-bottom:.6rem"></p><div class="grid g4" id="roles"></div></section>
   <section class="panel" aria-labelledby="hTips"><h3 class="sh" id="hTips">팁 · 이렇게 바꿔볼 수 있어요</h3><div class="tips" id="tips"></div></section>
   </div>
@@ -819,10 +832,11 @@ const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim
 /* ---------- song state ---------- */
 let song,PARTS,BARS,TOTAL,CH,KEY,transpose=0,mode='real',selBar=0,lo,hi,mel;
 /* 코드 어휘: 삼화음(메이저·마이너) + 7·maj7·m7·sus4·sus2·dim + 슬래시 베이스(X/Y). 문자열 하나가 한 마디(또는 반마디)의 코드 */
-const QT={'':[0,4,7],m:[0,3,7],'7':[0,4,7,10],maj7:[0,4,7,11],m7:[0,3,7,10],sus4:[0,5,7],sus2:[0,2,7],dim:[0,3,6]};
+/*CHORD-BEGIN*/const QT={'':[0,4,7],m:[0,3,7],'7':[0,4,7,10],maj7:[0,4,7,11],m7:[0,3,7,10],sus4:[0,5,7],sus2:[0,2,7],dim:[0,3,6]};
 const QLAB={'':'메이저',m:'마이너','7':'7 (도미넌트)',maj7:'maj7',m7:'m7',sus4:'sus4',sus2:'sus2',dim:'dim'};
 const CRE=/^([A-G]#?)(maj7|m7|m|7|sus4|sus2|dim)?(?:\/([A-G]#?))?$/;
 function parseChord(c){const m=c.match(CRE),q=m[2]||'',b=m[3]?NAMES.indexOf(m[3]):null;return {root:NAMES.indexOf(m[1]),minor:q==='m'||q==='m7'||q==='dim',q,bass:b===NAMES.indexOf(m[1])?null:b}}
+const chordPcs=c=>{const p=parseChord(c),s=new Set((QT[p.q]||QT['']).map(i=>(p.root+i)%12));if(p.bass!=null)s.add(p.bass);return s};/*CHORD-END*/
 function detectKey(){let best=null;for(let k=0;k<12;k++){const dia={[k]:0,[(k+2)%12]:1,[(k+4)%12]:1,[(k+5)%12]:0,[(k+7)%12]:0,[(k+9)%12]:1};let sc=0;for(const c of CH){if(dia[c.root]!==undefined&&(dia[c.root]===1)===c.minor)sc+=(c.root===k?1.5:1)}if(!best||sc>best.sc)best={k,sc}}return best.k}
 /* 로마 숫자·코드 이름 철자는 sing.js(romanOf·chordLabel): ♭II·♭III·♯IV·♭VI·♭VII 와 같은 글자로 근음을 적고(F 장조 IV = Bb, C 장조 ♭VII = Bb), 슬래시 베이스는 근음에서 센 음정 글자(D/F# → II/♯4) */
 const roman=c=>SingLab.romanOf(c,KEY);
@@ -1201,9 +1215,35 @@ function renderTips(){const vi=tn(KEY+9,1)+'m',IV=tn(KEY+5),V=tn(KEY+7),I=tn(KEY
 
 /* ---------- 편곡 점검: 채보·생성 데이터로만 계산하는 신호 기반 검사(청취 평가 아님). 순수 함수 ---------- */
 /* 멜로디 = score 윗선(없으면 guitar, keys). SingLab.topLine 은 음역에 맞춰 옥타브를 옮기므로 간격 계산에 쓸 수 없어 원래 높이 그대로 뽑는 윗선을 따로 둔다 */
-const topOf=ns=>{const o=[];for(const n of ns.slice().sort((a,b)=>a[0]-b[0])){const c=o[o.length-1];if(c&&n[0]-c[0]<=.06){if(n[2]>c[2]||(n[2]===c[2]&&n[1]>c[1])){c[1]=n[1];c[2]=n[2]}}else o.push([n[0],n[1],n[2]])}return o},
+/*ARR-BEGIN*/const topOf=ns=>{const o=[];for(const n of ns.slice().sort((a,b)=>a[0]-b[0])){const c=o[o.length-1];if(c&&n[0]-c[0]<=.06){if(n[2]>c[2]||(n[2]===c[2]&&n[1]>c[1])){c[1]=n[1];c[2]=n[2]}}else o.push([n[0],n[1],n[2]])}return o},
  melSrc=sg=>['vocal','score','guitar','keys'].find(p=>sg.parts[p]&&sg.parts[p].length)||null;
-function arrCheck(sg){
+/* 확장 점검 f–i: 이론 학습 노트(T5 화성·음역)의 일부. 기준값은 출발점이지 규칙이 아니다. pf(코드 문자열)→피치클래스 집합 */
+function arrExt(sg,pf,mel,src){
+ const P=sg.parts,B=sg.bars,E=1e-6,has=p=>P[p]&&P[p].length,r2=x=>Math.round(x*100)/100,bass=(P.bass||[]).slice().sort((a,b)=>a[0]-b[0]),comp=['keys','guitar'].filter(p=>p!==src&&has(p)),
+ inB=(ns,b)=>ns.filter(n=>n[0]>=b*4-E&&n[0]<b*4+4-E),touch=(ns,b)=>ns.filter(n=>n[0]<b*4+4-E&&n[0]+n[1]>b*4+E),ovl=(x,y)=>Math.min(x[0]+x[1],y[0]+y[1])-Math.max(x[0],y[0]),
+ cache=new Map(),pcs=s=>{let v=cache.get(s);if(!v){v=pf(s);cache.set(s,v)}return v},
+ chAt=(b,t)=>{if(sg.silent&&sg.silent[b])return null;const sp=sg.split&&sg.split[b];return pcs(sp?(t-b*4>=2?sp.b:sp.a):sg.chords[b])},
+ isOut=(n,b,t)=>{const c=chAt(b,t);return c?!c.has(((n[2]%12)+12)%12):null},
+ roles=[['bass','베이스',bass,.05,2],...comp.map(p=>[p,p==='keys'?'건반':'기타',P[p],.25,3]),['mel','멜로디',mel,.4,3]],
+ voices=[['mel',mel],...comp.map(p=>[p,P[p]]),['bass',bass]].filter(v=>v[1].length),
+ sum2={f:{ok:0,warn:0},g:{ok:0,warn:0},h:{ok:0,warn:0}},bars=[],pb=Array(B).fill(0);
+ for(let b=0;b<B;b++){const o={};
+  const fp=[];for(const [id,nm,ns,cap,mn] of roles){const x=inB(ns,b);if(x.length<mn)continue;let out=0,k=0;for(const n of x){const r=isOut(n,b,n[0]);if(r===null)continue;k++;if(r)out++}if(k<mn)continue;fp.push({p:id,nm,n:k,out,share:r2(out/k),cap,flag:out/k>cap})}
+  o.f=fp.length?{parts:fp,flag:fp.some(q=>q.flag)}:null;
+  if(voices.length<2||(sg.silent&&sg.silent[b]))o.cl=null;else{let n=0;for(let i=0;i<voices.length;i++)for(let j=i+1;j<voices.length;j++)for(const x of touch(voices[i][1],b))for(const y of touch(voices[j][1],b)){const t=Math.max(x[0],y[0]);if(t<b*4-E||t>=b*4+4-E||ovl(x,y)<=.25)continue;const d=Math.abs(x[2]-y[2]);if(d>14||(d%12!==1&&d%12!==11))continue;if(isOut(x,b,t)||isOut(y,b,t))n++}o.cl={n,flag:n>0}}
+  const bb=inB(bass,b);if(!bb.length)o.h=null;else{const lo=Math.min(...bb.map(n=>n[2])),hi=Math.max(...bb.map(n=>n[2]));let mud=0;for(const k of touch(comp.flatMap(p=>P[p]),b))for(const x of touch(bass,b)){const t=Math.max(k[0],x[0]);if(t<b*4-E||t>=b*4+4-E||ovl(k,x)<=.05)continue;const d=k[2]-x[2];if(d>=0&&d<7&&k[2]<55){mud++;break}}
+   o.h={lo,hi,hz:Math.round(440*2**((lo-69)/12)),low:lo<28,high:hi>52,mud,flag:lo<28||hi>52||mud>0}}
+  for(const [k,v] of [['f',o.f],['g',o.cl],['h',o.h]])if(v)sum2[k][v.flag?'warn':'ok']++;bars.push(o)}
+ /* 병행 5도·8도(참고): 베이스–멜로디, 둘 다 같은 방향으로 움직이고 P5→P5 또는 P8→P8. 같은 음 반복·붙들린 옥타브 겹침은 세지 않음 */
+ let n=0;if(mel.length&&bass.length){const ts=[...new Set([...mel,...bass].map(x=>Math.round(x[0]*1e3)/1e3))].sort((a,b)=>a-b);let mi=-1,bi=-1,prev=null;
+  for(const t of ts){while(mi+1<mel.length&&mel[mi+1][0]<=t+E)mi++;while(bi+1<bass.length&&bass[bi+1][0]<=t+E)bi++;const m=mi>=0&&mel[mi][0]+mel[mi][1]>t+E?mel[mi][2]:null,x=bi>=0&&bass[bi][0]+bass[bi][1]>t+E?bass[bi][2]:null;
+   if(m===null||x===null){prev=null;continue}
+   if(prev&&(m!==prev.m||x!==prev.x)){const dm=m-prev.m,db=x-prev.x,i0=Math.abs(prev.m-prev.x)%12,i1=Math.abs(m-x)%12;if(dm*db>0&&i0===i1&&(i1===7||i1===0)){n++;const bi2=Math.floor(t/4+E);if(bi2>=0&&bi2<B)pb[bi2]++}}
+   prev={m,x}}}
+ return{bars,sum2,par:{n,bars:pb,on:!!(mel.length&&bass.length)}}}
+/* 베이스 음역 문구(순수) */
+const arrHMsg=h=>{const t=[];if(h.low)t.push(`베이스 최저 MIDI ${h.lo}(약 ${h.hz} Hz)`+(h.lo<28?' · 약 41 Hz 아래, 작은 스피커에서 잘 안 들림':''));if(h.high)t.push(`베이스 최고 MIDI ${h.hi}(하드 상한 52 초과)`);if(h.mud)t.push(`베이스 바로 위(7반음 이내) G3 아래 건반·기타 ${h.mud}곳(저역 탁함)`);return t};
+function arrCheck(sg,pf=chordPcs){
  const P=sg.parts,B=sg.bars,E=1e-6,has=p=>P[p]&&P[p].length,r2=x=>Math.round(x*100)/100,
  top=topOf,
  src=melSrc(sg),mel=src?top(P[src]):[],accP=['keys','guitar'].filter(p=>p!==src&&has(p)),accAll=accP.flatMap(p=>P[p]),acc=top(accAll),bass=P.bass||[],
@@ -1222,16 +1262,21 @@ function arrCheck(sg){
   const mc=mo.length,ac=inB(acc,b).length;o.d=!mc||!acc.length?null:{mel:mc,acc:ac,flag:ac>mc};
   o.g=gaps.filter(g=>g.bar===b+1);o.e=on.length?{n:o.g.length,flag:o.g.length>0}:null;
   for(const k of 'abcde')if(o[k])sum[k][o[k].flag?'warn':'ok']++;bars.push(o)}
- return{src,acc:accP,hasBass:bass.length>0,bars,sum,gaps}}
-const ARR_L={a:'베이스–멜로디 간격(12반음 미만)',b:'리듬 겹침(같은 16분 위치 60% 초과)',c:'음역 교차(건반·기타가 베이스 아래)',d:'멜로디보다 바쁜 반주 윗선',e:'1박 넘는 빈 구간(새 음 없음)'};
+ const X=arrExt(sg,pf,mel,src);bars.forEach((o,i)=>Object.assign(o,X.bars[i]));
+ return{src,acc:accP,hasBass:bass.length>0,bars,sum,gaps,sum2:X.sum2,par:X.par,est:sg.id==='user'}}/*ARR-END*/
+const ARR_L2={f:'비화성음 비율(코드 밖 음, 파트별 상한)',g:'반음 부딪힘(다른 파트끼리 m2·M7)',h:'파트 음역(베이스 저음·탁한 저역)'},ARR_L={a:'베이스–멜로디 간격(12반음 미만)',b:'리듬 겹침(같은 16분 위치 60% 초과)',c:'음역 교차(건반·기타가 베이스 아래)',d:'멜로디보다 바쁜 반주 윗선',e:'1박 넘는 빈 구간(새 음 없음)'};
 function renderArr(){const R=arrCheck(song),sc=R.src?PARTDEF[R.src].name.replace(/ \(.*$/,''):'없음',nA=R.bars.length;
- el('arrSum').innerHTML=Object.keys(ARR_L).map(k=>{const s=R.sum[k],n=s.ok+s.warn;return `<span class="achip ${n?s.warn?'warn':'ok':'na'}" role="listitem">${n?s.warn?'주의':'통과':'해당 없음'} · ${ARR_L[k]} <b>${n?`주의 ${s.warn} · 통과 ${s.ok}`:'-'}</b></span>`}).join('');
- const rows=R.bars.filter(o=>'abcde'.split('').some(k=>o[k]&&o[k].flag)).map(o=>{const t=[];
+ const chip=(k,L,s)=>{const n=s.ok+s.warn;return `<span class="achip ${n?s.warn?'warn':'ok':'na'}" role="listitem" data-k="${k}">${n?s.warn?'주의':'통과':'해당 없음'} · ${L} <b>${n?`주의 ${s.warn} · 통과 ${s.ok}`:'-'}</b></span>`};
+ el('arrSum').innerHTML=Object.keys(ARR_L).map(k=>chip(k,ARR_L[k],R.sum[k])).join('')+Object.keys(ARR_L2).map(k=>chip(k,ARR_L2[k],R.sum2[k])).join('')+`<span class="achip ${R.par.on?'info':'na'}" role="listitem" data-k="i">${R.par.on?'참고':'해당 없음'} · 병행 5도·8도(베이스–멜로디) <b>${R.par.on?R.par.n+'쌍':'-'}</b></span>`;
+ const rows=R.bars.filter(o=>'abcdefh'.split('').some(k=>o[k]&&o[k].flag)||(o.cl&&o.cl.flag)).map(o=>{const t=[];
   if(o.a&&o.a.flag)t.push(`베이스–멜로디 최소 ${o.a.min}반음`);if(o.b&&o.b.flag)t.push(`멜로디 ${o.b.n}음 중 ${Math.round(o.b.share*100)}%가 베이스와 같은 16분 위치`);if(o.c&&o.c.flag)t.push(`베이스보다 낮은 반주 음 ${o.c.n}개`);if(o.d&&o.d.flag)t.push(`멜로디 ${o.d.mel}음 < 반주 윗선 ${o.d.acc}음`);
+  if(o.f&&o.f.flag)t.push(o.f.parts.filter(q=>q.flag).map(q=>`${q.nm} 코드 밖 음 ${q.out}/${q.n}개(${Math.round(q.share*100)}%, 상한 ${Math.round(q.cap*100)}%)`).join(', ')+(R.est?' · 추정 코드 기준':''));
+  if(o.cl&&o.cl.flag)t.push(`반음 부딪힘 ${o.cl.n}곳`+(R.est?' (추정 코드 기준)':''));
+  if(o.h&&o.h.flag)t.push(...arrHMsg(o.h));
   for(const g of o.g)t.push(`${g.bar}마디 ${g.beat}박 이후 ${g.len}박 새 음 없음`);
   return `<button type="button" class="arrbar" data-b="${o.bar}"><b>${o.bar}마디</b><span>${t.join(' · ')}</span></button>`});
  el('arrSumm').textContent=`마디별 주의 목록 (${rows.length}/${nA}마디)`;el('arrBars').innerHTML=rows.join('');el('arrBars').hidden=!rows.length;
- el('arrNote').textContent=`멜로디 기준: ${sc} 윗선${R.hasBass?'':' · 베이스 파트 없음(간격·리듬·교차 검사 생략)'}. ${rows.length?'마디를 누르면 그곳으로 이동해 1마디를 반복합니다.':'주의가 있는 마디가 없습니다.'}`;
+ el('arrNote').textContent=`멜로디 기준: ${sc} 윗선${R.hasBass?'':' · 베이스 파트 없음(간격·리듬·교차 검사 생략)'}${R.est?' · 코드는 추정값이라 f·g 는 추정 코드 기준입니다':''}. ${rows.length?'마디를 누르면 그곳으로 이동해 1마디를 반복합니다.':'주의가 있는 마디가 없습니다.'}`;
  const up=song.id==='user';
  el('arrTips').innerHTML=[['원곡 구성',up?'이 반주는 코드에서 생성한 초안이라 원곡의 실제 악기 구성은 알 수 없습니다. 원곡에 없는 악기를 더해 저음이나 빈틈을 채우기보다, 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하세요.':`${song.inventory||'원곡 구성 정보가 없습니다.'} 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하고, 원곡에 없는 악기를 더해 채우지 마세요.`],
   ['저음 밸런스','이 프로젝트의 청취에서는 저음 영역(베이스 약 150 Hz, 건반 약 250 Hz)을 −4 dB쯤 낮춘 쪽이 선호됐습니다. 규칙이 아니라 출발점이며, 곡과 스피커에 따라 직접 들어 조정하세요.']].map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
