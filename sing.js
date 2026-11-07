@@ -15,6 +15,27 @@
 (function(root){
 const NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const MAJ=[0,2,4,5,7,9,11],MIN=[0,2,3,5,7,8,10];
+/* 철자(장조 기준). 조 이름은 조표와 같게(Db·Eb·F#·Ab·Bb: A#·D#·G# 장조는 겹올림표 조라 쓰지 않음). 조 안 음은 그 장음계 글자대로(F# 장조의 E# 등).
+   조 밖 검은 건반 — 선율 음: ♯1·♭3·♯4·♯5·♭7(SOLF·오선보와 같음) / 코드 근음: 로마 숫자 ♭II·♭III·♯IV·♭VI·♭VII, 마이너·dim 근음은 ♯i·♯ii·♯v(♭vii 만 플랫). 조 밖 흰 건반은 제자리.
+   슬래시 베이스는 근음에서 센 음정 글자로(D/F#, E/G#: 코드 구성음 철자). 저장 문자열(코드 분석·편집)은 그대로 샤프 표기이고 화면·악보 파일 표시만 이 철자를 쓴다 */
+const KEYN=['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'],NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'],LET='CDEFGAB',LPC=[0,2,4,5,7,9,11],pcm=x=>((x%12)+12)%12,accS=a=>a>0?'#'.repeat(a):'b'.repeat(-a);
+const CH_FL={1:1,3:1,8:1,10:1},CH_MN={10:1},NT_FL={3:1,10:1},IVL={1:1,2:1,3:2,4:2,5:3,6:4,7:4,8:5,9:5,10:6,11:6};
+const RM={0:'I',1:['♭II','♯I'],2:'II',3:['♭III','♯II'],4:'III',5:'IV',6:'♯IV',7:'V',8:['♭VI','♯V'],9:'VI',10:'♭VII',11:'VII'},RQ={'':'',m:'','7':'7',maj7:'maj7',m7:'7',sus4:'sus4',sus2:'sus2',dim:'°'};
+function scaleNames(key){const k=pcm(key),l0=LET.indexOf(KEYN[k][0]);return MAJ.map((iv,i)=>{const l=(l0+i)%7;return LET[l]+accS(((pcm(k+iv)-LPC[l]+18)%12)-6)})}
+/* pc 의 이름(조 key 기준). o.chord: 코드 근음 규칙, o.minor: 마이너·dim 계열 코드 */
+function pcName(pc,key=0,o){const p=pcm(pc),r=pcm(p-key),d=MAJ.indexOf(r);if(d>=0)return scaleNames(key)[d];if(NAMES[p].length===1)return NAMES[p];
+ return (o&&o.chord?(o.minor?CH_MN[r]:CH_FL[r]):NT_FL[r])?NFL[p]:NAMES[p]}
+const nameStep=n=>{const l=LET.indexOf(n[0]),a=[...n.slice(1)].reduce((s,c)=>s+(c==='#'?1:c==='b'?-1:0),0);return {l,a,pc:pcm(LPC[l]+a)}};
+/* 슬래시 베이스 이름: 근음 이름에서 음정만큼 글자를 세어 철자(겹임시표가 되면 조 기준 음 이름) */
+function bassName(rootName,bassPc,key=0){const r=nameStep(rootName),i=pcm(bassPc-r.pc),l=(r.l+(IVL[i]||0))%7,a=((pcm(bassPc)-LPC[l]+18)%12)-6;return i&&Math.abs(a)<=1?LET[l]+accS(a):pcName(bassPc,key)}
+const isMinQ=q=>q==='m'||q==='m7'||q==='dim';
+/* {root,q,bass} → 표시 이름(예: Bb, D/F#, C#m7/G#) */
+function chordLabel(c,key=0){const rn=pcName(c.root,key,{chord:1,minor:isMinQ(c.q)});return rn+(c.q||'')+(c.bass!=null?'/'+bassName(rn,c.bass,key):'')}
+/* 로마 숫자(장조 key 기준). 마이너·dim 은 소문자, m7·7 은 7, dim 은 °. 슬래시 베이스는 베이스의 음계 도수(철자 기준: D/F# → /♯4) */
+function romanOf(c,key=0){const r0=RM[pcm(c.root-key)],mn=isMinQ(c.q);let r=Array.isArray(r0)?r0[mn?1:0]:r0;if(mn)r=r.replace(/[IV]+/,x=>x.toLowerCase());r+=RQ[c.q||'']||'';
+ if(c.bass!=null){const t=nameStep(KEYN[pcm(key)]),b=nameStep(bassName(pcName(c.root,key,{chord:1,minor:mn}),c.bass,key)),d=(b.l-t.l+7)%7,a=((b.pc-pcm(key+MAJ[d]))+18)%12-6;r+='/'+(Math.abs(a)>1?BF[pcm(c.bass-key)]:(a>0?'♯':a<0?'♭':'')+(d+1))}return r}
+const BF=['1','♭2','2','♭3','3','4','♯4','5','♯5','6','♭7','7']; /* 먼 조에서 겹임시표 도수가 나올 때만 쓰는 대체(선율 음 철자와 같음) */
+const noteNmK=(m,key=0)=>pcName(m,key)+(Math.floor(m/12)-1);
 
 function yin(buf,sr,fmin=70,fmax=1100,thr=.12){const n=buf.length,maxL=Math.min(Math.floor(sr/fmin),n>>1),minL=Math.max(2,Math.floor(sr/fmax));
  let rms=0;for(let i=0;i<n;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/n);if(rms<.008)return null;
@@ -35,15 +56,18 @@ async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,
  return {track,stop(){on=false;clearInterval(iv);if(src)try{src.disconnect()}catch(_){}if(own)stream.getTracks().forEach(t=>t.stop())}}}
 
 function rng(seed){let s=seed>>>0||1;return ()=>(s=(s*1664525+1013904223)>>>0)/4294967296}
-/* 키(0–11)·장단조·마디 수·음역[lo,hi] → 으뜸음에서 시작해 으뜸음으로 끝나는 멜로디. 도약은 3도 이하 위주, 가끔 4·5도 */
+/* 키(0–11)·장단조·마디 수·음역[lo,hi] → 으뜸음에서 시작해 으뜸음으로 끝나는 멜로디. 도약은 3도 이하 위주(1단계는 3도까지), 2단계는 가끔 4·5도.
+   마지막 음(으뜸음)으로 들어가는 진행도 같은 한도 안(1단계 3도, 2단계 5도): 남은 음 수로 닿을 수 없게 멀어지면 가까운 으뜸음 쪽으로 돌린다(음역 안 으뜸음이 하나뿐일 때 6·7도 도약으로 끝나던 문제) */
 function makeExercise({key=0,minor=false,bars=4,lo=57,hi=69,seed=1,level=1}={}){const R=rng(seed),sc=minor?MIN:MAJ,pool=[];
  for(let m=lo;m<=hi;m++)if(sc.includes(((m-key)%12+12)%12))pool.push(m);if(pool.length<3)return [];
- const tonics=pool.filter(m=>((m-key)%12+12)%12===0);let cur=tonics.length?tonics[Math.floor(tonics.length/2)]:pool[pool.length>>1];
+ const tonics=pool.filter(m=>((m-key)%12+12)%12===0),tI=tonics.map(m=>pool.indexOf(m)),mx=level<2?2:4;let cur=tonics.length?tonics[Math.floor(tonics.length/2)]:pool[pool.length>>1];
  const rhythms=level<2?[[2,2],[1,1,2],[2,1,1],[4]]:[[1,1,1,1],[1.5,.5,2],[1,1,2],[.5,.5,1,2],[2,1,1]];const out=[];let t=0;
  for(let b=0;b<bars;b++){const rh=b===bars-1?[2,2]:rhythms[Math.floor(R()*rhythms.length)];for(let k=0;k<rh.length;k++){
   const last=b===bars-1&&k===rh.length-1;let i=pool.indexOf(cur);
   if(out.length){if(last){const near=tonics.length?tonics.reduce((a,x)=>Math.abs(x-cur)<Math.abs(a-cur)?x:a):cur;i=pool.indexOf(near)}
-   else{const r=R(),step=r<.6?1:r<.85?2:(level<2?2:R()<.5?3:4);const dir=i<=1?1:i>=pool.length-2?-1:(R()<.5?-1:1);i=Math.max(0,Math.min(pool.length-1,i+dir*step))}}
+   else{const i0=i,r=R(),step=r<.6?1:r<.85?2:(level<2?2:R()<.5?3:4);const dir=i<=1?1:i>=pool.length-2?-1:(R()<.5?-1:1);i=Math.max(0,Math.min(pool.length-1,i+dir*step));
+    const rem=b<bars-1?rh.length-1-k+Math.max(0,bars-2-b)+2:1,dt=j=>Math.min(...tI.map(x=>Math.abs(j-x)));
+    if(tI.length&&dt(i)>mx*rem){const tt=tI.reduce((a,x)=>Math.abs(x-i0)<Math.abs(a-i0)?x:a);i=i0+Math.sign(tt-i0)*Math.min(Math.abs(tt-i0)-1,mx)}}} /* 으뜸음 한 칸 앞(레·시)에서 멈춰 끝 마디가 도–도 반복으로 쏠리지 않게 */
   cur=pool[i];out.push([t,rh[k],cur]);t+=rh[k]}}
  return out}
 
@@ -72,10 +96,10 @@ const INTERVALS=[['단2도',1],['장2도',2],['단3도',3],['장3도',4],['완�
    dir: 'asc' 상행 | 'desc' 하행 | 'har' 동시 | 'mix' 섞기(음정만). name: 지정하면 그 음정/화음으로 고정. weight: id→가중치 함수(약점 위주). item 은 통계 id */
 const SV_ALL=[['메이저7',[0,4,7,11]],['도미넌트7',[0,4,7,10]],['마이너7',[0,3,7,10]],['하프 디미니시',[0,3,6,10]],['디미니시7',[0,3,6,9]]];
 /* 으뜸음 찾기: 무작위 장조(key 0–11)에서 으뜸화음(I)이 한 번도 안 나오는 다이아토닉 4코드. 1 은 V 로 끝(끌림 강함), 2 는 IV·ii 로 끝. 처음·끝·가운데 모두 I 아님. 도수 0–6 */
-const TK_P={1:[[3,5,1,4],[5,3,1,4],[1,5,3,4],[3,2,5,4],[2,5,1,4],[5,1,3,4]],2:[[1,4,5,3],[5,1,4,3],[5,2,4,3],[2,5,4,3],[3,4,2,1],[5,3,4,1],[4,5,3,1]]},TK_LAB={1:'V 화음으로 끝남',2:'IV·ii 화음으로 끝남'}; /* vi 로 끝내면 나란한 단조(vi 가 으뜸)로 들려 답이 둘이 되므로 2단계 끝은 IV·ii */
+const TK_P={1:[[3,5,1,4],[1,2,3,4],[1,5,3,4],[3,2,5,4],[2,5,1,4],[2,3,1,4]],2:[[1,4,5,3],[2,1,4,3],[1,2,4,3],[2,5,4,3],[3,4,2,1],[3,5,4,1],[4,5,3,1]]},TK_LAB={1:'V 화음으로 끝남',2:'IV·ii 화음으로 끝남'}; /* vi 로 끝내면 나란한 단조(vi 가 으뜸)로 들려 답이 둘이 되므로 2단계 끝은 IV·ii. vi 로 시작해도 첫 화음이 으뜸으로 들려(vi–IV–ii–V = 단조 i–VI–iv–VII, vi–iii–V–IV = i–v–VII–VI) 같은 문제가 생기므로 시작도 vi 아님 */
 function tonicQuiz({level=1,seed=1}={}){const lv=level<2?1:2,R=rng(seed);for(let i=0;i<4;i++)R(); /* 작은 연속 시드의 첫 출력 상관을 버림 */
  const key=Math.floor(R()*12),ps=TK_P[lv],degs=ps[Math.floor(R()*ps.length)].slice();let prev=null;const cad=degs.map(d=>{const v=voiceTriad((key+MAJ[d])%12,DEG_Q[d],prev);prev=v.notes;return {notes:v.notes,bass:v.bass}}),t=voiceTriad(key,'maj',prev);
- return {type:'tonic',level:lv,key,degs,answer:NAMES[key],choices:NAMES.slice(),cad,tonic:{notes:t.notes,bass:t.bass},notes:[],label:NAMES[key]+' 메이저',item:'tk:'+lv}}
+ return {type:'tonic',level:lv,key,degs,answer:KEYN[key],choices:KEYN.slice(),cad,tonic:{notes:t.notes,bass:t.bass},notes:[],label:KEYN[key]+' 메이저',item:'tk:'+lv}}
 /* 탭 템포: 탭 시각(초) 배열 → {bpm,n}. 마지막 탭 기준 pause(2 s) 넘게 끊긴 앞은 버리고, 최근 max(9)탭의 간격 중앙값에서 25% 넘게 벗어난 간격은 제외한 평균으로 BPM. 간격 2개 미만이면 null */
 function tapBpm(times,{pause=2,max=9,tol=.25}={}){const t=(Array.isArray(times)?times:[]).filter(x=>typeof x==='number'&&isFinite(x));if(t.length<3)return null;let st=t.length-1;while(st>0&&t[st]-t[st-1]<=pause&&t[st]-t[st-1]>0)st--;const w=t.slice(Math.max(st,t.length-max));if(w.length<3)return null;
  const iv=[];for(let i=1;i<w.length;i++)iv.push(w[i]-w[i-1]);const sr=iv.slice().sort((a,b)=>a-b),h=sr.length>>1,med=sr.length%2?sr[h]:(sr[h-1]+sr[h])/2;if(!(med>0))return null;
@@ -86,19 +110,19 @@ function earQuiz({type='interval',key=0,level=1,seed=Date.now(),lo=55,hi=72,dir=
  if(type==='tonic')return tonicQuiz({level,seed});
  if(type==='triad'){const all=[['메이저',[0,4,7]],['마이너',[0,3,7]],['디미니시',[0,3,6]],['오그먼트',[0,4,8]]],qs=all.slice(0,level<2?2:4);
   const fixed=name&&all.find(q=>q[0]===name),q=fixed||pickWeighted(qs,weight?qs.map(x=>weight('tr:'+x[0])):null,R),root=lo+Math.floor(R()*(hi-lo-8));
-  return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:NAMES[root%12],item:'tr:'+q[0]}}
+  return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:pcName(root,key,{chord:1,minor:q[1][1]===3}),item:'tr:'+q[0]}}
  if(type==='seventh'){const qs=SV_ALL.slice(0,level<2?3:5),fixed=name&&SV_ALL.find(q=>q[0]===name),q=fixed||pickWeighted(qs,weight?qs.map(x=>weight('sv:'+x[0])):null,R),root=lo+Math.floor(R()*(hi-lo-11));
-  return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:NAMES[root%12],item:'sv:'+q[0]}}
+  return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:pcName(root,key,{chord:1,minor:q[1][1]===3}),item:'sv:'+q[0]}}
  if(type==='degree'){const sems=level<2?MAJ:[0,1,2,3,4,5,6,7,8,9,10,11],fx=name?SOLF.indexOf(name):-1,sm=fx>=0?fx:pickWeighted(sems,weight?sems.map(x=>weight('dg:'+x)):null,R);
   let prev=null;const cad=[0,3,4,0].map(d=>{const v=voiceTriad((key+MAJ[d])%12,'maj',prev);prev=v.notes;return {notes:v.notes,bass:v.bass}}),t=60+(((key+sm-60)%12)+12)%12;
-  return {type,answer:SOLF[sm],choices:sems.map(x=>SOLF[x]).concat(fx>=0&&!sems.includes(fx)?[SOLF[fx]]:[]),notes:[t],cad,label:NAMES[key%12]+' 메이저',item:'dg:'+sm}}
+  return {type,answer:SOLF[sm],choices:sems.map(x=>SOLF[x]).concat(fx>=0&&!sems.includes(fx)?[SOLF[fx]]:[]),notes:[t],cad,label:KEYN[pcm(key)]+' 메이저',item:'dg:'+sm}}
  const pool=level<2?INTERVALS.filter(([,s])=>MAJ.includes(s%12)||s===12):INTERVALS,dirs=dir==='mix'?DIRS:[dir==='desc'||dir==='har'?dir:'asc'];let nm,semi,dr;
  const fx=name&&INTERVALS.find(x=>x[0]===name);
  if(fx){[nm,semi]=fx;dr=dirs[Math.floor(R()*dirs.length)]}
  else{const items=[];for(const p of pool)for(const d of dirs)items.push([p[0],p[1],d]);const it=pickWeighted(items,weight?items.map(x=>weight('iv:'+x[0]+':'+x[2])):null,R);[nm,semi,dr]=it}
  let base;if(level<2){const deg=MAJ.filter(d=>MAJ.includes((d+semi)%12));const d=deg[Math.floor(R()*deg.length)]??0;base=lo+((key+d-lo)%12+12)%12}else base=lo+Math.floor(R()*(hi-lo-12));
  const ch=pool.map(p=>p[0]);if(!ch.includes(nm))ch.push(nm);
- return {type,answer:nm,choices:ch,notes:[base,base+semi],label:NAMES[base%12],dir:dr,item:'iv:'+nm+':'+dr}}
+ return {type,answer:nm,choices:ch,notes:[base,base+semi],label:pcName(dr==='desc'?base+semi:base,key),dir:dr,item:'iv:'+nm+':'+dr}} /* 하행은 위 음에서 시작하므로 라벨(「~에서 시작한」)도 위 음 */
 
 const DEG_L=['I','ii','iii','IV','V','vi','vii°'],DEG_Q=['maj','min','min','maj','maj','min','dim'],QIV={maj:[0,4,7],min:[0,3,7],dim:[0,3,6]};
 /* 한 화음의 보이싱: 이전 화음과 가장 가깝게 이어지는 전위를 고른다. 베이스는 36–47 의 근음 */
@@ -138,7 +162,7 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
    id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · tk:<으뜸음 찾기 난이도 1|2> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · sd:<vocal|score|bass> (곡 받아쓰기, 창마다 정답률 0..1; 루틴에는 안 씀) · all:<옛 항목>(옛 pr-stats 이관분) */
-const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
+const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','미♭','미','파','파#','솔','솔#','라','시♭','시']; /* 반음 계이름은 오선보 철자와 같게 ♯1·♭3·♯4·♯5·♭7 (레#·라# 는 증2도·증6도 철자라 단3도·단7도 위 음에 쓰지 않음) */
 const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),TK_ITEMS=['tk:1','tk:2'],DG_ITEMS=SOLF.map((_,i)=>'dg:'+i);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
 const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',tk:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
 const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40,pitch:30}; // 문제당 예상 초 (블록 최대 문제 수 = 시간/이 값)
@@ -352,7 +376,7 @@ function pmDegOf(key,midi){const o=Math.floor((midi-key)/12),pc=((midi-key)%12+1
 /* 기준음 midi(음계 안 음) → {deg,tdeg,target,semis} 또는 null(음계 밖·모르는 종류) */
 function pmHarmTarget(key,ref,hk){const d=pmDegOf(key,ref),k=HK_D[hk];if(d==null||k==null)return null;const t=scMidi(key,d+k);return {deg:((d%7)+7)%7,tdeg:(((d+k)%7)+7)%7,target:t,semis:t-ref}}
 /* 반주 3화음: 뿌리 칸 r0 → {rootDeg,midis(뿌리 위치로 쌓고 맨 위가 lo 이하가 되게 옥타브 내림),pcs,name,q} */
-function pmChordOf(key,r0,lo){let m=[0,2,4].map(k=>scMidi(key,r0+k));while(m[2]>lo)m=m.map(x=>x-12);while(m[0]<36)m=m.map(x=>x+12);/* 낮은 내 음역이면 뿌리가 20–30Hz(서브소닉)까지 내려가므로 C2(MIDI 36) 아래는 한 옥타브씩 올린다 */const dg=((r0%7)+7)%7;return {rootDeg:dg,midis:m,pcs:m.map(x=>((x%12)+12)%12),name:NAMES[((m[0]%12)+12)%12]+QL[dg],q:QL[dg]}}
+function pmChordOf(key,r0,lo){let m=[0,2,4].map(k=>scMidi(key,r0+k));while(m[2]>lo)m=m.map(x=>x-12);while(m[0]<36)m=m.map(x=>x+12);/* 낮은 내 음역이면 뿌리가 20–30Hz(서브소닉)까지 내려가므로 C2(MIDI 36) 아래는 한 옥타브씩 올린다 */const dg=((r0%7)+7)%7;return {rootDeg:dg,midis:m,pcs:m.map(x=>((x%12)+12)%12),name:pcName(m[0],key)+QL[dg],q:QL[dg]}} /* 이름은 조 철자(F 장조 IV = Bb, A# 아님) */
 function pmHarmQuestion({range,R,key,hk,wk}){const lo=range[0],hi=Math.max(range[0],range[1]);
  if(!HK_D[hk]){const W=wk?HKS.map(h=>weightFor(wk,'pm:'+PM_HAR+':'+h)):null;hk=pickWeighted(HKS,W,R)}
  const c=[];for(let m=lo;m<=hi;m++){const t=pmHarmTarget(key,m,hk);if(t&&t.target>=lo&&t.target<=hi)c.push([m,t])}
@@ -471,5 +495,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);

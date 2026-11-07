@@ -626,7 +626,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     </details>
   </div>
   <div class="panel sp" data-sp="quiz" id="earPanel">
-    <div class="head"><h2>청음 퀴즈 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정·3화음·7화음 성질, 키 안의 음계 도수, 또는 코드 진행의 으뜸음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
+    <div class="head"><h2>청음 퀴즈 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정·3화음·7화음 성질, 키 안의 음계 도수, 또는 코드 진행(장조)의 으뜸음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem">
       <div class="opt"><span class="lb">문제 종류</span><div class="seg" id="eType" role="group" aria-label="문제 종류"><button type="button" aria-pressed="true" data-v="interval">음정</button><button type="button" aria-pressed="false" data-v="triad">3화음</button><button type="button" aria-pressed="false" data-v="seventh">7화음</button><button type="button" aria-pressed="false" data-v="degree">음계 도수</button><button type="button" aria-pressed="false" data-v="tonic">으뜸음 찾기</button></div></div>
       <div class="opt" id="eDirOpt"><span class="lb">방향</span><div class="seg" id="eDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="true" data-v="asc">상행</button><button type="button" aria-pressed="false" data-v="desc">하행</button><button type="button" aria-pressed="false" data-v="har">동시</button><button type="button" aria-pressed="false" data-v="mix">섞기</button></div></div>
@@ -820,13 +820,12 @@ let song,PARTS,BARS,TOTAL,CH,KEY,transpose=0,mode='real',selBar=0,lo,hi,mel;
 const QT={'':[0,4,7],m:[0,3,7],'7':[0,4,7,10],maj7:[0,4,7,11],m7:[0,3,7,10],sus4:[0,5,7],sus2:[0,2,7],dim:[0,3,6]};
 const QLAB={'':'메이저',m:'마이너','7':'7 (도미넌트)',maj7:'maj7',m7:'m7',sus4:'sus4',sus2:'sus2',dim:'dim'};
 const CRE=/^([A-G]#?)(maj7|m7|m|7|sus4|sus2|dim)?(?:\/([A-G]#?))?$/;
-const RNUM=['I','♭II','II','♭III','III','IV','♭V','V','♭VI','VI','♭VII','VII'];
 function parseChord(c){const m=c.match(CRE),q=m[2]||'',b=m[3]?NAMES.indexOf(m[3]):null;return {root:NAMES.indexOf(m[1]),minor:q==='m'||q==='m7'||q==='dim',q,bass:b===NAMES.indexOf(m[1])?null:b}}
 function detectKey(){let best=null;for(let k=0;k<12;k++){const dia={[k]:0,[(k+2)%12]:1,[(k+4)%12]:1,[(k+5)%12]:0,[(k+7)%12]:0,[(k+9)%12]:1};let sc=0;for(const c of CH){if(dia[c.root]!==undefined&&(dia[c.root]===1)===c.minor)sc+=(c.root===k?1.5:1)}if(!best||sc>best.sc)best={k,sc}}return best.k}
-function roman(c){const d=(c.root-KEY+12)%12,mn=c.q==='m'||c.q==='m7'||c.q==='dim';let r=RNUM[d];if(mn)r=r.replace(/[IV]+/,x=>x.toLowerCase());
- r+={'':'',m:'','7':'7',maj7:'maj7',m7:'7',sus4:'sus4',sus2:'sus2',dim:'°'}[c.q||''];if(c.bass!=null)r+='/'+['1','♭2','2','♭3','3','4','♭5','5','♭6','6','♭7','7'][(c.bass-KEY+12)%12];return r}
-const tn=pc=>NAMES[(pc+transpose+1200)%12];
-const fmtChord=c=>tn(c.root)+c.q+(c.bass!=null?'/'+tn(c.bass):'');
+/* 로마 숫자·코드 이름 철자는 sing.js(romanOf·chordLabel): ♭II·♭III·♯IV·♭VI·♭VII 와 같은 글자로 근음을 적고(F 장조 IV = Bb, C 장조 ♭VII = Bb), 슬래시 베이스는 근음에서 센 음정 글자(D/F# → II/♯4) */
+const roman=c=>SingLab.romanOf(c,KEY);
+const tn=(pc,mn)=>SingLab.pcName(pc+transpose,KEY+transpose,{chord:1,minor:!!mn});
+const fmtChord=c=>SingLab.chordLabel({root:c.root+transpose,q:c.q,bass:c.bass==null?null:c.bass+transpose},KEY+transpose);
 const chordName=i=>fmtChord(CH[i]);
 /* 반마디로 나뉜 마디(song.split[i]={a,b}: 앞·뒤 반마디 코드)는 'C │ G' 로 보여 준다. song.chords[i] 는 마디 대표 코드로 그대로 둔다 */
 const chordFull=i=>{const sp=song.split&&song.split[i];return sp?fmtChord(parseChord(sp.a))+' │ '+fmtChord(parseChord(sp.b)):chordName(i)};
@@ -1163,7 +1162,7 @@ function renderProg(){el('keyName').textContent=`· ${tn(KEY)} 메이저 추정`
 /* 코드 고치기: 내 곡의 칸을 누르면 근음·메이저/마이너를 고르는 편집기. 고치면 그 마디의 베이스·건반만 다시 만든다 */
 function openCed(b){edBar=b;selBar=b;renderCed();renderProg();renderBar();draw()}
 function renderCed(){const w=el('ced');if(edBar<0||song.id!=='user'){w.hidden=true;return}const c=CH[edBar],sp=song.split&&song.split[edBar];w.hidden=false;
- w.innerHTML=`<b>마디 ${edBar+1} 코드 고치기</b><div class="row"><label class="chk">근음 <select id="cedRoot" aria-label="근음">${NAMES.map((_,pc)=>`<option value="${pc}"${pc===c.root?' selected':''}>${tn(pc)}</option>`).join('')}</select></label><label class="chk">슬래시 베이스 <select id="cedBass" aria-label="슬래시 베이스(분수 코드의 아래 음)"><option value="-1"${c.bass==null?' selected':''}>없음</option>${NAMES.map((_,pc)=>pc===c.root?'':`<option value="${pc}"${pc===c.bass?' selected':''}>/${tn(pc)}</option>`).join('')}</select></label></div><div class="seg" id="cedQ" role="group" aria-label="코드 종류" style="flex-wrap:wrap">${Object.keys(QT).map(q=>`<button aria-pressed="${q===c.q}" data-q="${q}">${QLAB[q]}</button>`).join('')}</div><div class="row"><button class="btn sm" id="cedReset">원래대로</button><button class="btn sm" id="cedClose">닫기</button></div><span class="muted small">${sp?`이 마디는 반마디 둘(${chordFull(edBar)})로 추정됐습니다. 고치면 마디 전체가 코드 하나로 바뀝니다. `:''}고치면 이 마디의 베이스·건반만 다시 만듭니다. 채보 음은 그대로입니다.</span>`}
+ w.innerHTML=`<b>마디 ${edBar+1} 코드 고치기</b><div class="row"><label class="chk">근음 <select id="cedRoot" aria-label="근음">${NAMES.map((_,pc)=>`<option value="${pc}"${pc===c.root?' selected':''}>${tn(pc,c.minor)}</option>`).join('')}</select></label><label class="chk">슬래시 베이스 <select id="cedBass" aria-label="슬래시 베이스(분수 코드의 아래 음)"><option value="-1"${c.bass==null?' selected':''}>없음</option>${NAMES.map((_,pc)=>pc===c.root?'':`<option value="${pc}"${pc===c.bass?' selected':''}>/${SingLab.bassName(tn(c.root,c.minor),pc+transpose,KEY+transpose)}</option>`).join('')}</select></label></div><div class="seg" id="cedQ" role="group" aria-label="코드 종류" style="flex-wrap:wrap">${Object.keys(QT).map(q=>`<button aria-pressed="${q===c.q}" data-q="${q}">${QLAB[q]}</button>`).join('')}</div><div class="row"><button class="btn sm" id="cedReset">원래대로</button><button class="btn sm" id="cedClose">닫기</button></div><span class="muted small">${sp?`이 마디는 반마디 둘(${chordFull(edBar)})로 추정됐습니다. 고치면 마디 전체가 코드 하나로 바뀝니다. `:''}고치면 이 마디의 베이스·건반만 다시 만듭니다. 채보 음은 그대로입니다.</span>`}
 function setChord(b,name){song.chords[b]=name;if(name===song.auto[b]){delete song.edits[b];song.conf[b]=song.autoConf[b];song.silent[b]=song.autoSilent[b];if(song.split)song.split[b]=song.autoSplit[b]}else{song.edits[b]=name;song.conf[b]=1;song.silent[b]=false;if(song.split)song.split[b]=null}regenBars(song,[b],song.style);afterSongEdit();persist()}
 const cedName=(root,q,bass)=>NAMES[root]+q+(bass!=null&&bass>=0&&bass!==root?'/'+NAMES[bass]:'');
 function afterSongEdit(){prep();if(song.id==='user'){song.inventory=userInv(song);el('inventory').textContent=song.inventory}if(S.playing&&mode==='synth')seekIdx(nowBeat());el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderTips();renderArr();renderBar();updExp();draw()}
@@ -1181,12 +1180,12 @@ function renderRoles(){const nb=BARS,P=song.parts,cards=[];
  if(P.guitar){const per=(P.guitar.length/nb).toFixed(1),dur=avg(P.guitar.map(n=>n[1])).toFixed(2);cards.push(card('guitar',per>=8?'기타 · 리프로 색을 낸다':'기타 · 벽을 세운다',[['마디당 음',per],['평균 길이(박)',dur],['음역',`${noteName(Math.min(...P.guitar.map(n=>n[2])))}–${noteName(Math.max(...P.guitar.map(n=>n[2])))}`]],per>=8?`마디당 ${per}음이면 16분 단위로 쪼개는 리프입니다. 노래와 겹치면 벌스에서 기타를 끄고 코러스에서만 켜는 식으로 밀도를 조절하세요.`:`마디당 ${per}음, 평균 ${dur}박 지속이면 코드 바뀜마다 치는 지속 보이싱(파워코드 벽)입니다. 후렴에서 두께를 더 원하면 같은 보이싱을 한 옥타브 아래로 겹치세요. 다른 악기를 추가하지는 마세요.`))}
  el('roles').innerHTML=cards.join('')}
 function card(p,title,st,tip){return `<div class="panel role" style="--c:var(--${p})"><h3>${title}</h3><div class="stat">${st.map(([k,v])=>`<span>${k} <b>${v}</b></span>`).join('')}</div><p class="muted" style="font-size:.88rem">${tip}</p></div>`}
-function renderTips(){const vi=NAMES[(KEY+9+transpose)%12]+'m',IV=NAMES[(KEY+5+transpose)%12],V=NAMES[(KEY+7+transpose)%12],I=NAMES[(KEY+transpose)%12];
+function renderTips(){const vi=tn(KEY+9,1)+'m',IV=tn(KEY+5),V=tn(KEY+7),I=tn(KEY);
  /* 팁은 곡 데이터(채보 음 또는 반주 음)에서 계산한 값으로 문장을 만든다. 신호 기반이며 청취 검증이 아니다 */
  const sc=!!(song.parts.score&&song.parts.score.length),ref=sc?song.parts.score:mel.flatMap(p=>song.parts[p]),pc=x=>Math.round(100*x),tips=[],src=sc?(song.melName?'멜로디 ':'채보 '):'';
  if(ref.length){const ps=ref.map(n=>n[2]).sort((a,b)=>a-b),q=f=>ps[Math.min(ps.length-1,Math.floor(f*ps.length))],med=q(.5),p10=q(.1),p90=q(.9);
   tips.push(['키',`${src}음의 중간 높이는 ${noteName(med)}, 90%가 ${noteName(p10)}–${noteName(p90)} 안에 있습니다. ${p90>=79?'높은 음이 많은 편이라 노래가 힘들면 키 슬라이더(브라우저 합성)를 −2 ~ −3으로 내려 보세요.':med<=52?'낮은 쪽에 몰려 있어 +2 정도 올리면 더 또렷할 수 있습니다.':'음역이 무난합니다. 목소리에 맞게 ±2 안에서 먼저 시험해 보세요.'} 코드 이름과 음이름이 같이 바뀝니다.`])}
- const cnt={};song.chords.forEach(c=>cnt[c]=(cnt[c]||0)+1);const [top,tc]=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0],pt=parseChord(top),alt=tn(pt.minor?(pt.root+3)%12:(pt.root+9)%12)+(pt.minor?'':'m');
+ const cnt={};song.chords.forEach(c=>cnt[c]=(cnt[c]||0)+1);const [top,tc]=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0],pt=parseChord(top),alt=tn(pt.minor?(pt.root+3)%12:(pt.root+9)%12,!pt.minor)+(pt.minor?'':'m');
  tips.push(['대체 코드',`가장 자주 나오는 코드는 ${fmtChord(pt)}(${tc}마디, 전체의 ${pc(tc/BARS)}%)입니다. 그중 한 번을 ${alt}로 바꾸면 같은 멜로디에 그늘이 생깁니다. ${IV}→${V}→${I} 종지는 그대로 두는 편이 안전합니다.`]);
  const per=Array.from({length:BARS},(_,b)=>ref.filter(n=>n[0]>=b*4-1e-6&&n[0]<b*4+4-1e-6).length),g=Math.min(4,BARS),gr=[];for(let i=0;i+g<=BARS;i+=g)gr.push([i,avg(per.slice(i,i+g))]);
  if(gr.length>1){const mx=gr.reduce((a,b)=>b[1]>a[1]?b:a),mn=gr.reduce((a,b)=>b[1]<a[1]?b:a);tips.push(['밀도',`마디당 ${src}음 평균 ${avg(per).toFixed(1)}개. 가장 빽빽한 구간은 ${mx[0]+1}–${mx[0]+g}마디(${mx[1].toFixed(1)}개), 가장 성긴 구간은 ${mn[0]+1}–${mn[0]+g}마디(${mn[1].toFixed(1)}개)입니다. 성긴 구간은 파트를 줄여 숨 쉴 자리를 만들고, 빽빽한 구간은 건반을 한 층 빼서 길을 비워 주세요.`])}
@@ -1638,7 +1637,7 @@ function singNew(){if(sing.busy)return;clearInterval(sing.liv);sing.head=null;co
   el('sSrcLab').textContent=`${part==='vocal'?'원곡 보컬 멜로디(추정)':song.melName?'멜로디 가이드':'채보'}에서 뽑은 윗선율${song.melName||part==='vocal'?'':'(추정)'} · ${part?PNAME[part]:'쓸 수 있는 파트 없음'}에서 같은 순간 가장 높은 음, ${r.a}–${r.b}마디, 음 ${sing.ex.length}개. 선택한 음역에 들어오도록 통째로 옥타브를 옮겼습니다(키 선택은 쓰지 않고 곡의 음높이 관계 그대로).`;
   msg=sing.ex.length>=2?`현재 곡 ${r.a}–${r.b}마디 · ${Math.round(song.bpm*rate())} BPM. 먼저 「들어보기」, 준비되면 「부르기」.`:'이 마디 범위에서 뽑을 선율이 없습니다. 범위를 바꿔 보세요.';if(sing.ex.length<2)sing.ex=[]}
  else{sing.bars=sing.genBars;sing.ex=window.SingLab?SingLab.makeExercise({key:singKeyPc(),minor:false,bars:sing.bars,lo:sing.range[0],hi:sing.range[1],seed:seed(),level:sing.level}):[];
-  msg=sing.ex.length?`${NAMES[singKeyPc()]} 메이저 · ${sing.bars}마디 · ${Math.round(song.bpm*rate())} BPM(연습 탭의 속도를 따릅니다). 먼저 「들어보기」, 준비되면 「부르기」.`:'이 음역에서는 문제를 만들 수 없습니다. 다른 음역이나 키를 고르세요.'}
+  msg=sing.ex.length?`${SingLab.KEYN[singKeyPc()]} 메이저 · ${sing.bars}마디 · ${Math.round(song.bpm*rate())} BPM(연습 탭의 속도를 따릅니다). 먼저 「들어보기」, 준비되면 「부르기」.`:'이 음역에서는 문제를 만들 수 없습니다. 다른 음역이나 키를 고르세요.'}
  sing.track=[];sing.res=null;el('sResult').innerHTML='';el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;el('sMsg').textContent=msg;singDraw()}
 /* ---------- 오선보 보기: staff.js 는 처음 고를 때만 불러온다. 보기 방식(pr-stview)·음 아래 글자(pr-stlab)는 이 브라우저에만 저장 ---------- */
 const STV={v:'roll',lab:'0',sig:{}},VK={'맞음':'ok','높음':'hi','낮음':'lo','옥타브 차이':'oct','소리 없음':'none'};
@@ -1811,7 +1810,7 @@ function pmDroneStart(q,t,dur){pmDroneStop(true);if(!q||!q.chord)return;const g=
 function pmDroneStop(now){const g=pmDrone.g,os=pmDrone.oscs.slice();pmDrone.g=null;if(!g)return;try{const t=ctx.currentTime;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+(now?.01:.08));for(const o of os)o.stop(t+(now?.02:.1))}catch(e){}}
 if(window.SingLab)for(const [n] of SingLab.INTERVALS)el('pmIv').add(new Option(n,n));
 function pmBtns(b){for(const id of ['pmListen','pmRec','pmNew'])el(id).disabled=b;el('pmStop').hidden=!b;pm.busy=b}
-function pmQText(q){el('pmHeadph').hidden=q.mode!=='har';return q.mode==='har'?`기준음 ${sn(q.ref)} · 반주 ${q.chordName} · 목표: ${SingLab.HK_LAB[q.hk]} 화음(기준음에서 ${q.hk==='3down'?'아래':'위'}로 키 안의 음)`:q.mode==='same'?`기준음 ${sn(q.ref)} · 목표: 같은 음`:`기준음 ${sn(q.ref)} · 목표: ${q.iv} ${q.dir==='asc'?'위로':'아래로'} (${q.semis}반음)`}
+function pmQText(q){el('pmHeadph').hidden=q.mode!=='har';return q.mode==='har'?`기준음 ${SingLab.noteNmK(q.ref,q.key)} · 반주 ${q.chordName} · 목표: ${SingLab.HK_LAB[q.hk]} 화음(기준음에서 ${q.hk==='3down'?'아래':'위'}로 키 안의 음)`:q.mode==='same'?`기준음 ${sn(q.ref)} · 목표: 같은 음`:`기준음 ${sn(q.ref)} · 목표: ${q.iv} ${q.dir==='asc'?'위로':'아래로'} (${q.semis}반음)`}
 function pmReset(){const nd=el('pmNeedle');el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='마이크가 꺼져 있습니다.'}
 function pmNew(){if(sing.busy||!window.SingLab)return;pm.q=SingLab.pmQuestion({mode:pm.mode,range:pm.range,seed:seed(),key:singKeyPc(),hk:pm.hk==='mix'?null:pm.hk,iv:pm.iv||null,dir:pm.dir==='mix'?null:pm.dir,wk:pm.weak&&STAT2?SingLab.weakness(STAT2):null});
  el('pmQ').textContent=pmQText(pm.q);el('pmResult').innerHTML='';el('pmMsg').textContent='「기준음 듣기」로 들어 보고, 준비되면 「부르기」(마이크)를 누르세요.';pmReset()}
@@ -1931,7 +1930,7 @@ el('eDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 el('eWeak').onchange=()=>{if(RT.on){el('eWeak').checked=ear.weak;return}ear.weak=el('eWeak').checked;earNew()};
 /* 코드 진행 받아쓰기. 블록 코드 + 베이스 근음, 소리는 tone('sing') */
 const prog={level:1,q:null,ans:[],cur:0,done:false};
-const keyLab=()=>`${NAMES[singKeyPc()]} 메이저`;
+const keyLab=()=>`${SingLab.KEYN[singKeyPc()]} 메이저`;
 function progNew(){progSet(SingLab.makeProgression({key:singKeyPc(),level:prog.level,seed:seed(),songChords:CH.map(c=>c.q==='sus4'||c.q==='sus2'||c.q==='dim'?{root:NaN,minor:false}:{root:c.root,minor:c.minor}),songKey:KEY}))}
 function progSet(q){prog.q=q;prog.ans=[null,null,null,null];prog.cur=0;prog.done=false;prog.rev=prog.chk=false;
  const ds=prog.level<2?[0,1,2,3,4,5]:[0,1,2,3,4,5,6];el('pChoices').innerHTML=ds.map(d=>`<button class="btn" type="button" data-d="${d}">${SingLab.DEG_L[d]}</button>`).join('');

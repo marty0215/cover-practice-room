@@ -11,9 +11,11 @@ const esc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[
 function parseChord(c){const m=CRE.exec(String(c||''));if(!m)return null;const r=NS.indexOf(m[1]),b=m[3]?NS.indexOf(m[3]):null;return {root:r,q:m[2]||'',bass:b===r?null:b}}
 const sp=(pc,flat)=>{const n=(flat?NF:NS)[mod(pc)];return {step:n[0],alter:n[1]==='#'?1:n[1]==='b'?-1:0,name:n}};
 /* 코드 문자열 → <harmony> (이조·조표 철자 반영). 읽을 수 없으면 빈 문자열 */
-function harmony(c,keyPc,tr,off,St){const p=parseChord(c);if(!p)return '';const flat=(St||root.Staff).keySig(mod(keyPc+tr)).kind==='b',r=sp(p.root+tr,flat),k=KIND[p.q],al=(x,t)=>x.alter?`<${t}-alter>${x.alter}</${t}-alter>`:'';
+/* 철자는 sing.js chordLabel 과 같은 규칙(조 안 근음은 조표대로, 조 밖은 ♭II·♭III·♯IV·♭VI·♭VII, 슬래시 베이스는 근음에서 센 음정 글자: C 장조 Bb, D/F#) */
+const nm=n=>({step:n[0],alter:[...n.slice(1)].reduce((s,c)=>s+(c==='#'?1:c==='b'?-1:0),0),name:n});
+function harmony(c,keyPc,tr,off,St){const p=parseChord(c);if(!p)return '';const SL=root.SingLab||(typeof require!=='undefined'?require('./sing.js'):null),kk=mod(keyPc+tr),rn=SL.pcName(p.root+tr,kk,{chord:1,minor:p.q==='m'||p.q==='m7'||p.q==='dim'}),r=nm(rn),k=KIND[p.q],al=(x,t)=>x.alter?`<${t}-alter>${x.alter}</${t}-alter>`:'';
  let s=`<harmony><root><root-step>${r.step}</root-step>${al(r,'root')}</root><kind${k[1]?` text="${k[1]}"`:''}>${k[0]}</kind>`;
- if(p.bass!=null){const b=sp(p.bass+tr,flat);s+=`<bass><bass-step>${b.step}</bass-step>${al(b,'bass')}</bass>`}
+ if(p.bass!=null){const b=nm(SL.bassName(rn,p.bass+tr,kk));s+=`<bass><bass-step>${b.step}</bass-step>${al(b,'bass')}</bass>`}
  return s+(off?`<offset>${off}</offset>`:'')+'</harmony>'}
 /* 단선율로 줄이기: 16분 격자에 맞춘 뒤 같은 시작이면 윗음(low 면 아랫음), 겹치면 앞 음을 뒤 음 시작에서 자른다 */
 function mono(ns,low){const q=ns.filter(n=>n&&isFinite(n[0]+n[1]+n[2])&&n[0]>=0&&n[1]>0).map(n=>{const a=Math.round(n[0]*4);return {a,b:Math.max(a+1,Math.round((n[0]+n[1])*4)),m:n[2]}}).sort((x,y)=>x.a-y.a||(low?x.m-y.m:y.m-x.m)),o=[];

@@ -8,11 +8,12 @@ const SSH=[38,35,39,36,33,37,34],SFL=[34,37,33,36,32,35,31];/* 높은음자리 �
 const DUR={16:'w',12:'h',8:'h',6:'q',4:'q',3:'e',2:'e',1:'s'};
 const mod=n=>((n%12)+12)%12;
 function keySig(pc){pc=mod(pc);const [n,k]=KS[pc],ls=(k==='#'?SH:k==='b'?FL:[]).slice(0,n);return {pc,n,kind:k,letters:ls,steps:(k==='#'?SSH:SFL).slice(0,n)}}
-/* midi → {l:글자 0–6(C=0), acc:-1|0|1, oct, step:오선 단계(옥타브*7+글자)}. 조 안 음은 조표대로, 조 밖 검은 건반은 샤프 조에선 #, 플랫 조에선 b, 조 밖 흰 건반은 제자리표 */
+/* midi → {l:글자 0–6(C=0), acc:-1|0|1, oct, step:오선 단계(옥타브*7+글자)}. 조 안 음은 조표대로, 조 밖 흰 건반은 제자리표.
+   조 밖 검은 건반은 으뜸음 기준 도수로: ♭3·♭7 은 플랫, ♯1·♯4·♯5 는 샤프(C 장조 Eb·Bb, F 장조 F#·C#; 예전 규칙은 C 장조 ♭7 을 A#, F 장조 ♯1 을 Gb 로 적었다). sing.js SOLF·pcName 과 같은 규칙 */
 function spell(m,pc){const ks=keySig(pc),A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const p=mod(m);
  const mk=(l,a)=>{const o=Math.floor((m-a-LP[l])/12)-1;return {l,acc:a,oct:o,step:o*7+l}};
  for(let l=0;l<7;l++)if(mod(LP[l]+A[l])===p)return mk(l,A[l]);const w=LP.indexOf(p);if(w>=0)return mk(w,0);
- return ks.kind==='b'?mk(LP.indexOf((p+1)%12),-1):mk(LP.indexOf((p+11)%12),1)}
+ const r=mod(p-pc);return r===3||r===10?mk(LP.indexOf((p+1)%12),-1):mk(LP.indexOf((p+11)%12),1)}
 const okAt=(u,p)=>u===16||u===12?p===0:u===8||u===6?p%8===0:u===4||u===3?p%4===0:u===2?p%2===0:true;
 function split(pos,len,rest){const set=rest?[16,8,4,2,1]:[16,12,8,6,4,3,2,1],r=[];while(len>0){const u=set.find(x=>x<=len&&okAt(x,pos));r.push(u);pos+=u;len-=u}return r}
 function layout(notes,o={}){const bpb=o.beatsPerBar||4,U=bpb*4,ks=keySig(o.key||0),ord=notes.map((_,i)=>i).sort((x,y)=>notes[x][0]-notes[y][0]),q=[];let pe=0;
