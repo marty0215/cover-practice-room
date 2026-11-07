@@ -2015,7 +2015,7 @@ async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing
  finally{sing.abort=null;clearInterval(iv);try{src&&an0&&src.disconnect(an0)}catch(_){}Mic.release('cal');singSetBusy(false)}
  if(!cl.length)return;const ls=SingLab.latencyStats(sm,cl),ms=ls&&ls.ms;
  if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
- else{setLat(ms);const ad=SingLab.latencyAdvice({iqr:ls.iqr,outputLatency:ctx.outputLatency,labels});msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다(클릭 ${ls.n}번, 퍼짐 ${ls.iqr} ms). 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`+(ad.lines.length?' '+ad.lines.join(' '):'')}}
+ else{const ad=SingLab.latencyAdvice({iqr:ls.iqr,outputLatency:ctx.outputLatency,labels});if(ad.unstable){let cur=null;try{cur=localStorage.getItem('pr-miclat')}catch(_){}const prev=cur!=null&&cur!==''&&isFinite(+cur)?Math.round(+cur):null;msg.textContent=`측정이 불안정해 저장하지 않았습니다. ${prev!=null?`이전 값(${prev} ms)을 그대로 씁니다.`:'아직 저장된 값이 없어 보정 없이(0 ms) 씁니다.'} `+ad.lines.join(' ')}else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다(클릭 ${ls.n}번, 퍼짐 ${ls.iqr} ms). 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`+(ad.lines.length?' '+ad.lines.join(' '):'')}}}
 el('sCal').onclick=singCal;el('sCalZero').onclick=()=>{setLat(0);el('sMsg').textContent='지연 보정을 0 ms로 되돌렸습니다.'};
 el('sRec').onclick=singRec;el('sListen').onclick=singListen;el('sNew').onclick=()=>RT.on?rtNext():singNew();el('sStop').onclick=()=>{if(sing.abort)sing.abort()};
 el('sBars').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.genBars=+b.dataset.v;segPress('sBars',b);singNew()});
@@ -2117,7 +2117,7 @@ function spark(h){if(h.length<2)return '<span class="muted">—</span>';const W=
 function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');{const none=DRILLS.every(([id])=>!(STAT[id]&&STAT[id].n));el('statEmpty').hidden=!none;el('statTbl').parentElement.hidden=none;el('rtEmpty').hidden=!none}logRender();el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows;
  const w=STAT2?SingLab.topWeak(STAT2,{n:5}):[];el('weakBox').innerHTML=w.length?`<ol class="wl">${w.map(x=>`<li>${esc(x.text)}</li>`).join('')}</ol>`:'<p class="muted">아직 뚜렷한 약점이 없습니다. 항목마다 2번 이상 풀면 계산합니다.</p>'}
 function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}dayRec();statRender()}
-let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};DAYS=SingLab.newLog();if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2');localStorage.removeItem('pr-days1');localStorage.removeItem('pr-ladder1')}catch(_){}LAD=SingLab.ladNew();ladUi();statRender()};
+let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};DAYS=SingLab.newLog();if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2');localStorage.removeItem('pr-days1');localStorage.removeItem('pr-ladder1')}catch(_){}LAD=SingLab.ladNew();ladUi();earLvUi();earShowAcc();statRender()};
 /* 진도 백업·복원: 허용 키만 담은 JSON 을 내려받고(Blob), 고른 파일은 sing.js parseBackup 으로 검증 후 화면 안 확인 줄에서 합치기/바꾸기. 곡 분석·녹음은 대상 아님 */
 const bkCur=()=>{const o={};for(const k of SingLab.BK_KEYS){let v=null;try{v=k==='pr-stats'?JSON.stringify(STAT):k==='pr-stats2'?JSON.stringify(STAT2):k==='pr-days1'?JSON.stringify(DAYS):localStorage.getItem(k)}catch(_){}if(v!=null)o[k]=v}return o};
 let bkPend=null;const bkMsg=(t,bad)=>{el('bkMsg').textContent=(bad?'오류: ':'')+t},bkClose=()=>{bkPend=null;el('bkConfirm').hidden=true;el('bkHelp').hidden=true};
@@ -2128,7 +2128,7 @@ el('bkFile').onchange=async()=>{const f=el('bkFile').files&&el('bkFile').files[0
  bkPend=r.data;el('bkSumm').textContent=`파일 내용: 푼 문제 ${r.sum.answers}개 · 연습 ${r.sum.days}일 · 항목 ${r.sum.keys.length}개. 어떻게 가져올까요?`;el('bkConfirm').hidden=false;el('bkHelp').hidden=false;bkMsg('')};
 function bkApply(merge){if(!bkPend)return;try{const cur=bkCur(),out=merge?SingLab.mergeBackup(cur,bkPend):bkPend,p=k=>{try{return JSON.parse(out[k])}catch(e){return null}};
  for(const k of Object.keys(out))try{localStorage.setItem(k,out[k])}catch(_){}
- if(out['pr-stats']){STAT=p('pr-stats')||{}}if(out['pr-stats2'])STAT2=SingLab.migrateStats(p('pr-stats2'),null);if(out['pr-days1'])DAYS=SingLab.pruneLog(p('pr-days1'));if(out['pr-ear'])earA=p('pr-ear')||{};if(out['pr-ladder1']){LAD=SingLab.ladClean(p('pr-ladder1'));if(typeof ladUi==='function')ladUi()}
+ if(out['pr-stats']){STAT=p('pr-stats')||{}}if(out['pr-stats2'])STAT2=SingLab.migrateStats(p('pr-stats2'),null);if(out['pr-days1'])DAYS=SingLab.pruneLog(p('pr-days1'));if(out['pr-ear'])earA=p('pr-ear')||{};if(out['pr-ladder1']){LAD=SingLab.ladClean(p('pr-ladder1'));if(typeof ladUi==='function'){ladUi();earLvUi();earShowAcc()}}
  bkClose();statRender();bkMsg(`${merge?'합쳤습니다':'바꿨습니다'}(항목 ${Object.keys(out).length}개). 음역·보정·보기 설정은 페이지를 다시 열면 반영됩니다.`)}catch(e){bkClose();bkMsg('가져오지 못했습니다. 지금 기록은 그대로입니다.',1)}}
 el('bkMerge').onclick=()=>bkApply(true);el('bkRepl').onclick=()=>bkApply(false);el('bkCancel').onclick=()=>{bkClose();bkMsg('가져오기를 취소했습니다. 기록은 그대로입니다.')};
 
@@ -2139,14 +2139,14 @@ let LAD=SingLab.ladClean(jget('pr-ladder1'));const saveLad=()=>{try{localStorage
 let earA={};try{earA=JSON.parse(localStorage.getItem('pr-ear'))||{}}catch(e){}
 const EAR_NOLV={func:1,inversion:1},earKey=()=>ear.type+(EAR_NOLV[ear.type]?1:ear.level),earName=t=>({interval:'음정',triad:'3화음',seventh:'7화음',degree:'음계 도수',tonic:'으뜸음 찾기',cadence:'카덴스 듣기',func:'화음 기능',inversion:'전위 듣기',reading:'악보 읽기',mode:'모드 식별',contrast:'쌍 대조'})[t]||'3화음';
 function earShowAcc(){const k=earKey(),a=earA[k]||{n:0,ok:0},b=earA[k+'#1'],f=x=>x&&x.n?`${x.ok}/${x.n} (${Math.round(100*x.ok/x.n)}%)`:'아직 기록 없음';
- el('eAcc').textContent=`${earName(ear.type)}${EAR_NOLV[ear.type]?'':` 난이도 ${ear.level}`} 정답률: ${f(a)}${ear.once||(b&&b.n)?` · 1회 듣기만: ${f(b)}`:''} · 이 브라우저에만 저장됩니다.`}
+ el('eAcc').textContent=`${earName(ear.type)}${earNoLvUi()?'':` 난이도 ${ear.level}`} 정답률: ${f(a)}${ear.once||(b&&b.n)?` · 1회 듣기만: ${f(b)}`:''} · 이 브라우저에만 저장됩니다.`}
 const wFn=()=>{const wk=SingLab.weakness(STAT2);return id=>SingLab.weightFor(wk,id)};
 function earNew(){if(ear.type==='contrast')return ctNew();earSet(SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed(),dir:ear.dir,weight:ear.weak&&STAT2?wFn():null,active:SingLab.ladItems(LAD,ear.type)}))}
 /* 쌍 대조: 세션 8문제, 두 음정을 번갈아. 세션이 시작되면(fresh) 먼저 두 소리 비교 듣기 */
 if(window.SingLab)[['auto','자동(내 혼동 쌍 우선)'],...SingLab.CONTRAST_FIXED.map((p,i)=>[String(i),p[0]+' / '+p[1]])].forEach(([v,t])=>el('eCPair').add(new Option(t,v)));
 function ctDir(){return ear.ct&&ear.ct.pair.dir||(ear.dir==='desc'||ear.dir==='har'?ear.dir:'asc')}
-function ctNew(){if(!ear.ct||ear.ct.idx>=SingLab.CONTRAST_N)ear.ct={pair:SingLab.contrastPair(STAT2,el('eCPair').value),idx:0,n:0,ok:0,fresh:true};
- const c=ear.ct,q=SingLab.earQuiz({type:'contrast',pair:[c.pair.a,c.pair.b],idx:c.idx,seed:seed(),dir:ctDir()});c.idx++;earSet(q);ctInfo()}
+function ctNew(){if(!ear.ct||ear.ct.idx>=SingLab.CONTRAST_N)ear.ct={pair:SingLab.contrastPair(STAT2,el('eCPair').value),idx:0,n:0,ok:0,fresh:true,sess:seed()};
+ const c=ear.ct,q=SingLab.earQuiz({type:'contrast',pair:[c.pair.a,c.pair.b],idx:c.idx,seed:seed(),dir:ctDir(),sess:c.sess});c.idx++;earSet(q);ctInfo()}
 function ctInfo(t){const c=ear.ct;if(!c)return;const i=el('eCtInfo');i.hidden=false;i.textContent=t||`쌍 대조 ${c.pair.a} vs ${c.pair.b}${c.pair.src==='conf'?'(내 혼동 쌍)':''} · ${Math.min(c.idx,SingLab.CONTRAST_N)}/${SingLab.CONTRAST_N}번째 문제`}
 function ctCompare(){const c=ear.ct;if(!c)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();const d=ctDir(),t=ctx.currentTime+.1,base=60;ear.cmpLog=[];
  [c.pair.a,c.pair.b].forEach((nm,k)=>{const semi=SingLab.INTERVALS.find(x=>x[0]===nm)[1];ivTones(t+k*1.9,[base,base+semi],d);ear.cmpLog.push(nm)});
@@ -2154,10 +2154,13 @@ function ctCompare(){const c=ear.ct;if(!c)return;ensureCtx();if(ctx.state==='sus
 function ctAuto(){if(ear.type==='contrast'&&ear.ct&&ear.ct.fresh){ear.ct.fresh=false;ctCompare();return true}return false}
 const ivTones=(t,n,d)=>{if(d==='har')for(const p of n)tone('sing',t,1.4,p,90);else{const o=d==='desc'?[n[1],n[0]]:n;tone('sing',t,.55,o[0],90);tone('sing',t+.65,.55,o[1],90)}};
 const LADT=window.SingLab?SingLab.LAD_TYPES:[];
+/* 난이도 선택 칸 표시 규칙: 한 곳에서만 정한다(단계 진도 켜짐·쌍 대조·기능/전위는 숨김, 검수 #11) */
+const earNoLvUi=()=>ear.type==='func'||ear.type==='inversion'||ear.type==='contrast'||SingLab.ladOn(LAD,ear.type);
+function earLvUi(){el('eLevelOpt').hidden=earNoLvUi()}
 function ladUi(){const on=LADT.includes(ear.type),st=on?SingLab.ladStatus(LAD,ear.type):null;el('eLadLb').hidden=!on;el('eLadder').checked=!!(st&&st.on);el('eLadSt').hidden=!(st&&st.on);el('eLadSt').textContent=st&&st.on?st.text:''}
 /* 다시 듣기 1회: 한 번 들으면 답할 때까지 버튼 잠금(답한 뒤엔 풀림) */
 function earLock(){const b=el('ePlay'),lock=ear.once&&ear.plays>=1&&!ear.done&&!!ear.q;b.disabled=lock||(!!ear.q&&ear.q.type==='reading'&&!ear.done);b.textContent=lock?'▶ 들어보기(1회 사용함)':'▶ 들어보기'}
-function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;ear.plays=0;const ct=ear.type==='contrast';el('eDirOpt').hidden=ear.type!=='interval'&&!ct;el('eLevelOpt').hidden=ear.type==='func'||ear.type==='inversion'||ct||SingLab.ladOn(LAD,ear.type);el('eLv3').hidden=ear.type!=='reading';el('eCmp').hidden=el('eCPairOpt').hidden=!ct;el('eCtInfo').hidden=!ct;readStaff(q);earLock();ladUi();
+function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;ear.plays=0;const ct=ear.type==='contrast';el('eDirOpt').hidden=ear.type!=='interval'&&!ct;earLvUi();el('eLv3').hidden=ear.type!=='reading';el('eCmp').hidden=el('eCPairOpt').hidden=!ct;el('eCtInfo').hidden=!ct;readStaff(q);earLock();ladUi();
  el('eChoices').innerHTML=ear.q.choices.map(c=>`<button class="btn" type="button" data-c="${c}">${c}</button>`).join('');el('eFb').textContent='';el('eNext').disabled=true;earShowAcc()}
 /* 악보 읽기: 오선보는 staff.js 를 처음 쓸 때만 불러온다. 보기 전에 소리가 정답을 알려 주지 않게 답하기 전엔 재생하지 않는다. aria-label 에 음 이름 없음 */
 function readStaff(q){const box=el('eStaff');box.hidden=q.type!=='reading';if(q.type!=='reading'){box.innerHTML='';return}box.innerHTML='<p class="muted small msg">오선보를 불러오는 중…</p>';
@@ -2178,7 +2181,7 @@ el('eReplay').addEventListener('click',e=>{const b=e.target.closest('button');if
 if(ear.once)segPress('eReplay',document.querySelector('#eReplay [data-v=once]'));
 el('eLadder').onchange=()=>{if(RT.on||!LADT.includes(ear.type)){el('eLadder').checked=SingLab.ladOn(LAD,ear.type);return}LAD=SingLab.ladSet(LAD,ear.type,el('eLadder').checked);saveLad();earNew()};
 el('eCPair').onchange=()=>{ear.ct=null;earNew();ctAuto()};
-el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,k=earKey(),a=earA[k]||(earA[k]={n:0,ok:0});a.n++;if(ok)a.ok++;if(ear.once&&ear.plays<=1){const o=earA[k+'#1']||(earA[k+'#1']={n:0,ok:0});o.n++;if(ok)o.ok++}statRec(ear.type,ok?1:0);
+el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,k=earKey(),a=earA[k]||(earA[k]={n:0,ok:0});a.n++;if(ok)a.ok++;if(ear.once&&ear.plays===1){const o=earA[k+'#1']||(earA[k+'#1']={n:0,ok:0});o.n++;if(ok)o.ok++}statRec(ear.type,ok?1:0);
  let extra='';if(!RT.on&&SingLab.ladOn(LAD,ear.type)){const r=SingLab.ladRec(LAD,ear.type,ok);LAD=r.L;saveLad();if(r.promoted!=null)extra+=' 단계 진도: 새 항목이 열렸습니다 — '+(ear.type==='degree'?'「'+SingLab.SOLF[r.promoted]+'」':'「'+r.promoted+'」')+'.';ladUi()}
  if(ear.type==='contrast'&&ear.ct){ear.ct.n++;if(ok)ear.ct.ok++;ctInfo();if(ear.ct.n>=SingLab.CONTRAST_N){extra+=` ${SingLab.CONTRAST_N}문제 세션 끝: ${ear.ct.ok}/${ear.ct.n}. 「새 문제」를 누르면 새 세션을 시작합니다.`;ctInfo(`쌍 대조 ${ear.ct.pair.a} vs ${ear.ct.pair.b} · 세션 끝 ${ear.ct.ok}/${ear.ct.n}`)}}
 fine(ear.q.item,ok?1:0,ok?null:b.dataset.c);try{localStorage.setItem('pr-ear',JSON.stringify(earA))}catch(_){}

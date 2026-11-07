@@ -29,8 +29,11 @@ function frames(L,R,sr,fft){fft=fft||fftInPlace;const n=Math.max(0,Math.floor((L
 function pack(fr){return fr?{v:1,n:fr.n,fps:fr.fps,hop:fr.hop,N:fr.N,sr:fr.sr,stereo:!!fr.stereo,s:fr.s}:null}
 function unpack(o){if(!o||o.v!==1||!(o.n>0)||!(o.fps>0)||!o.s)return null;const s={};for(const k of KEYS){const a=o.s[k];if(!a||a.length!==o.n)return null;const f=a instanceof Float32Array?a:Float32Array.from(a);for(let i=0;i<f.length;i++)if(!isFinite(f[i]))return null;s[k]=f}return {n:o.n,fps:o.fps,hop:o.hop,N:o.N,sr:o.sr,stereo:!!o.stereo,s}}
 const pctl=(a,q)=>{if(!a.length)return 0;const b=a.slice().sort((x,y)=>x-y),i=(b.length-1)*q,l=Math.floor(i),h=Math.ceil(i);return b[l]+(b[h]-b[l])*(i-l)};
-/* 곡 안 0~1: 5~95 백분위로 늘린다(빈 마디 null 은 0). 거의 일정하면 전부 0 */
-function norm01(v){const x=v.filter(a=>a!=null&&isFinite(a)),lo=pctl(x,.05),hi=pctl(x,.95),sp=hi-lo;return v.map(a=>a==null||!isFinite(a)||!(sp>1e-9)?0:Math.max(0,Math.min(1,(a-lo)/sp)))}
+/* 곡 안 0~1: 5~95 백분위로 늘린다(빈 마디 null 은 0). 5~95 백분위 폭이 minSpan 미만이면(거의 일정; 일정한 소리의 계산 잡음을 늘려 무늬로 보이지 않게) 전부 0. 행마다 단위가 달라 MIN_SPAN 으로 정한다(검수 #11) */
+function norm01(v,minSpan=1e-9){const x=v.filter(a=>a!=null&&isFinite(a)),lo=pctl(x,.05),hi=pctl(x,.95),sp=hi-lo;return v.map(a=>a==null||!isFinite(a)||!(sp>=minSpan&&sp>1e-12)?0:Math.max(0,Math.min(1,(a-lo)/sp)))}
+/* 온셋 세기 절대 하한: 일정한 소리의 계산 잡음(곡 평균+0.5 표준편차가 이 아래로 내려가는 경우)을 타격으로 세지 않는다 */
+const FLUX_FLOOR=0.2;
+const MIN_SPAN={low:.5,lm:.5,pres:.5,hi:.5,perc:.3,flat:0,width:.01,ctr:.01}; /* 에너지 행은 dB(0.5 dB 미만 차이는 구분 안 함), perc 는 초당 횟수, width·ctr 은 0~1 비율, flat 은 곡 중앙값의 10% 미만이면 일정으로 본다 */
 const db=e=>10*Math.log10(e+1e-12);
 const ROWS=[
  {id:'low',label:'저음 대역(베이스·킥 등)',sub:'20~150 Hz 에너지'},
@@ -47,7 +50,7 @@ function perBar(fr,bpm,offset,bars){if(!fr||!(bpm>0)||!(bars>0))return null;cons
  const cnt=new Float64Array(bars),acc={};for(const k of KEYS)acc[k]=new Float64Array(bars);
  for(let f=0;f<n;f++){const b=idx[f];if(b<0)continue;cnt[b]++;for(const k of KEYS)if(k!=='flux')acc[k][b]+=s[k][f]}
  /* 타격 밀도: 온셋 세기의 지역 최대(±2프레임) 가운데 곡 평균+0.5 표준편차를 넘는 것의 수 / 마디 길이 */
- let m=0,m2=0;for(let f=0;f<n;f++){m+=s.flux[f];m2+=s.flux[f]*s.flux[f]}m/=n||1;const sd=Math.sqrt(Math.max(0,m2/(n||1)-m*m)),thr=m+.5*sd,pk=new Float64Array(bars);
+ let m=0,m2=0;for(let f=0;f<n;f++){m+=s.flux[f];m2+=s.flux[f]*s.flux[f]}m/=n||1;const sd=Math.sqrt(Math.max(0,m2/(n||1)-m*m)),thr=Math.max(m+.5*sd,FLUX_FLOOR),pk=new Float64Array(bars);
  for(let f=0;f<n;f++){const b=idx[f],v=s.flux[f];if(b<0||v<=thr)continue;let ok=true;for(let d=-2;d<=2&&ok;d++){const g=f+d;if(d&&g>=0&&g<n&&(s.flux[g]>v||(s.flux[g]===v&&d<0)))ok=false}if(ok)pk[b]++}
  const per=(k,fn)=>Array.from({length:bars},(_,b)=>cnt[b]?fn(acc[k][b]/cnt[b],b):null);
  const raw={low:per('low',db),lm:per('lm',db),pres:per('pres',db),hi:per('hi',db),perc:Array.from({length:bars},(_,b)=>cnt[b]?pk[b]/bs:null),flat:per('flat',x=>x)};
@@ -55,7 +58,7 @@ function perBar(fr,bpm,offset,bars){if(!fr||!(bpm>0)||!(bars>0))return null;cons
  /* 소리가 거의 없는 마디(합이 곡 중앙값의 1/1000 미만)는 flat·width·ctr 이 의미 없으므로 비운다 */
  const tt=Array.from({length:bars},(_,b)=>cnt[b]?(acc.low[b]+acc.lm[b]+acc.pres[b]+acc.hi[b])/cnt[b]:0),med=pctl(tt.filter(x=>x>0),.5);
  for(const k of ['flat','width','ctr'])if(raw[k])raw[k]=raw[k].map((x,b)=>tt[b]<med*1e-3?null:x);
- const rows=ROWS.filter(r=>raw[r.id]).map(r=>({id:r.id,label:r.label,sub:r.sub,raw:raw[r.id],v:norm01(raw[r.id]).map(x=>Math.round(x*100)/100)}));
+ const rows=ROWS.filter(r=>raw[r.id]).map(r=>({id:r.id,label:r.label,sub:r.sub,raw:raw[r.id],v:norm01(raw[r.id],r.id==='flat'?.1*Math.abs(pctl(raw.flat.filter(x=>x!=null&&isFinite(x)),.5)):MIN_SPAN[r.id]).map(x=>Math.round(x*100)/100)}));
  return {bars,stereo:fr.stereo,rows}}
 const api={frames,pack,unpack,perBar,norm01,ROWS,KEYS,N,HOP,fft:fftInPlace};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Bands=api})(typeof window!=='undefined'?window:globalThis);
