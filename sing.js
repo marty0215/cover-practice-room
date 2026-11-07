@@ -5,7 +5,7 @@
    - scoreTake: 목표 음별로 ±50 cent 안에 든 유성 프레임 비율, 평균 cent 오차, 판정
    - estimateLatency: 스피커 클릭을 마이크로 다시 듣는 왕복 지연(ms) 추정
    - smoothNotes: pyin+평활 분할과 같은 방식으로 음높이 곡선을 음 목록으로 (2026-11-07 시험 F1 0.755 방식)
-   - earQuiz: 키 안의 음정·3화음 문제 생성
+   - earQuiz: 키 안의 음정·3화음·7화음 성질·음계 도수(종지 뒤 한 음) 문제 생성
    - makeProgression: 4코드 진행 받아쓰기 문제(곡 코드 창 또는 무작위 다이아토닉) + 보이싱
    - topLine: 채보 음 목록에서 윗선율(단선율) 추출 → 음역에 맞춰 옥타브 이동
    - recStat·lastAcc: 진도 기록(항목별 최근 결과 배열) 갱신·최근 n회 정답률
@@ -68,12 +68,18 @@ function smoothNotes(track,{dev=.6,minDur=.06}={}){const out=[];let seg=[];const
  for(const f of track){if(f[1]==null||f[2]<.5){flush();continue}if(seg.length){const ps=seg.map(x=>x[1]).sort((a,b)=>a-b);if(Math.abs(f[1]-ps[ps.length>>1])>dev)flush()}seg.push(f)}flush();return out}
 
 const INTERVALS=[['단2도',1],['장2도',2],['단3도',3],['장3도',4],['완전4도',5],['증4도',6],['완전5도',7],['단6도',8],['장6도',9],['단7도',10],['장7도',11],['옥타브',12]];
-/* 청음 문제: type 'interval' | 'triad'. level 1 은 키 안의 음만, 2 는 전부.
+/* 청음 문제: type 'interval' | 'triad' | 'seventh' | 'degree'. level 1 은 키 안의 음만(7화음은 maj7·7·m7, 도수는 장음계 7음), 2 는 전부(7화음 5종, 도수 12음).
    dir: 'asc' 상행 | 'desc' 하행 | 'har' 동시 | 'mix' 섞기(음정만). name: 지정하면 그 음정/화음으로 고정. weight: id→가중치 함수(약점 위주). item 은 통계 id */
+const SV_ALL=[['메이저7',[0,4,7,11]],['도미넌트7',[0,4,7,10]],['마이너7',[0,3,7,10]],['하프 디미니시',[0,3,6,10]],['디미니시7',[0,3,6,9]]];
 function earQuiz({type='interval',key=0,level=1,seed=Date.now(),lo=55,hi=72,dir='asc',name=null,weight=null}={}){const R=rng(seed);
  if(type==='triad'){const all=[['메이저',[0,4,7]],['마이너',[0,3,7]],['디미니시',[0,3,6]],['오그먼트',[0,4,8]]],qs=all.slice(0,level<2?2:4);
   const fixed=name&&all.find(q=>q[0]===name),q=fixed||pickWeighted(qs,weight?qs.map(x=>weight('tr:'+x[0])):null,R),root=lo+Math.floor(R()*(hi-lo-8));
   return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:NAMES[root%12],item:'tr:'+q[0]}}
+ if(type==='seventh'){const qs=SV_ALL.slice(0,level<2?3:5),fixed=name&&SV_ALL.find(q=>q[0]===name),q=fixed||pickWeighted(qs,weight?qs.map(x=>weight('sv:'+x[0])):null,R),root=lo+Math.floor(R()*(hi-lo-11));
+  return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:NAMES[root%12],item:'sv:'+q[0]}}
+ if(type==='degree'){const sems=level<2?MAJ:[0,1,2,3,4,5,6,7,8,9,10,11],fx=name?SOLF.indexOf(name):-1,sm=fx>=0?fx:pickWeighted(sems,weight?sems.map(x=>weight('dg:'+x)):null,R);
+  let prev=null;const cad=[0,3,4,0].map(d=>{const v=voiceTriad((key+MAJ[d])%12,'maj',prev);prev=v.notes;return {notes:v.notes,bass:v.bass}}),t=60+(((key+sm-60)%12)+12)%12;
+  return {type,answer:SOLF[sm],choices:sems.map(x=>SOLF[x]).concat(fx>=0&&!sems.includes(fx)?[SOLF[fx]]:[]),notes:[t],cad,label:NAMES[key%12]+' 메이저',item:'dg:'+sm}}
  const pool=level<2?INTERVALS.filter(([,s])=>MAJ.includes(s%12)||s===12):INTERVALS,dirs=dir==='mix'?DIRS:[dir==='desc'||dir==='har'?dir:'asc'];let nm,semi,dr;
  const fx=name&&INTERVALS.find(x=>x[0]===name);
  if(fx){[nm,semi]=fx;dr=dirs[Math.floor(R()*dirs.length)]}
@@ -119,10 +125,10 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
-   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
+   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
 const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
-const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
-const KIND_OF={iv:'ear',tr:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창'};
+const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),DG_ITEMS=SOLF.map((_,i)=>'dg:'+i);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
+const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창'};
 const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40}; // 문제당 예상 초 (블록 최대 문제 수 = 시간/이 값)
 const kindOf=id=>KIND_OF[String(id).split(':')[0]]||null;
 const clamp01=x=>Math.max(0,Math.min(1,+x||0));
@@ -154,13 +160,15 @@ function weightFor(wk,id,{only=null,focus=null}={}){const r=wk&&wk[id]?wk[id].ra
 const relPc=(p,key)=>((p-key)%12+12)%12;
 /* 멜로디 한 줄의 통계 id 들. md 는 둘째 음부터 음 자리·진행(−12..12), sg 는 모든 음의 음 자리 */
 function exItems(ex,key,pre){const out=[];ex.forEach((n,i)=>{if(pre==='md'){if(i>0){out.push('md:d'+relPc(n[2],key),'md:s'+Math.max(-12,Math.min(12,n[2]-ex[i-1][2])))}}else out.push('sg:d'+relPc(n[2],key))});return out}
+/* only 에 3화음·7화음·도수 항목이 있을 때만 그 항목을 청음 후보에 더한다 */
+const extraEar=only=>[['tr:',TR_ITEMS],['sv:',SV_ITEMS],['dg:',DG_ITEMS]].flatMap(([pf,a])=>only&&only.some(i=>i.startsWith(pf))?a:[]);
 const sd=R=>Math.floor(R()*4294967294)+1;
 function weakest(wk,pool,n,R){const seen=pool.filter(id=>wk[id]&&wk[id].n>=1).sort((x,y)=>wk[y].rate-wk[x].rate||wk[y].n-wk[x].n||(x<y?-1:1)).slice(0,n);
  const rest=pool.filter(id=>!seen.includes(id));while(seen.length<n&&rest.length)seen.push(rest.splice(Math.floor(R()*rest.length),1)[0]);return seen}
 /* 블록 종류별 문제 한 개 생성(JSON 으로 저장 가능). ear: 음정·화음, prog: 코드 진행(후보 8개 중 약점 가중 추첨), mel/sight: 2마디 멜로디(후보 6개) */
 function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){const W=id=>weightFor(wk,id,{only,focus});
- if(kind==='ear'){let pool=IV_ITEMS.concat(only&&only.some(i=>i.startsWith('tr:'))?TR_ITEMS:[]);if(only&&only.length){const o=pool.filter(i=>only.includes(i));if(o.length)pool=o}
-  const item=pickWeighted(pool,pool.map(W),R),p=item.split(':');return item.startsWith('tr:')?{kind,type:'triad',name:p[1],item,seed:sd(R)}:{kind,type:'interval',name:p[1],dir:p[2],item,seed:sd(R)}}
+ if(kind==='ear'){let pool=IV_ITEMS.concat(extraEar(only));if(only&&only.length){const o=pool.filter(i=>only.includes(i));if(o.length)pool=o}
+  const item=pickWeighted(pool,pool.map(W),R),p=item.split(':');return item.startsWith('tr:')?{kind,type:'triad',name:p[1],item,seed:sd(R)}:item.startsWith('sv:')?{kind,type:'seventh',name:p[1],item,seed:sd(R)}:item.startsWith('dg:')?{kind,type:'degree',name:SOLF[+p[1]],item,seed:sd(R)}:{kind,type:'interval',name:p[1],dir:p[2],item,seed:sd(R)}}
  if(kind==='prog'){const c=[];for(let i=0;i<8;i++){const q=makeProgression({key,level:2,seed:sd(R)});c.push({degs:q.degs,items:q.degs.map((d,k)=>'pg:'+DEG_L[d]+':'+k)})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/4),R);return {kind,degs:x.degs,items:x.items,seed:sd(R)}}
  if(kind==='rhy'){const mode=R()<.5?'dict':'tap',l2=only&&only.some(i=>i.startsWith('rh:')&&RCELLS[i.slice(3)]&&RCELLS[i.slice(3)].lv===2),level=l2||R()<.4?2:1,c=[];
@@ -174,7 +182,7 @@ function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){c
 function makeRoutine(st,{minutes=10,seed=1,only=null}={}){const wk=weakness(st),R=rng(seed),ids=only&&only.length?only:null;
  let kinds=['ear','prog','mel','rhy','sight'],sh={ear:.27,prog:.27,mel:.18,rhy:.1,sight:.18};
  if(ids){kinds=kinds.filter(k=>ids.some(i=>kindOf(i)===k));sh={};for(const k of kinds)sh[k]=1/kinds.length}
- const pools={ear:IV_ITEMS.concat(ids&&ids.some(i=>i.startsWith('tr:'))?TR_ITEMS:[]),prog:[],mel:[],rhy:[],sight:[]};
+ const pools={ear:IV_ITEMS.concat(extraEar(ids)),prog:[],mel:[],rhy:[],sight:[]};
  for(const id of Object.keys(wk)){const k=kindOf(id);if(k&&k!=='ear'&&!id.startsWith('sg:v:')&&!/:(late|early)$/.test(id))pools[k].push(id)}
  return {minutes,seed,only:ids,blocks:kinds.map(k=>{const secs=Math.round(minutes*60*sh[k]),ok=ids?ids.filter(i=>kindOf(i)===k):null;
   return {kind:k,label:KIND_LAB[k],secs,maxQ:Math.max(2,Math.round(secs/SPQ[k])),focus:weakest(wk,k==='ear'?pools.ear:pools[k],3,R).filter(i=>wk[i]||k==='ear'),only:ok}})}}
@@ -194,6 +202,8 @@ const ivLab=(n,d)=>d==='har'?n+' 동시 화음':n+' '+DIR_KO[d],stepKo=s=>+s===0
 function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{},ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),tot=ks.reduce((a,k)=>a+c[k],0),top=ks[0],often=top!=null&&c[top]>=2&&c[top]/tot>=.4,pct=rate!=null?` (오답률 ${Math.round(rate*100)}%)`:'';
  if(p[0]==='iv'){const l=ivLab(p[1],p[2]);return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l}의 정답률이 낮습니다${pct}.`}
  if(p[0]==='tr'){const l=p[1]+' 3화음';return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l} 정답률이 낮습니다${pct}.`}
+ if(p[0]==='sv'){const l=p[1]+' 7화음';return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l} 정답률이 낮습니다${pct}.`}
+ if(p[0]==='dg'){const n=SOLF[+p[1]];if(!n)return String(id);return often?`음계 도수 듣기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 고릅니다.`:`음계 도수 듣기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
  if(p[0]==='pg')return often?`${+p[2]+1}번째 코드가 「${p[1]}」일 때 자주 「${top}」라고 적습니다.`:`${+p[2]+1}번째 칸의 「${p[1]}」 정답률이 낮습니다${pct}.`;
  if(p[0]==='md'&&p[1][0]==='d'){const n=SOLF[+p[1].slice(1)];return often?`받아쓰기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 적습니다.`:`받아쓰기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
  if(p[0]==='md'){const s=+p[1].slice(1);return often?`받아쓰기에서 ${eul(stepKo(s))} 자주 「${stepKo(+top)}」이라고 듣습니다.`:`받아쓰기에서 ${stepKo(s)} 정답률이 낮습니다${pct}.`}
@@ -204,7 +214,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  return String(id)}
 /* 항목 id 의 짧은 이름 (집중 항목 표시용) */
 function itemLabel(id){const p=String(id).split(':');
- if(p[0]==='iv')return ivLab(p[1],p[2]);if(p[0]==='tr')return p[1]+' 3화음';if(p[0]==='pg')return `${+p[2]+1}번째 칸 ${p[1]}`;
+ if(p[0]==='iv')return ivLab(p[1],p[2]);if(p[0]==='tr')return p[1]+' 3화음';if(p[0]==='sv')return p[1]+' 7화음';if(p[0]==='dg')return SOLF[+p[1]]?`도수 「${SOLF[+p[1]]}」`:String(id);if(p[0]==='pg')return `${+p[2]+1}번째 칸 ${p[1]}`;
  if(p[0]==='md')return p[1][0]==='d'?`받아쓰기 「${SOLF[+p[1].slice(1)]}」`:`받아쓰기 ${stepKo(+p[1].slice(1))}`;
  if(p[0]==='sg')return p[1]==='v'?(p[2]==='hi'?'시창 높게 부름':'시창 낮게 부름'):`시창 「${SOLF[+p[1].slice(1)]}」`;
  if(p[0]==='rh')return RCELLS[p[1]]?`리듬 「${RCELLS[p[1]].ko}」`:String(id);
@@ -283,5 +293,5 @@ function tapStatItems(res){const by={};for(const x of res.notes){if(!x.cat)conti
  for(const c of Object.keys(by)){for(const x of by[c])out.push(['rt:'+c,x.credit]);const h=by[c].filter(x=>x.dev!=null);if(h.length){out.push(['rt:'+c+':late',1-h.filter(x=>x.verdict==='늦음').length/h.length],['rt:'+c+':early',1-h.filter(x=>x.verdict==='빠름').length/h.length])}}
  return out}
 
-const api={yin,tracker,makeExercise,scoreTake,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,KIND_LAB,rng};
+const api={yin,tracker,makeExercise,scoreTake,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
