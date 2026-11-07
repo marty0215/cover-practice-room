@@ -2037,8 +2037,10 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
  sing.iv=setInterval(()=>{const now=ctx.currentTime;sing.head=now>=rec0?(now-rec0)/spb:null;if(now>=rec0&&!sung){sung=true;msg.textContent='부르는 중…'}else if(!sung&&now>=t0&&rf)msg.textContent='카운트인 1마디 뒤에 부르세요…';singDraw();if(now>=end)done(true)},30)}
 /* 지연 맞추기: 스피커 클릭 4번(0.7초 간격)을 마이크로 다시 들어 「예약 시각 → 마이크 기록 시각」 왕복 지연을 잰다. 판정할 때 음 구간을 그만큼 뒤로 민다(= 기록 시각에서 뺀다). 값은 localStorage('pr-miclat', ms) */
 try{const v=+localStorage.getItem('pr-miclat');if(isFinite(v)&&v>=0&&v<=500)sing.lat=v/1000}catch(e){}
-function updLat(){el('sLat').textContent=`지연 보정 ${Math.round(sing.lat*1000)} ms`;el('sCalZero').hidden=!sing.lat}
-function setLat(ms){sing.lat=ms/1000;try{localStorage.setItem('pr-miclat',String(ms))}catch(e){}updLat();singDraw()}
+/* 2026-11-08 워클릿 도입으로 프레임 시각이 창 중심(약 21 ms 이른 쪽)으로 바뀜: 그 전에 잰 값(pr-miclat-v 없음)은 다시 재도록 안내 */
+const latOld=()=>{try{return !!sing.lat&&localStorage.getItem('pr-miclat-v')!=='2'}catch(e){return false}};
+function updLat(){el('sLat').textContent=`지연 보정 ${Math.round(sing.lat*1000)} ms`+(latOld()?' · 분석 방식이 바뀌기 전에 잰 값이라 한 번 다시 재면 더 정확합니다':'');el('sCalZero').hidden=!sing.lat}
+function setLat(ms){sing.lat=ms/1000;try{localStorage.setItem('pr-miclat',String(ms));localStorage.setItem('pr-miclat-v','2')}catch(e){}updLat();singDraw()}
 function calClick(t){const o=ctx.createOscillator();o.frequency.value=1800;const g=ctx.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.06)}
 async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
  const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st,cut=false;sing.abort=()=>{cut=true}; /* 「그만」·탭 이동으로 측정 중단 */
