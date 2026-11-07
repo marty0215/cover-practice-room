@@ -40,7 +40,7 @@ const ROWS=[
  {id:'perc',label:'타격 밀도',sub:'소리가 갑자기 커지는 횟수(초당)'},
  {id:'flat',label:'잡음 정도',sub:'스펙트럼 평탄도 1~10 kHz(높을수록 잡음 같은 소리)'},
  {id:'width',label:'스테레오 폭',sub:'좌우가 다른 소리의 비중'},
- {id:'ctr',label:'가운데 비중(보컬이 가운데일 때 높음)',sub:'150 Hz~6 kHz 에서 가운데로 모인 소리의 비중'}];
+ {id:'ctr',label:'가운데 소리 비중',sub:'150 Hz~6 kHz 에서 좌우가 같은 소리의 비중. 보컬 유무 지표가 아님(시험한 곡에서 보컬과 상관 없음)'}];
 /* 마디 b 의 구간 = [offset+4·spb·b, +4·spb). 프레임 중심 시각으로 마디에 넣는다 */
 function perBar(fr,bpm,offset,bars){if(!fr||!(bpm>0)||!(bars>0))return null;const spb=60/bpm,bs=4*spb,n=fr.n,s=fr.s,idx=new Int32Array(n);
  for(let f=0;f<n;f++){const t=(f*fr.hop+fr.N/2)/fr.sr,b=Math.floor((t-offset)/bs+1e-9);idx[f]=b>=0&&b<bars?b:-1}
