@@ -599,12 +599,14 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <div class="panel sp" data-sp="pitch" id="pmPanel">
     <div class="head"><h2>음정 부르기 · 기준음 듣고 따라 내기</h2><p class="muted small">기준음을 듣고 같은 음, 또는 말한 음정만큼 위·아래 음을 소리 내어 길게 유지하세요.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
-      <div class="opt"><span class="lb">연습</span><div class="seg" id="pmMode" role="group" aria-label="연습 종류"><button type="button" aria-pressed="true" data-v="same">같은 음 내기</button><button type="button" aria-pressed="false" data-v="iv">음정 위/아래</button></div></div>
+      <div class="opt"><span class="lb">연습</span><div class="seg" id="pmMode" role="group" aria-label="연습 종류"><button type="button" aria-pressed="true" data-v="same">같은 음 내기</button><button type="button" aria-pressed="false" data-v="iv">음정 위/아래</button><button type="button" aria-pressed="false" data-v="har">화음 부르기</button></div></div>
       <div class="opt"><span class="lb">음역</span><div class="seg" id="pmRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button></div></div>
       <div class="opt" id="pmDirOpt" hidden><span class="lb">방향</span><div class="seg" id="pmDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="false" data-v="asc">위로</button><button type="button" aria-pressed="false" data-v="desc">아래로</button><button type="button" aria-pressed="true" data-v="mix">섞기</button></div></div>
+      <div class="opt" id="pmHkOpt" hidden><span class="lb">화음</span><div class="seg" id="pmHk" role="group" aria-label="화음 종류"><button type="button" aria-pressed="false" data-v="3up">3도 위</button><button type="button" aria-pressed="false" data-v="3down">3도 아래</button><button type="button" aria-pressed="false" data-v="5">5도 위</button><button type="button" aria-pressed="true" data-v="mix">섞기</button></div></div>
       <div class="opt" id="pmIvOpt" hidden><label class="lb" for="pmIv">음정</label><select id="pmIv"><option value="">섞기</option></select></div>
       <div class="opt"><span class="lb">&nbsp;</span><label class="chk" title="기록에서 오답률이 높은 항목을 더 자주 냅니다"><input type="checkbox" id="pmWeak"><span>약점 위주</span></label></div>
     </div>
+    <p class="note" id="pmHeadph" hidden>화음 부르기는 반주가 계속 울립니다. 마이크가 반주를 잡지 않게 <b>이어폰</b>을 써 주세요.</p>
     <p class="note" id="pmQ" style="margin-top:.8rem"></p>
     <div class="tuner" id="pmTuner"><span class="tn" id="pmNote" aria-hidden="true">–</span><div class="tbar" aria-hidden="true"><i id="pmNeedle"></i></div><span class="tc" id="pmTxt">마이크가 꺼져 있습니다.</span></div>
     <div class="row" style="margin-top:.8rem"><button class="btn" type="button" id="pmListen">▶ 기준음 듣기</button><button class="btn primary" type="button" id="pmRec">● 부르기</button><button class="btn" type="button" id="pmStop" hidden>■ 그만</button><button class="btn" type="button" id="pmNew">새 문제</button></div>
@@ -1757,14 +1759,20 @@ el('sFromLoop').onclick=()=>{if(sing.busy)return;syncSongRange();singNew()};
 el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.keyMode=b.dataset.v;segPress('sKey',b);singNew()});
 
 /* ---------- 음정 부르기: 기준음 → 같은 음 내기 / 음정 위·아래 부르기. 판정은 SingLab.pmJudge(첫 발성 0.15초 뒤 0.6초 창의 cent 중앙값). 마이크는 한 번 부를 때마다 열고 닫는다(Mic 'pm'). sing.busy·sing.abort 를 같이 써서 탭 이동·숨김 때 시창과 똑같이 끊긴다 ---------- */
-const pm={mode:'same',range:[52,67],dir:'mix',iv:'',weak:false,q:null,busy:false,tm:0};
+const pm={mode:'same',range:[52,67],dir:'mix',hk:'mix',iv:'',weak:false,q:null,busy:false,tm:0};
+/* 화음 부르기 반주(드론): 음계 3화음을 부드러운 사인·삼각파로 깔고 천천히 켜졌다 꺼진다. tone() 은 만든 음을 중간에 끌 수 없어 같은 음색 식을 직접 만든다. 마이크 판정이 끝나거나 중단되면 pmDroneStop 이 0.1초 안에 끈다. pmDrone.n = 살아 있는 발진기 수 */
+const pmDrone={g:null,n:0,oscs:[]};
+function pmDroneStart(q,t,dur){pmDroneStop(true);if(!q||!q.chord)return;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.12,t+.35);g.gain.setValueAtTime(.12,t+dur-.4);g.gain.linearRampToValueAtTime(0,t+dur);
+ for(const m of q.chord)for(const [type,amp] of [['sine',1],['triangle',.35]]){const o=ctx.createOscillator(),a=ctx.createGain();o.type=type;o.frequency.value=hz(m);a.gain.value=amp*.5;o.connect(a).connect(g);o.start(t);o.stop(t+dur+.1);pmDrone.n++;pmDrone.oscs.push(o);o.onended=()=>{pmDrone.n--;const i=pmDrone.oscs.indexOf(o);if(i>=0)pmDrone.oscs.splice(i,1);try{o.disconnect()}catch(e){}}}
+ g.connect(gains.sing);pmDrone.g=g}
+function pmDroneStop(now){const g=pmDrone.g,os=pmDrone.oscs.slice();pmDrone.g=null;if(!g)return;try{const t=ctx.currentTime;g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(g.gain.value,t);g.gain.linearRampToValueAtTime(0,t+(now?.01:.08));for(const o of os)o.stop(t+(now?.02:.1))}catch(e){}}
 if(window.SingLab)for(const [n] of SingLab.INTERVALS)el('pmIv').add(new Option(n,n));
 function pmBtns(b){for(const id of ['pmListen','pmRec','pmNew'])el(id).disabled=b;el('pmStop').hidden=!b;pm.busy=b}
-function pmQText(q){return q.mode==='same'?`기준음 ${sn(q.ref)} · 목표: 같은 음`:`기준음 ${sn(q.ref)} · 목표: ${q.iv} ${q.dir==='asc'?'위로':'아래로'} (${q.semis}반음)`}
+function pmQText(q){el('pmHeadph').hidden=q.mode!=='har';return q.mode==='har'?`기준음 ${sn(q.ref)} · 반주 ${q.chordName} · 목표: ${SingLab.HK_LAB[q.hk]} 화음(기준음에서 ${q.hk==='3down'?'아래':'위'}로 키 안의 음)`:q.mode==='same'?`기준음 ${sn(q.ref)} · 목표: 같은 음`:`기준음 ${sn(q.ref)} · 목표: ${q.iv} ${q.dir==='asc'?'위로':'아래로'} (${q.semis}반음)`}
 function pmReset(){const nd=el('pmNeedle');el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='마이크가 꺼져 있습니다.'}
-function pmNew(){if(sing.busy||!window.SingLab)return;pm.q=SingLab.pmQuestion({mode:pm.mode,range:pm.range,seed:seed(),iv:pm.iv||null,dir:pm.dir==='mix'?null:pm.dir,wk:pm.weak&&STAT2?SingLab.weakness(STAT2):null});
+function pmNew(){if(sing.busy||!window.SingLab)return;pm.q=SingLab.pmQuestion({mode:pm.mode,range:pm.range,seed:seed(),key:singKeyPc(),hk:pm.hk==='mix'?null:pm.hk,iv:pm.iv||null,dir:pm.dir==='mix'?null:pm.dir,wk:pm.weak&&STAT2?SingLab.weakness(STAT2):null});
  el('pmQ').textContent=pmQText(pm.q);el('pmResult').innerHTML='';el('pmMsg').textContent='「기준음 듣기」로 들어 보고, 준비되면 「부르기」(마이크)를 누르세요.';pmReset()}
-function pmListen(){if(sing.busy||!pm.q)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);tone('sing',ctx.currentTime+.1,1.2,pm.q.ref,92)}
+function pmListen(){if(sing.busy||!pm.q)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);const t=ctx.currentTime+.1;if(pm.q.mode==='har')pmDroneStart(pm.q,t,2.2);tone('sing',t,1.2,pm.q.ref,92)}
 function pmLive(f,q){const m=f[1],nd=el('pmNeedle');if(m==null||f[2]<.5){el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='소리가 없거나 음높이를 잡지 못했습니다';return}
  const c=(m-q.target)*100,k=Math.round(c/1200),cf=c-1200*k;el('pmNote').textContent=fuNm(m);nd.style.left=(50+Math.max(-100,Math.min(100,cf))/2)+'%';nd.className=!k&&Math.abs(cf)<=50?'ok':'bad';
  el('pmTxt').textContent=`목표 ${sn(q.target)} 기준 ${cf>0?'+':''}${Math.round(cf)} cent${k?' · 옥타브 다름':''}`}
@@ -1775,21 +1783,22 @@ async function pmRec(){if(sing.busy||!window.SingLab)return;const inRT=RT.on;if(
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 「기준음 듣기」는 마이크 없이 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
  sing.abort=null;if(cut){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='중단했습니다.';return}
  if(inRT&&!RT.on||inRT&&RT.plan.blocks[RT.bi].kind!=='pitch'||el('tab-sing').hidden||document.hidden||(!inRT&&singSub!=='pitch')){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='음정 부르기 화면을 벗어나 녹음을 시작하지 않았습니다.';return}
- const ts=ctx.currentTime+.15;try{tone('sing',ts,1.2,q.ref,92)}catch(e){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='기준음을 내지 못했습니다: '+e.message;return}
+ const ts=ctx.currentTime+.15;try{if(q.mode==='har')pmDroneStart(q,ts,7);tone('sing',ts,1.2,q.ref,92)}catch(e){pmDroneStop(true);tr.stop();sing.busy=false;pmBtns(false);msg.textContent='기준음을 내지 못했습니다: '+e.message;return}
  t0=ts+1.2+.2;msg.textContent='기준음을 듣는 중입니다…';pmReset();let finished=false;
- const done=score=>{if(finished)return;finished=true;clearInterval(pm.tm);tr.stop();sing.abort=null;sing.busy=false;pmBtns(false);
+ const done=score=>{if(finished)return;finished=true;clearInterval(pm.tm);pmDroneStop();tr.stop();sing.abort=null;sing.busy=false;pmBtns(false);
   if(!score){msg.textContent='중단했습니다.';return}
-  const res=SingLab.pmJudge(tr.track,{target:q.target,t0}),it=SingLab.pmStatItems(q,res);for(const x of it)fine(x[0],x[1],x[2]);if(it.length)statRec('pitch',it[0][1]);
+  const res=SingLab.pmJudgeQ(tr.track,q,{t0}),it=SingLab.pmStatItems(q,res);for(const x of it)fine(x[0],x[1],x[2]);if(it.length)statRec('pitch',it[0][1]);
   if(inRT&&RT.on&&it.length)rtAnswer(res.ok,[q.id]); /* 소리 없음·불안정은 답으로 세지 않고 다시 부르게 한다 */
   const dv=res.devCents==null?'':`${res.devCents>0?'+':''}${Math.round(res.devCents)} cent`,
-   why=res.verdict==='소리 없음'?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':res.verdict==='불안정'?'소리가 흔들리거나 짧아 판정하지 않았고 기록도 하지 않았습니다. 한 음을 0.6초 이상 길게 내 보세요.':res.octave?`음 이름은 가깝지만 한 옥타브 ${res.medCents>0?'높게':'낮게'} 불렀습니다(옥타브 차이).`:res.ok?'':res.medCents>0?'목표보다 높게 불렀습니다.':'목표보다 낮게 불렀습니다.';
+   why=res.leak?'반주 소리를 잡은 것 같습니다 — 이어폰을 써 주세요. 목소리가 아니라 반주(또는 기준음)의 고른 음으로 들려 판정하지 않았고 기록도 하지 않았습니다.':res.verdict==='소리 없음'?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':res.verdict==='불안정'?'소리가 흔들리거나 짧아 판정하지 않았고 기록도 하지 않았습니다. 한 음을 0.6초 이상 길게 내 보세요.':res.octave?`음 이름은 가깝지만 한 옥타브 ${res.medCents>0?'높게':'낮게'} 불렀습니다(옥타브 차이).`:res.ok?'':res.medCents>0?'목표보다 높게 불렀습니다.':'목표보다 낮게 불렀습니다.';
   el('pmResult').innerHTML=`<p class="score"><span class="vc ${VCLS[res.verdict]||'none'}">${res.verdict}</span> ${dv?`편차 <b>${dv}</b> (0.6초 중앙값) · `:''}목표 ${sn(q.target)}</p>${why?`<p class="note">${why}</p>`:''}`;
   msg.textContent='끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'};
  sing.abort=()=>done(false);
  pm.tm=setInterval(()=>{const now=ctx.currentTime;if(now<t0)return;if(msg.textContent.startsWith('기준음'))msg.textContent='지금 한 음을 길게 부르세요…';
   const r=SingLab.pmJudge(tr.track,{target:q.target,t0});if(now>=t0+4||(r.onset!=null&&now>=t0+r.onset+.15+.6+.05))done(true)},40)}
 el('pmListen').onclick=pmListen;el('pmRec').onclick=pmRec;el('pmNew').onclick=()=>RT.on?rtNext():pmNew();el('pmStop').onclick=()=>{if(sing.abort)sing.abort()};
-el('pmMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.mode=b.dataset.v;segPress('pmMode',b);el('pmDirOpt').hidden=el('pmIvOpt').hidden=pm.mode!=='iv';pmNew()});
+el('pmMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.mode=b.dataset.v;segPress('pmMode',b);el('pmDirOpt').hidden=el('pmIvOpt').hidden=pm.mode!=='iv';el('pmHkOpt').hidden=el('pmHeadph').hidden=pm.mode!=='har';pmNew()});
+el('pmHk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.hk=b.dataset.v;segPress('pmHk',b);pmNew()});
 el('pmRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.range=[+b.dataset.lo,+b.dataset.hi];segPress('pmRange',b);pmNew()});
 el('pmDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.dir=b.dataset.v;segPress('pmDir',b);pmNew()});
 el('pmIv').onchange=()=>{if(sing.busy)return;pm.iv=el('pmIv').value;pmNew()};el('pmWeak').onchange=()=>{pm.weak=el('pmWeak').checked;if(!sing.busy)pmNew()};
@@ -1964,7 +1973,7 @@ const RT={skips:[],on:false,plan:null,bi:0,sess:null,q:null,t0:0,log:[],tm:0,ove
 /* 시창·청음 하위 탐색: 한 번에 한 묶음만. 마지막 선택은 localStorage(실패해도 동작). 오늘의 연습 중에는 연습 코드가 패널을 직접 고른다 */
 const SUBS=['today','quiz','dict','sight','pitch','stat'];let singSub='today';
 try{const v=localStorage.getItem('pr-sing-sub');if(SUBS.includes(v))singSub=v}catch(e){}
-function setSub(v,save){if(!SUBS.includes(v))v='today';if(v!=='dict'&&window.rhyAbort)rhyAbort();if(v!=='pitch'&&pm.busy&&sing.abort)sing.abort();singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',p.dataset.sp!==v));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
+function setSub(v,save){if(!SUBS.includes(v))v='today';if(v!=='dict'&&window.rhyAbort)rhyAbort();if(v!=='pitch'){pmDroneStop();if(pm.busy&&sing.abort)sing.abort()}singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',p.dataset.sp!==v));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
 el('singNav').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!RT.on)setSub(b.dataset.sub)});
 const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',rhy:'rhyPanel',sight:'singPanel',pitch:'pmPanel'},ALL_PANELS=['singPanel','earPanel','progPanel','mdPanel','rhyPanel','pmPanel','statPanel'];
 function rtPanels(active){for(const id of ALL_PANELS)el(id).hidden=!!active&&id!==active}
@@ -2007,7 +2016,7 @@ function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing
 {let sv=null;try{sv=localStorage.getItem('pr-rt-pm')}catch(e){}el('rtPm').checked=sv==='1';if(sv==null)try{navigator.permissions.query({name:'microphone'}).then(r=>{let s2=null;try{s2=localStorage.getItem('pr-rt-pm')}catch(e){}if(s2==null)el('rtPm').checked=r.state==='granted'}).catch(()=>{})}catch(e){}
  el('rtPm').onchange=()=>{try{localStorage.setItem('pr-rt-pm',el('rtPm').checked?'1':'0')}catch(e){}}}
 el('rtStart').onclick=()=>rtStart();el('rtSkip').onclick=()=>rtBlock(RT.bi+1);el('rtNoMic').onclick=()=>rtPmSkip('음정 부르기는 마이크 없이 건너뛰었습니다(기록 없음).');el('rtStop').onclick=()=>rtFinish('중간에 그만뒀습니다');
-window.onTabShown=t=>{if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing')rhyAbort();if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
+window.onTabShown=t=>{if(t!=='sing')pmDroneStop();if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing')rhyAbort();if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
 {let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&Object.prototype.hasOwnProperty.call(SONGS,v)&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();pmNew();earNew();progNew();mdNew();rhyInit();(window.requestIdleCallback?f=>requestIdleCallback(f,{timeout:1500}):f=>setTimeout(f,300))(()=>statRender())}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 if(STV.lab!=='0')setStLab(STV.lab);if(STV.v==='staff')setStView('staff',false);

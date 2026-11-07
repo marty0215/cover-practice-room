@@ -125,7 +125,7 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
-   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
+   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
 const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
 const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),DG_ITEMS=SOLF.map((_,i)=>'dg:'+i);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
 const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
@@ -177,7 +177,8 @@ function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){c
     items=mode==='dict'?sl.filter(x=>x!=='~').map(x=>'rh:'+x):[...new Set(rhythmOnsets(slotsToRhythm(sl),60).map(e=>'rt:'+e.cat))];c.push({o,items})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/o.items.length),R);return {kind,mode,level,bars:x.o.bars,rseed:x.o.seed,items:x.items,seed:sd(R)}}
  if(kind==='pitch'){const po=only&&only.filter(i=>i.startsWith('pm:')),rg=[lo,hi];let q; /* 음정 부르기: 약점 id 가 있으면 그 항목만, 없으면 같은 음 1/3·음정 위/아래 2/3(약점 가중) */
-  if(po&&po.length){const item=pickWeighted(po,po.map(W),R),[,iv,d]=item.split(':');q=d==='same'?pmQuestion({mode:'same',range:rg,seed:sd(R)}):pmQuestion({mode:'iv',range:rg,seed:sd(R),iv,dir:d})}
+  if(po&&po.length){const item=pickWeighted(po,po.map(W),R),[,iv,d]=item.split(':');q=iv===PM_HAR?pmQuestion({mode:'har',range:rg,seed:sd(R),key,hk:d}):d==='same'?pmQuestion({mode:'same',range:rg,seed:sd(R)}):pmQuestion({mode:'iv',range:rg,seed:sd(R),iv,dir:d})}
+  else if(R()<.2)q=pmQuestion({mode:'har',range:rg,seed:sd(R),key,wk}); /* 화음 부르기는 약 20% */
   else{const m=R()<.34?'same':'iv';q=pmQuestion({mode:m,range:rg,seed:sd(R),wk})}
   return {kind,pq:q,items:[q.id],item:q.id,seed:sd(R)}}
  const pre=kind==='mel'?'md':'sg',c=[];for(let i=0;i<6;i++){const ex=makeExercise({key,bars:2,lo:pre==='md'?60:lo,hi:pre==='md'?72:hi,seed:sd(R),level:1});if(ex.length>=3)c.push({ex,items:exItems(ex,key,pre)})}
@@ -202,7 +203,7 @@ function makeSession(block,st,{seed=1,key=0,range=[52,67]}={}){const R=rng(seed)
 /* 한글 받침 판별 조사 */
 const jong=w=>{const c=String(w).charCodeAt(String(w).length-1)-44032;return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
 const eul=w=>w+(jong(w)?'을':'를'),ro=w=>w+(jong(w)===1?'으로':'로');
-const PM_SAME='동음',pmLab=(iv,d)=>d==='same'||iv===PM_SAME?'같은 음 내기':`${iv} ${d==='desc'?'아래로':'위로'} 부르기`;
+const PM_SAME='동음',PM_HAR='화음',HK_LAB={'3up':'3도 위','3down':'3도 아래','5':'5도 위'},pmLab=(iv,d)=>iv===PM_HAR?`화음 부르기 ${HK_LAB[d]||d}`:d==='same'||iv===PM_SAME?'같은 음 내기':`${iv} ${d==='desc'?'아래로':'위로'} 부르기`;
 const ivLab=(n,d)=>d==='har'?n+' 동시 화음':n+' '+DIR_KO[d],stepKo=s=>+s===0?'같은 음 반복':(s>0?'위로 ':'아래로 ')+Math.abs(s)+'반음 진행';
 /* 항목 id 를 쉬운 한국어 문장으로. 혼동 쌍(conf)에서 가장 자주 고른 오답이 2번 이상이고 오답의 40% 이상이면 "자주 ~로 고릅니다" */
 function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{},ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),tot=ks.reduce((a,k)=>a+c[k],0),top=ks[0],often=top!=null&&c[top]>=2&&c[top]/tot>=.4,pct=rate!=null?` (오답률 ${Math.round(rate*100)}%)`:'';
@@ -304,7 +305,32 @@ function tapStatItems(res){const by={};for(const x of res.notes){if(!x.cat)conti
 /* ---------- 음정 부르기 (pm) ----------
    모드 same: 기준음과 같은 음 내기(id pm:동음:same) · 모드 iv: 기준음에서 음정만큼 위/아래로 부르기(id pm:<음정>:<asc|desc>).
    기준음 [lo,hi] 안에서 목표 음도 같은 범위에 들게 고른다. wk(weakness 결과)가 있으면 약한 항목을 더 자주 낸다 */
-function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null}={}){const R=rng(seed),lo=range[0],hi=Math.max(range[0],range[1]);
+/* ---------- 화음 부르기 (pm:화음:<3up|3down|5>) ----------
+   앱의 키는 장조 으뜸음(0–11)뿐이라 단조는 나란한 장조로 본다. 음계 칸 idx(정수, 7칸=옥타브)의 MIDI = 으뜸음+옥타브*12+MAJ[idx%7].
+   기준음 칸 r → 목표: 3up=r+2, 3down=r-2(음계 안의 3도라 칸마다 장3도·단3도가 갈림: I·IV·V 위 장3도, ii·iii·vi·vii 위 단3도), 5=r+4(vii 위만 감5도).
+   반주(드론)는 기준음·목표가 둘 다 든 음계 3화음(I·IV·V 장, ii·iii·vi 단, vii 감). */
+const QL=['','m','m','','','m','dim'],HK_D={'3up':2,'3down':-2,'5':4},HKS=['3up','3down','5'];
+const scMidi=(key,idx)=>key+12*Math.floor(idx/7)+MAJ[((idx%7)+7)%7];
+function pmDegOf(key,midi){const o=Math.floor((midi-key)/12),pc=((midi-key)%12+12)%12,d=MAJ.indexOf(pc);return d<0?null:o*7+d}
+/* 기준음 midi(음계 안 음) → {deg,tdeg,target,semis} 또는 null(음계 밖·모르는 종류) */
+function pmHarmTarget(key,ref,hk){const d=pmDegOf(key,ref),k=HK_D[hk];if(d==null||k==null)return null;const t=scMidi(key,d+k);return {deg:((d%7)+7)%7,tdeg:(((d+k)%7)+7)%7,target:t,semis:t-ref}}
+/* 반주 3화음: 뿌리 칸 r0 → {rootDeg,midis(뿌리 위치로 쌓고 맨 위가 lo 이하가 되게 옥타브 내림),pcs,name,q} */
+function pmChordOf(key,r0,lo){let m=[0,2,4].map(k=>scMidi(key,r0+k));while(m[2]>lo)m=m.map(x=>x-12);const dg=((r0%7)+7)%7;return {rootDeg:dg,midis:m,pcs:m.map(x=>((x%12)+12)%12),name:NAMES[((m[0]%12)+12)%12]+QL[dg],q:QL[dg]}}
+function pmHarmQuestion({range,R,key,hk,wk}){const lo=range[0],hi=Math.max(range[0],range[1]);
+ if(!HK_D[hk]){const W=wk?HKS.map(h=>weightFor(wk,'pm:'+PM_HAR+':'+h)):null;hk=pickWeighted(HKS,W,R)}
+ const c=[];for(let m=lo;m<=hi;m++){const t=pmHarmTarget(key,m,hk);if(t&&t.target>=lo&&t.target<=hi)c.push([m,t])}
+ if(!c.length)return null;const [ref,t]=c[Math.floor(R()*c.length)],d=pmDegOf(key,ref);
+ /* 뿌리 칸: 3up 은 기준=뿌리 또는 3음, 3down 은 목표=뿌리 또는 3음, 5 는 기준=뿌리 → 기준·목표가 항상 반주 화음 안에 있다 */
+ const r0=hk==='3up'?(R()<.5?d:d-2):hk==='3down'?(R()<.5?d-2:d-4):d,ch=pmChordOf(key,r0,lo);
+ return {mode:'har',ref,target:t.target,iv:PM_HAR,dir:hk,hk,semis:t.semis,key,id:'pm:'+PM_HAR+':'+hk,chord:ch.midis,chordPcs:ch.pcs,chordName:ch.name,rootDeg:ch.rootDeg}}
+/* 반주 새어듦 의심: 판정 중앙값이 목표가 아닌 반주 화음음(음이름 기준, 옥타브 무시) ±band cent 안이고 p10–p90 폭이 maxSpread cent 이하(사람 목소리보다 훨씬 고른 소리)면 true.
+   한계: 이어폰이 가장 확실한 해결이다. 합성음처럼 아주 고른 소리나 반주음(기준음 포함)을 그대로 따라 부른 경우도 같은 안내가 나온다. 목소리가 반주보다 훨씬 커 중앙값이 목소리를 따르면 검출되지 않는다. */
+function pmLeak(res,q,{band=30,maxSpread=20}={}){if(!q||q.mode!=='har'||!res||res.medCents==null||res.spread==null||res.spread>maxSpread)return false;
+ const m=q.target+res.medCents/100,tp=((q.target%12)+12)%12;return (q.chordPcs||[]).some(pc=>pc!==tp&&Math.abs((((m-pc)%12)+18)%12-6)*100<=band)}
+/* 문제 종류별 판정: 화음 부르기는 반주 새어듦 의심 시 verdict '반주 소리 의심'(leak:true, 기록 안 함) */
+function pmJudgeQ(track,q,o={}){const r=pmJudge(track,{target:q.target,...o});return pmLeak(r,q)?{...r,leak:true,ok:false,verdict:'반주 소리 의심'}:r}
+function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null,key=0,hk=null}={}){const R=rng(seed),lo=range[0],hi=Math.max(range[0],range[1]);
+ if(mode==='har'){const h=pmHarmQuestion({range,R,key,hk,wk});if(h)return h}
  if(mode!=='iv'){const ref=lo+Math.floor(R()*(hi-lo+1));return {mode:'same',ref,target:ref,iv:PM_SAME,dir:'same',semis:0,id:'pm:'+PM_SAME+':same'}}
  let c=[];for(const [n,s] of INTERVALS)for(const d of ['asc','desc'])if((!iv||n===iv)&&(!dir||d===dir)&&hi-lo>=s)c.push([n,s,d]);
  if(!c.length)c=[['완전5도',7,'asc']];const W=wk?c.map(x=>weightFor(wk,'pm:'+x[0]+':'+x[2])):null,[n,s,d]=pickWeighted(c,W,R);
@@ -322,8 +348,8 @@ function pmJudge(track,{target,t0=0,tol=50,minConf=.5,skip=.15,win=.6,run=3,spre
  const oct=Math.abs(Math.abs(med)-1200)<tol*2,dev=oct?med-Math.sign(med)*1200:med,ok=!oct&&Math.abs(med)<=tol;
  return {...r,medCents:med,devCents:dev,spread:sp,octave:oct,ok,verdict:oct?'옥타브 차이':ok?'맞음':med>0?'높음':'낮음'}}
 /* 판정 → 통계 [[id,frac,chosen]]. 소리 없음·불안정은 기록하지 않는다([]) */
-function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.verdict==='불안정'||res.verdict==='소리 없음')return [];
+function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.leak||res.verdict==='불안정'||res.verdict==='소리 없음')return [];
  return [[q.id,res.ok?1:0,res.ok?null:res.octave?'옥타브':res.verdict==='높음'?'높게':'낮게']]}
 
-const api={yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
