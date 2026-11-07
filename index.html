@@ -419,6 +419,8 @@ details.help>p{margin:0 0 var(--s2);max-width:44em}
 .empty{border:1px dashed var(--control-border);border-radius:10px;padding:var(--s3) var(--s4);color:var(--text-muted);font-size:.88rem;background:transparent}
 .subnav{display:flex;flex-wrap:nowrap;overflow-x:auto;justify-self:start;max-width:100%;scrollbar-width:none}
 .subnav button{flex:0 0 auto;white-space:nowrap;min-height:var(--hit)}
+/* 좁은 화면: 메뉴 6개가 가로 스크롤에 숨지 않게 3칸 격자, 음역 버튼은 3칸 균등 */
+@media (max-width:560px){.subnav{display:grid;grid-template-columns:repeat(3,1fr);width:100%}.subnav button{white-space:normal;padding:0 .4rem}.subnav button:nth-child(3n+1){border-left:0}.subnav button:nth-child(n+4){border-top:1px solid var(--control-border)}#pmRange{display:grid;grid-template-columns:repeat(3,1fr);width:100%}#pmRange button{white-space:normal;line-height:1.25;padding:.3rem .4rem}#pmPanel .opt:has(#pmWeak)>.lb{display:none}}
 .sp-off{display:none}
 .rt-on .sp-off{display:block}
 .rt-on #singNav{display:none}
