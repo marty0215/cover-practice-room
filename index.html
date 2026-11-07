@@ -378,6 +378,19 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 .slots .btn.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
 .slots .btn.ok{border-color:var(--ok);color:var(--ok);font-weight:700}
 .slots .btn.bad{border-color:var(--warn);color:var(--warn);font-weight:700}
+.rhgrid{display:grid;gap:.5rem;margin-top:.7rem;max-width:460px}
+.rhbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.3rem;padding:.3rem;border:1px solid var(--border);border-radius:10px}
+.rhbar .btn{min-width:0;min-height:3rem;padding:0 .2rem;font-size:.95rem;line-height:1.2;text-align:center;justify-content:center;flex-wrap:wrap}
+.rhbar .btn.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.rhbar .btn.ok{border-color:var(--ok);color:var(--ok);font-weight:700}
+.rhbar .btn.bad{border-color:var(--warn);color:var(--warn);font-weight:700}
+.rhc{display:flex;align-items:center;justify-content:center;min-height:3rem;border:1px solid var(--control-border);border-radius:8px;background:var(--surface);font-size:1.15rem;min-width:0}
+.tiles .btn{flex-direction:column;gap:0;padding:.25rem .6rem;min-height:3.2rem}
+.tiles .g{font-size:1.25rem;line-height:1.2}.tiles .t{font-size:.74rem;color:var(--text-muted)}
+.tap-pad{display:flex;width:100%;max-width:460px;min-height:9rem;margin-top:.8rem;font-size:1.1rem;border-style:dashed;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.tap-pad.on{background:var(--surface-2);border-color:var(--accent)}
+.tap-pad.hit{background:var(--accent);color:var(--on-accent)}
+#rhBeat{font-family:var(--mono);font-size:1.3rem;min-height:1.8rem;margin-top:.5rem}
 .stt{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:.6rem}
 .stt th{font-weight:600;text-align:left;color:var(--text-muted);font-size:.78rem;padding:.25rem .4rem}
 .stt td{padding:.3rem .4rem;border-top:1px solid var(--border);vertical-align:middle}
@@ -535,7 +548,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 <div class="tabpanel" id="tab-sing" role="tabpanel" tabindex="0" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
   <div class="seg subnav" id="singNav" role="group" aria-label="시창·청음 메뉴"><button type="button" aria-pressed="true" data-sub="today">오늘의 연습</button><button type="button" aria-pressed="false" data-sub="quiz">청음 퀴즈</button><button type="button" aria-pressed="false" data-sub="dict">받아쓰기</button><button type="button" aria-pressed="false" data-sub="sight">시창</button><button type="button" aria-pressed="false" data-sub="stat">진도</button></div>
   <div class="panel sp" data-sp="today" id="rtPanel">
-    <div class="head"><h2>오늘의 10분 연습</h2><p class="muted small">음정 → 코드 진행 → 멜로디 받아쓰기 → 시창 순서로 약 10분입니다.</p><details class="help"><summary>도움말</summary><p>기록에서 약한 항목이 더 자주 나오고, 틀린 문제는 2–4문제 뒤에 다시 나옵니다. 시창은 마이크를 씁니다(이어폰 권장). 기록은 이 브라우저에만 저장됩니다.</p></details></div>
+    <div class="head"><h2>오늘의 10분 연습</h2><p class="muted small">음정 → 코드 진행 → 멜로디 받아쓰기 → 리듬 → 시창 순서로 약 10분입니다(리듬 약 1분).</p><details class="help"><summary>도움말</summary><p>기록에서 약한 항목이 더 자주 나오고, 틀린 문제는 2–4문제 뒤에 다시 나옵니다. 시창은 마이크를 씁니다(이어폰 권장). 기록은 이 브라우저에만 저장됩니다.</p></details></div>
     <div id="rtIdle"><p class="empty" id="rtEmpty">아직 풀어 본 문제가 없습니다. 처음에는 모든 항목이 고르게 나오고, 풀수록 약한 항목이 늘어납니다.</p><div class="row"><button class="btn primary" type="button" id="rtStart">오늘의 10분 연습 시작</button></div></div>
     <div id="rtRun" hidden>
       <div class="row" style="justify-content:space-between"><b id="rtBlk"></b><span class="mono" id="rtTime" role="timer"></span></div>
@@ -592,6 +605,25 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="chips2" id="mdSlots" aria-label="입력한 음"></div>
     <div class="pk" id="mdKeys" role="group" aria-label="건반 (C4부터 C5)"></div>
     <p class="score" id="mdFb" role="status"></p>
+  </div>
+  <div class="panel sp" data-sp="dict" id="rhyPanel">
+    <div class="head"><h2>받아쓰기 · 리듬</h2><p class="muted small" id="rhDesc"></p><details class="help"><summary>도움말</summary><p>카운트인 4박 뒤에 1–2마디 리듬이 딱따기 소리로 나옵니다. 받아쓰기는 박마다 음표 타일을 골라 칸을 채우고, 따라 치기는 카운트인 뒤 박자에 맞춰 <kbd>Space</kbd>나 큰 버튼(터치)을 칩니다. 따라 치기 중에는 <kbd>Space</kbd>가 재생 단축키로 쓰이지 않습니다. 소리가 나오는 시각은 브라우저가 알려 주는 출력 지연을 반영하지만, 블루투스 이어폰은 값이 부정확할 수 있습니다.</p></details></div>
+    <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
+      <div class="opt"><span class="lb">방식</span><div class="seg" id="rhMode" role="group" aria-label="리듬 연습 방식"><button type="button" aria-pressed="true" data-v="dict">받아쓰기</button><button type="button" aria-pressed="false" data-v="tap">따라 치기</button></div></div>
+      <div class="opt"><span class="lb">난이도</span><div class="seg" id="rhLevel" role="group" aria-label="리듬 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+      <div class="opt"><span class="lb">마디</span><div class="seg" id="rhBars" role="group" aria-label="리듬 마디 수"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+      <div class="opt"><label class="lb" for="rhTempo">템포 <output id="rhTempoVal" for="rhTempo">80</output> BPM</label><input type="range" id="rhTempo" min="60" max="120" step="5" value="80"></div>
+      <label class="chk" title="카운트인 뒤에도 박마다 작은 소리를 냅니다"><input type="checkbox" id="rhPulse" checked><span>박 소리 함께</span></label>
+    </div>
+    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="rhPlay">▶ 들어보기</button><button class="btn primary" type="button" id="rhGo" hidden>치기 시작</button><button class="btn" type="button" id="rhCheck">확인</button><button class="btn ghost" type="button" id="rhReveal">정답 보기</button><button class="btn" type="button" id="rhStop" hidden>멈추기</button><button class="btn" type="button" id="rhNext">새 문제</button></div>
+    <div id="rhDict"><div class="rhgrid" id="rhSlots" role="group" aria-label="박별 칸"></div>
+      <div class="choices tiles" id="rhTiles" role="group" aria-label="음표 고르기"></div>
+      <div class="row" style="margin-top:.5rem"><button class="btn sm ghost" type="button" id="rhClear">선택 칸 지우기</button></div></div>
+    <div id="rhTapBox" hidden><div class="rhgrid" id="rhShow" role="img"></div>
+      <button class="btn tap-pad" type="button" id="rhPad" aria-describedby="rhFb">여기를 탭하거나 Space 키로 치기</button></div>
+    <div id="rhBeat" aria-hidden="true"></div>
+    <p class="score" id="rhFb" role="status"></p>
+    <div id="rhRes"></div>
   </div>
   <div class="panel sp" data-sp="stat" id="statPanel">
     <div class="head"><h2>진도 기록</h2><p class="muted small">항목별 최근 10회 정답률입니다. 이 브라우저에만 저장됩니다.</p></div>
@@ -684,6 +716,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>베이스·건반·드럼·기타 끄기/켜기</td></tr>
     <tr><td><kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>4</kbd></td><td>그 파트만 듣기(솔로)</td></tr>
     <tr><td><kbd>?</kbd></td><td>이 창 열기 (<kbd>Esc</kbd>로 닫기)</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>(리듬 따라 치기에서) 시작 · 박자에 맞춰 치기. 받아쓰기에서는 다시 듣기</td></tr>
   </table>
   <p class="muted small">입력칸·선택칸·슬라이더에 포커스가 있으면 단축키는 꺼집니다. 코드 띠: 누르면 이동, 끌면(터치는 길게 누른 뒤 끌면) 구간 반복, 양 끝 손잡이로 길이 조절, 빈 곳을 누르면 해제. 채보 그림: 드래그 = 구간 반복, 더블클릭 = 해제.</p>
   <form method="dialog" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn primary" value="close">닫기</button><a class="btn" href="help.html">사용 설명서</a></form>
@@ -905,7 +938,7 @@ el('home').onclick=()=>seekTo(0);
 /* 키보드: Space 재생/정지 · ←/→ 한 마디 · [ ] 템포 ∓5% · L 반복 · M 메트로놈 (입력칸·선택칸·슬라이더에 포커스가 있으면 끔) */
 const keyOf=e=>({Space:'Space',ArrowLeft:'Left',ArrowRight:'Right',BracketLeft:'[',BracketRight:']',KeyL:'L',KeyM:'M',Home:'Home',Digit1:'1',Digit2:'2',Digit3:'3',Digit4:'4'})[e.code]||(e.key==='?'?'?':null)||({' ':'Space','[':'[',']':']',l:'L',L:'L',m:'M',M:'M',ArrowLeft:'Left',ArrowRight:'Right',Home:'Home'})[e.key];
 const typing=t=>{const g=t&&t.tagName;return g==='TEXTAREA'||g==='SELECT'||(g==='INPUT'&&/^(text|number|email|range)$/.test(t.type))};
-const inMd=t=>!!(t&&t.closest&&t.closest('#mdPanel')); // 멜로디 받아쓰기 영역 안에서는 전역 단축키를 끈다
+const inMd=t=>!!(t&&t.closest&&t.closest('#mdPanel,#rhyPanel')); // 멜로디·리듬 받아쓰기 영역 안에서는 전역 단축키를 끈다
 const MS_KEYS={1:'bass',2:'keys',3:'drums',4:'guitar'};
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typing(e.target)||el('keysheet').open||inMd(e.target))return;const k=keyOf(e);if(!k||(k==='Space'&&ownBtn(e.target)))return;e.preventDefault();
  if(k==='Space'){if(!e.repeat)S.playing?stop():play()}
@@ -1485,7 +1518,7 @@ el('sFromLoop').onclick=()=>{if(sing.busy)return;syncSongRange();singNew()};
 el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.keyMode=b.dataset.v;segPress('sKey',b);singNew()});
 
 /* 진도 기록: pr-stats {drill:{n,h:[최근 결과 0..1]}} (localStorage, 실패해도 동작) */
-const DRILLS=[['interval','음정'],['triad','3화음'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sight','시창 점수']];
+const DRILLS=[['interval','음정'],['triad','3화음'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['rhythm','리듬 받아쓰기'],['rtap','리듬 따라 치기 점수'],['sight','시창 점수']];
 let STAT={};try{STAT=JSON.parse(localStorage.getItem('pr-stats'))||{}}catch(e){STAT={}}
 if(!STAT||typeof STAT!=='object'||Array.isArray(STAT))STAT={};for(const k of Object.keys(STAT)){const r=STAT[k];if(!r||!Array.isArray(r.h))delete STAT[k];else{r.h=r.h.filter(x=>typeof x==='number'&&isFinite(x));r.n=Math.max(r.h.length,+r.n|0)}} /* 깨진 저장값은 버린다 */
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -1565,16 +1598,97 @@ el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;md.done=true;const n
   fine(d,c?1:0,c||md.ans[i]==null?null:SingLab.SOLF[relK(md.ans[i])]);fine(s,c?1:0,c||md.ans[i]==null?null:String(Math.max(-12,Math.min(12,md.ans[i]-md.ex[i-1][2]))))});
  mdSlots();if(RT.on)rtAnswer(n>0&&ok===n,mids);el('mdFb').textContent=`${ok}/${n}음 맞음 (음높이만 채점, 박자 제외). 「들어보기」로 다시 들어 보세요.`};
 /* 컴퓨터 키 입력: 시창·청음 탭이 보이고 입력칸에 포커스가 없을 때만. 전역 단축키보다 먼저 가로챈다(캡처 단계) */
-document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||el('mdPanel').offsetParent===null||!md.ex.length||md.done||sing.busy||typing(e.target)||el('keysheet').open)return;
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||el('mdPanel').offsetParent===null||!md.ex.length||md.done||sing.busy||typing(e.target)||el('keysheet').open||rhyHas())return;
  const p=MD_KEYS[e.code];if(p==null&&e.key!=='Backspace')return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;if(p==null)mdUndo();else{mdAdd(p);const b=el('mdKeys').querySelector(`[data-p="${p}"]`);b.classList.add('on');setTimeout(()=>b.classList.remove('on'),120)}},true);
-/* ---------- 오늘의 10분 연습: 블록(음정→코드→받아쓰기→시창)을 차례로 돌리며 위 위젯을 그대로 쓴다. 계획·출제·요약은 sing.js(순수 함수) ---------- */
+
+/* ---------- 리듬 받아쓰기 · 따라 치기. 칸 배열·채점·통계 id 는 sing.js(순수 함수). 소리는 딱따기 합성(전체 볼륨·압축기 경유) ---------- */
+const rhy={act:false,mode:'dict',level:1,bars:1,tempo:80,target:[],ans:[],cur:0,done:false,rev:false,gr:null,phase:'idle',nodes:[],timers:[],taps:[],tPerf:0,spb:0,res:null,latMs:0,latSrc:'',spaceDown:false};
+const rhNb=()=>rhy.bars*4;
+function rhyWood(t,kind,vel){if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter(),v=vel==null?1:vel;
+ const fr=kind==='tap'?1500:kind==='tickA'?1000:kind==='tick'?700:900,tick=kind==='tick'||kind==='tickA';
+ o.type=tick?'sine':'triangle';o.frequency.setValueAtTime(fr*(tick?1:1.25),t);if(!tick)o.frequency.exponentialRampToValueAtTime(fr*.8,t+.03);f.type='bandpass';f.frequency.value=tick?fr:fr*1.3;f.Q.value=tick?.7:2.5;
+ const pk=(tick?.2:kind==='tap'?.55:.7)*v,d=tick?.05:.11;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(pk,t+.002);g.gain.exponentialRampToValueAtTime(.0005,t+d);
+ o.connect(f).connect(g).connect(master);o.start(t);o.stop(t+d+.03);rhy.nodes.push(o);if(rhy.nodes.length>160)rhy.nodes.shift()}
+function rhyStopAudio(){for(const o of rhy.nodes)try{o.stop(0)}catch(_){}rhy.nodes=[];for(const t of rhy.timers)clearTimeout(t);rhy.timers=[]}
+const rhyLater=(ms,fn)=>{rhy.timers.push(setTimeout(fn,Math.max(0,ms)))};
+function rhyAbort(msg){const run=rhy.phase==='count'||rhy.phase==='tap';rhyStopAudio();if(rhy.phase!=='done')rhy.phase='idle';if(run){el('rhBeat').textContent='';if(msg)el('rhFb').textContent=msg}rhyBtns()}
+function rhyBtns(){const tap=rhy.mode==='tap',run=rhy.phase==='count'||rhy.phase==='tap';el('rhGo').hidden=!tap||run;el('rhStop').hidden=!tap||!run;el('rhCheck').hidden=tap;el('rhReveal').hidden=tap;el('rhDict').hidden=tap;el('rhTapBox').hidden=!tap;
+ el('rhPlay').textContent=tap?'▶ 모범 듣기':'▶ 들어보기';el('rhPad').classList.toggle('on',run);el('rhPad').textContent=run?'치세요 (Space 또는 탭)':'여기를 탭하거나 Space 키로 치기 시작'}
+/* 카운트인 4박(첫 박 강조) 후 리듬. kind 'model' = 리듬 소리, 'tap' = 박 소리만(치는 쪽이 소리를 냄) */
+function rhySchedule(kind){ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();rhyStopAudio();const spb=60/rhy.tempo,t0=ctx.currentTime+.2,tr=t0+4*spb,nb=rhNb(),pulse=el('rhPulse').checked;
+ rhy.spb=spb;for(let i=0;i<4;i++)rhyWood(t0+i*spb,i===0?'tickA':'tick',1);
+ if(pulse||kind==='tap')for(let i=0;i<nb;i++)rhyWood(tr+i*spb,i%4===0?'tickA':'tick',kind==='tap'||pulse?.55:0);
+ const rh=SingLab.slotsToRhythm(rhy.target);if(kind==='model')for(const e of rh)if(!e.rest)rhyWood(tr+e.beat*spb,'m',e.dur>=1?.9:.8);
+ /* 소리가 나는 시각(perf 기준). getOutputTimestamp 는 이미 출력 장치 시각이라 지연을 또 더하지 않고, 없으면 currentTime 짝 + outputLatency(없으면 baseLatency) */
+ let perf0=performance.now(),ctx0=ctx.currentTime,lat=0;rhy.latSrc='';try{const ot=ctx.getOutputTimestamp&&ctx.getOutputTimestamp();if(ot&&ot.performanceTime>0&&ot.contextTime>0){perf0=ot.performanceTime;ctx0=ot.contextTime;rhy.latSrc='출력 시각 API'}}catch(_){}
+ if(!rhy.latSrc){lat=ctx.outputLatency>0?ctx.outputLatency:(ctx.baseLatency||0);rhy.latSrc=ctx.outputLatency>0?'outputLatency':ctx.baseLatency?'baseLatency':'알 수 없음'}
+ rhy.latMs=Math.round(lat*1000);const perfOf=c=>perf0+(c-ctx0)*1000+lat*1000;rhy.tPerf=perfOf(tr);
+ const lab=el('rhBeat');for(let i=0;i<4;i++)rhyLater(perfOf(t0+i*spb)-performance.now(),()=>{lab.textContent='카운트 '+(i+1)});
+ for(let i=0;i<nb;i++)rhyLater(perfOf(tr+i*spb)-performance.now(),()=>{lab.textContent=`${Math.floor(i/4)+1}마디 ${i%4+1}박`});
+ rhyLater(perfOf(tr+nb*spb)-performance.now(),()=>{lab.textContent=''});
+ return perfOf(tr+nb*spb)}
+function rhyModel(){if(!rhy.target.length)rhyNew();if(rhy.phase==='count'||rhy.phase==='tap')rhyAbort();const end=rhySchedule('model');rhy.phase='model';rhyBtns();rhyLater(end-performance.now()+50,()=>{if(rhy.phase==='model'){rhy.phase='idle';rhyBtns()}});
+ el('rhFb').textContent=rhy.mode==='dict'&&!rhy.done?'듣는 중입니다. 박마다 타일을 골라 칸을 채우세요.':'모범 리듬을 들려 줍니다.'}
+function rhyTapStart(){if(!rhy.target.length)rhyNew();rhyStopAudio();rhy.taps=[];rhy.res=null;rhy.phase='count';el('rhRes').innerHTML='';if(document.activeElement&&document.activeElement.blur&&document.activeElement.closest&&document.activeElement.closest('#rhyPanel'))document.activeElement.blur();
+ const end=rhySchedule('tap');rhy.phase='tap';rhyBtns();el('rhFb').textContent='카운트인 4박 뒤부터 목표 리듬대로 치세요.';rhyLater(end-performance.now()+.6*rhy.spb*1000,rhyTapFinish)}
+function rhyTap(ts){if(rhy.phase==='idle'||rhy.phase==='done'||rhy.phase==='model'){rhyTapStart();return}if(rhy.phase!=='tap')return;
+ ensureCtx();rhyWood(ctx.currentTime+.002,'tap',1);const rel=ts-rhy.tPerf,spbMs=rhy.spb*1000;if(rel>=-.45*spbMs&&rel<=rhNb()*spbMs+.6*spbMs)rhy.taps.push(rel);const p=el('rhPad');p.classList.add('hit');setTimeout(()=>p.classList.remove('hit'),80)}
+function rhyTapFinish(){if(rhy.phase!=='tap')return;rhy.phase='done';rhyStopAudio();el('rhBeat').textContent='';const SL=SingLab,on=SL.rhythmOnsets(SL.slotsToRhythm(rhy.target),rhy.tempo);
+ if(!rhy.taps.length){rhy.res=null;el('rhFb').textContent='탭이 없었습니다. 「치기 시작」 또는 Space 로 다시 해 보세요.';el('rhRes').innerHTML='';rhyBtns();return}
+ const res=SL.scoreTaps(on,rhy.taps,{tolMs:50});rhy.res=res;const ids=[];for(const [id,fr] of SL.tapStatItems(res)){fine(id,fr);if(!ids.includes(id))ids.push(id)}statRec('rtap',res.score/100);
+ const sg=res.meanSigned==null?'—':(res.meanSigned>0?'+':'')+res.meanSigned,cl={정확:'ok',늦음:'lo',빠름:'hi',놓침:'none'};
+ el('rhRes').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 · 평균 오차 <b>${res.meanAbs==null?'—':res.meanAbs}</b> ms · 평균 치우침 <b>${sg}</b> ms ${res.meanSigned==null||Math.abs(res.meanSigned)<10?'':res.meanSigned>0?'(전체적으로 늦음)':'(전체적으로 빠름)'}</p>
+  <div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${cl[x.verdict]}"><b>${i+1}</b> ${RHCAT[x.cat]} ${x.verdict}${x.dev!=null?` ${x.dev>0?'+':''}${x.dev} ms`:''}</span>`).join('')}</div>
+  <p class="note">정확 = ±${res.tolMs} ms 안. 양수는 늦게, 음수는 빠르게 친 것입니다. 놓친 음 ${res.missed}개 · 남는 탭 ${res.extra}개. ${rhy.latSrc==='알 수 없음'?'브라우저가 출력 지연을 알려 주지 않아 반영하지 못했습니다.':rhy.latSrc==='출력 시각 API'?'브라우저가 알려 주는 출력 시각으로 소리 나는 시각을 맞췄습니다.':`출력 지연 약 ${rhy.latMs} ms(${rhy.latSrc})를 목표 시각에 반영했습니다.`} 키보드·터치 입력 지연은 보정하지 못합니다. 신호 기반 측정이며 사람 평가가 아닙니다.</p>`;
+ el('rhFb').textContent=`${res.score}점. 평균 오차 ${res.meanAbs==null?'—':res.meanAbs} ms.`;rhyBtns();if(RT.on)rtAnswer(res.score>=70,ids)}
+const RHCAT=window.SingLab?SingLab.RCAT_LAB:{};
+/* 받아쓰기 칸 */
+function rhyNew(){rhySet(SingLab.makeRhythmSlots({level:rhy.level,bars:rhy.bars,seed:seed()}))}
+function rhySet(slots){rhyAbort();rhy.target=slots;rhy.bars=Math.max(1,slots.length>>2);rhy.ans=slots.map(()=>null);rhy.cur=0;rhy.done=false;rhy.rev=false;rhy.gr=null;rhy.taps=[];rhy.res=null;rhy.phase='idle';el('rhRes').innerHTML='';el('rhBeat').textContent='';
+ el('rhFb').textContent=rhy.mode==='dict'?`1–${rhy.bars}마디 리듬. 「들어보기」 후 박마다 타일을 골라 ${rhNb()}칸을 채우세요.`:'「모범 듣기」로 들어 본 뒤 「치기 시작」을 누르고, 카운트인 4박 뒤부터 보이는 리듬대로 치세요.';rhyRender();rhyBtns()}
+function rhyRender(){const C=SingLab.RCELLS,T=rhy.target;
+ el('rhTiles').innerHTML=SingLab.RC_ORDER.filter(id=>C[id].lv<=rhy.level).map(id=>`<button class="btn" type="button" data-id="${id}"><span class="g" aria-hidden="true">${C[id].g}</span><span class="t">${C[id].ko}${C[id].len>1?' · 2박':''}</span></button>`).join('');
+ let h='';for(let b=0;b<rhy.bars;b++){h+=`<div class="rhbar" role="group" aria-label="${b+1}마디">`;for(let k=0;k<4;k++){const i=b*4+k,a=rhy.ans[i],g=rhy.gr;let cls='btn',t=a==null?'?':a==='~'?'–':C[a].g,al=`${b+1}마디 ${k+1}박 `+(a==null?'비어 있음':a==='~'?'앞 음표에서 이어짐':C[a].ko);
+   if(rhy.done&&g){const tg=T[i]==='~'?'–':C[T[i]].g;if(rhy.rev&&!rhy.chk){cls+=' ok';t=tg;al+=' · 정답 '+(T[i]==='~'?'이어짐':C[T[i]].ko)}else if(g.ok[i]){cls+=' ok';t='✓ '+t;al+=' · 맞음'}else{cls+=' bad';t=`✗ ${t} → ${tg}`;al+=' · 틀림, 정답 '+(T[i]==='~'?'이어짐':C[T[i]].ko)}}else if(i===rhy.cur)cls+=' cur';
+   h+=`<button class="${cls}" type="button" data-i="${i}" aria-label="${al}">${t}</button>`}h+='</div>'}el('rhSlots').innerHTML=h;
+ let sh='';const desc=[];for(let b=0;b<rhy.bars;b++){sh+='<div class="rhbar">';const ids=[];for(let k=0;k<4;k++){const id=T[b*4+k];if(id==='~')continue;ids.push(C[id].ko);sh+=`<span class="rhc" aria-hidden="true" style="grid-column:span ${C[id].len}">${C[id].g}</span>`}sh+='</div>';desc.push(`${b+1}마디 ${ids.join(', ')}`)}
+ el('rhShow').innerHTML=sh;el('rhShow').setAttribute('aria-label','목표 리듬: '+desc.join(' / '))}
+function rhyClearAt(j){const A=rhy.ans;let o=j;while(o>0&&A[o]==='~')o--;const L=A[o]&&A[o]!=='~'?SingLab.RCELLS[A[o]].len:1;for(let k=o;k<o+L&&k<A.length;k++)A[k]=null}
+function rhyPlace(id){if(rhy.done||!rhy.target.length)return;const c=SingLab.RCELLS[id],i=rhy.cur;if(i%4+c.len>4){el('rhFb').textContent=`${c.ko}은 2박짜리라 마디 마지막 박에는 넣을 수 없습니다.`;return}
+ for(let k=i;k<i+c.len;k++)rhyClearAt(k);rhy.ans[i]=id;for(let k=1;k<c.len;k++)rhy.ans[i+k]='~';
+ let n=-1;for(let d=0;d<rhNb();d++){const j=(i+c.len+d)%rhNb();if(rhy.ans[j]==null){n=j;break}}rhy.cur=n>=0?n:i;rhyRender()}
+function rhyCheck(){if(rhy.done||!rhy.target.length)return;const A=rhy.ans;if(A.some(x=>x==null)){el('rhFb').textContent='빈 칸이 있습니다. 모든 칸을 채우고 확인하세요(쉼표도 타일로 고릅니다).';return}
+ const gr=SingLab.gradeRhythm(rhy.target,A),C=SingLab.RCELLS;rhy.gr=gr;rhy.done=true;rhy.chk=true;statRec('rhythm',gr.correct/gr.total);
+ const ids=[];for(const c of gr.cells){const id='rh:'+c.id;ids.push(id);fine(id,c.ok?1:0,c.ok||c.chosen==null?null:(c.chosen==='~'?'앞 음표의 이어짐':C[c.chosen].ko))}
+ rhyRender();if(RT.on)rtAnswer(gr.all,ids);el('rhFb').textContent=`${gr.correct}/${gr.total}박 맞음. 「들어보기」로 다시 들어 보세요.`}
+function rhyReveal(){if(!rhy.target.length)rhyNew();if(!rhy.done){rhy.done=true;rhy.rev=true;rhy.chk=false;rhy.gr={ok:rhy.target.map(()=>true)};statRec('rhythm',0);const ids=rhy.target.filter(x=>x!=='~').map(x=>'rh:'+x);for(const id of ids)fine(id,0);if(RT.on)rtAnswer(false,ids)}rhyRender();el('rhFb').textContent='정답 리듬입니다. 「들어보기」로 다시 들어 보세요.'}
+function rhyFromQ(q){rhy.act=true;rhy.mode=q.mode;rhy.level=q.level;rhy.bars=q.bars;segPress('rhMode',document.querySelector(`#rhMode [data-v="${q.mode}"]`));segPress('rhLevel',document.querySelector(`#rhLevel [data-v="${q.level}"]`));segPress('rhBars',document.querySelector(`#rhBars [data-v="${q.bars}"]`));
+ rhySet(SingLab.makeRhythmSlots({level:q.level,bars:q.bars,seed:q.rseed}));if(q.mode==='dict')rhyModel();else el('rhFb').textContent='「모범 듣기」로 들어 본 뒤 「치기 시작」을 누르세요. 카운트인 4박 뒤부터 보이는 리듬대로 치면 됩니다.'}
+function rhyInit(){const setV=(id,key,num)=>el(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;rhy[key]=num?+b.dataset.v:b.dataset.v;segPress(id,b);rhyNew()});
+ setV('rhMode','mode',false);setV('rhLevel','level',true);setV('rhBars','bars',true);
+ el('rhTempo').oninput=()=>{rhy.tempo=+el('rhTempo').value;el('rhTempoVal').textContent=rhy.tempo;if(rhy.phase==='count'||rhy.phase==='tap'||rhy.phase==='model')rhyAbort('템포를 바꿔 멈췄습니다.')};
+ el('rhPlay').onclick=rhyModel;el('rhGo').onclick=rhyTapStart;el('rhStop').onclick=()=>rhyAbort('멈췄습니다. 기록하지 않았습니다.');el('rhCheck').onclick=rhyCheck;el('rhReveal').onclick=rhyReveal;el('rhNext').onclick=()=>{if(RT.on)return rtNext();rhyNew();if(rhy.mode==='dict')rhyModel()};
+ el('rhTiles').addEventListener('click',e=>{const b=e.target.closest('button');if(b)rhyPlace(b.dataset.id)});el('rhClear').onclick=()=>{if(!rhy.done){rhyClearAt(rhy.cur);rhyRender()}};
+ el('rhSlots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||rhy.done)return;let i=+b.dataset.i;while(i>0&&rhy.ans[i]==='~')i--;rhy.cur=i;rhyRender()});
+ el('rhPad').addEventListener('pointerdown',e=>{e.preventDefault();rhyTap(e.timeStamp)});el('rhPad').addEventListener('click',e=>e.preventDefault());
+ rhyNew();rhyBtns()}
+/* 키보드(캡처 단계): 리듬 영역이 보일 때 Space = 따라 치기 시작·치기 / 받아쓰기 다시 듣기. 전역 재생 단축키는 막는다. ←→ 칸 이동, Backspace 지우기 */
+const rhyHas=()=>rhy.act&&el('rhyPanel').offsetParent!==null; // 마지막으로 만진 곳이 리듬 영역이면 그쪽이 키를 받는다(같은 받아쓰기 묶음 안의 멜로디 입력과 겹치지 않게)
+for(const ev of ['pointerdown','focusin'])document.addEventListener(ev,e=>{const t=e.target;rhy.act=!!(t&&t.closest&&t.closest('#rhyPanel'))},true);
+const rhyActive=e=>rhy.act&&!(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||el('rhyPanel').offsetParent===null||typing(e.target)||el('keysheet').open||sing.busy);
+document.addEventListener('keydown',e=>{if(!rhyActive(e))return;
+ if(e.code==='Space'||e.key===' '){e.preventDefault();e.stopImmediatePropagation();rhy.spaceDown=true;if(e.repeat)return;if(rhy.mode==='tap')rhyTap(e.timeStamp);else rhyModel();return}
+ if(rhy.mode==='dict'&&!rhy.done&&(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='Backspace'||e.key==='Delete')){e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;
+  if(e.key==='Backspace'||e.key==='Delete'){rhyClearAt(rhy.cur);rhyRender()}else{let i=rhy.cur+(e.key==='ArrowLeft'?-1:1);i=Math.max(0,Math.min(rhNb()-1,i));while(i>0&&rhy.ans[i]==='~')i+=e.key==='ArrowLeft'?-1:1;rhy.cur=Math.max(0,i);rhyRender()}}},true);
+document.addEventListener('keyup',e=>{if((e.code==='Space'||e.key===' ')&&rhy.spaceDown){rhy.spaceDown=false;e.preventDefault();e.stopImmediatePropagation()}},true);
+/* ---------- 오늘의 10분 연습: 블록(음정→코드→받아쓰기→리듬→시창)을 차례로 돌리며 위 위젯을 그대로 쓴다. 계획·출제·요약은 sing.js(순수 함수) ---------- */
 const RT={on:false,plan:null,bi:0,sess:null,q:null,t0:0,log:[],tm:0,over:false,answered:false,last:null};
 /* 시창·청음 하위 탐색: 한 번에 한 묶음만. 마지막 선택은 localStorage(실패해도 동작). 오늘의 연습 중에는 연습 코드가 패널을 직접 고른다 */
 const SUBS=['today','quiz','dict','sight','stat'];let singSub='today';
 try{const v=localStorage.getItem('pr-sing-sub');if(SUBS.includes(v))singSub=v}catch(e){}
-function setSub(v,save){if(!SUBS.includes(v))v='today';singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',p.dataset.sp!==v));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
+function setSub(v,save){if(!SUBS.includes(v))v='today';if(v!=='dict'&&window.rhyAbort)rhyAbort();singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',p.dataset.sp!==v));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
 el('singNav').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!RT.on)setSub(b.dataset.sub)});
-const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',sight:'singPanel'},ALL_PANELS=['singPanel','earPanel','progPanel','mdPanel','statPanel'];
+const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',rhy:'rhyPanel',sight:'singPanel'},ALL_PANELS=['singPanel','earPanel','progPanel','mdPanel','rhyPanel','statPanel'];
 function rtPanels(active){for(const id of ALL_PANELS)el(id).hidden=!!active&&id!==active}
 function rtLock(on){el('tab-sing').classList.toggle('rt-on',on);document.querySelectorAll('#tab-sing .opt').forEach(o=>{if(on&&!o.querySelector('#sNew'))o.setAttribute('inert','');else o.removeAttribute('inert')});el('sNew').textContent=on?'다음 문제(건너뛰기)':'새 문제'}
 function rtStart(only){if(RT.on||sing.busy||!window.SingLab)return;if(S.playing)stop();setSub('today',false);clearInterval(sing.liv);
@@ -1590,6 +1704,7 @@ function rtShowQ(q){const k=q.kind;
   earSet(SingLab.earQuiz({type:q.type,key:singKeyPc(),level:2,seed:q.seed,dir:q.dir||'asc',name:q.name}));earPlay()}
  else if(k==='prog'){prog.level=2;segPress('pLevel',document.querySelector('#pLevel [data-v="2"]'));progSet(SingLab.makeProgression({key:singKeyPc(),level:2,seed:q.seed,degs:q.degs}));progPlay()}
  else if(k==='mel'){mdSet(q.ex);mdPlay()}
+ else if(k==='rhy')rhyFromQ(q)
  else{sing.src='gen';sing.genBars=2;sing.bars=2;sing.level=1;segPress('sSrc',document.querySelector('#sSrc [data-v="gen"]'));segPress('sBars',document.querySelector('#sBars [data-v="2"]'));segPress('sLevel',document.querySelector('#sLevel [data-v="1"]'));singNew();
   sing.ex=q.ex;sing.track=[];sing.res=null;el('sResult').innerHTML='';el('sMsg').textContent='연습 중: 「들어보기」로 다시 듣고, 준비되면 「부르기」(마이크). 건너뛰려면 「새 문제」.';singDraw();singListen()}}
 function rtUi(){if(!RT.on)return;const b=RT.plan.blocks[RT.bi],n=RT.plan.blocks.length,left=Math.max(0,b.secs-(performance.now()-RT.t0)/1000),done=RT.sess.log.length;
@@ -1608,9 +1723,9 @@ function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing
  const ag=el('rtAgain');if(ag)ag.onclick=()=>rtStart(sm.weak.map(w=>w.id));el('rtClose').onclick=()=>{el('rtSum').innerHTML=''};
  try{el('rtPanel').scrollIntoView({block:'start'})}catch(_){}}
 el('rtStart').onclick=()=>rtStart();el('rtSkip').onclick=()=>rtBlock(RT.bi+1);el('rtStop').onclick=()=>rtFinish('중간에 그만뒀습니다');
-window.onTabShown=t=>{if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
+window.onTabShown=t=>{if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing')rhyAbort();if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
-{let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&Object.prototype.hasOwnProperty.call(SONGS,v)&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
+{let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&Object.prototype.hasOwnProperty.call(SONGS,v)&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();rhyInit();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 setSub(singSub,false);
 /* 처음 안내: 첫 방문에만(localStorage 실패 시에는 매번 보이되 닫을 수 있음) */
 (function(){const o=el('onb');let seen=false;try{seen=localStorage.getItem('pr-onb')==='1';if(!seen)localStorage.setItem('pr-onb','1')}catch(e){}
