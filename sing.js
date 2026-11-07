@@ -284,7 +284,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  if(p[0]==='tk'){const l=TK_LAB[p[1]];if(!l)return String(id);return often?`으뜸음 찾기(${l})에서 으뜸음을 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`으뜸음 찾기(${l}) 정답률이 낮습니다${pct}.`}
  if(p[0]==='cd'){const l=CD_T[p[1]]&&CD_T[p[1]].ko;if(!l)return String(id);return often?`카덴스 듣기에서 「${l}」${jong(l)?'을':'를'} 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`카덴스 듣기에서 「${l}」 정답률이 낮습니다${pct}.`}
  if(p[0]==='fn'){const l=FN_KO[p[1]];if(!l)return String(id);return often?`화음 기능 듣기에서 「${l}」 화음을 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`화음 기능 듣기에서 「${l}」 화음의 정답률이 낮습니다${pct}.`}
- if(p[0]==='inv'){const l=INV_KO[+p[1]];if(!l)return String(id);return often?`전위 듣기에서 「${l}」를 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`전위 듣기에서 「${l}」 정답률이 낮습니다${pct}.`}
+ if(p[0]==='inv'){const l=INV_KO[+p[1]];if(!l)return String(id);return often?`전위 듣기에서 「${l}」${jong(l)?'을':'를'} 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`전위 듣기에서 「${l}」 정답률이 낮습니다${pct}.`}
  if(p[0]==='dg'){const n=SOLF[+p[1]];if(!n)return String(id);return often?`음계 도수 듣기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 고릅니다.`:`음계 도수 듣기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
  if(p[0]==='pg')return often?`${+p[2]+1}번째 코드가 「${p[1]}」일 때 자주 「${top}」라고 적습니다.`:`${+p[2]+1}번째 칸의 「${p[1]}」 정답률이 낮습니다${pct}.`;
  if(p[0]==='md'&&p[1][0]==='d'){const n=SOLF[+p[1].slice(1)];return often?`받아쓰기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 적습니다.`:`받아쓰기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
