@@ -50,6 +50,7 @@
 
 - `index.html`: 화면과 앱 로직 전체.
 - `sing.js`: 시창·청음 코어(음높이 추정, 멜로디 생성, 판정, 지연 추정, 청음 문제).
+  적응형 청음(오늘의 10분 연습): 항목별 세부 통계 `pr-stats2`(옛 `pr-stats`에서 이관), 약점 계산(`weakness`), 약점 가중 출제, 틀린 문제 2–4문제 뒤 재출제, 혼동 쌍 기반 설명.
 - `vendor/`: Basic Pitch 1.0.1 (Apache-2.0)와 모델. TensorFlow.js 3.21은 CDN에서 불러옵니다.
 - `audio/`: 데모 음원(One Dream 후렴 17-20마디 렌더, 이 프로젝트 제작).
 - `DESIGN_SPEC_ko.md`, `PLAN_ko.md`: 디자인 명세와 기획 메모.

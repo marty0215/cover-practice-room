@@ -363,6 +363,10 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 .stt td{padding:.3rem .4rem;border-top:1px solid var(--border);vertical-align:middle}
 .stt td.n{font-family:var(--mono)}
 .stt svg{display:block;width:72px;height:20px}
+#rtBar{width:100%;height:10px;accent-color:var(--accent);margin:.6rem 0 .2rem}
+.rt-on .opt[inert]{opacity:.55}
+#rtSum .stt td.t{max-width:46ch}
+.wl{margin:.5rem 0 0 1.2rem;font-size:.9rem;display:grid;gap:.25rem}
 .stack{display:grid;gap:1rem;max-width:900px}.stack>*,.grid>*{min-width:0}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -462,6 +466,17 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
 </div></div>
 
 <div class="tabpanel" id="tab-sing" role="tabpanel" tabindex="0" aria-labelledby="tabb-sing" hidden><div class="in"><div class="stack">
+  <div class="panel" id="rtPanel">
+    <div class="head"><h2>오늘의 10분 연습</h2><p class="muted small">음정 → 코드 진행 → 멜로디 받아쓰기 → 시창 순서로 약 10분입니다. 기록에서 약한 항목이 더 자주 나오고, 틀린 문제는 2–4문제 뒤에 다시 나옵니다. 시창은 마이크를 씁니다(이어폰 권장). 기록은 이 브라우저에만 저장됩니다.</p></div>
+    <div class="row" id="rtIdle"><button class="btn primary" type="button" id="rtStart">오늘의 10분 연습 시작</button></div>
+    <div id="rtRun" hidden>
+      <div class="row" style="justify-content:space-between"><b id="rtBlk"></b><span class="mono" id="rtTime" role="timer"></span></div>
+      <progress id="rtBar" max="100" value="0" aria-label="전체 진행"></progress>
+      <p class="note" id="rtQ" role="status"></p>
+      <div class="row" style="margin-top:.6rem"><button class="btn sm" type="button" id="rtSkip">블록 건너뛰기</button><button class="btn sm" type="button" id="rtStop">그만두기</button></div>
+    </div>
+    <div id="rtSum" aria-live="polite"></div>
+  </div>
   <div class="panel" id="singPanel">
     <div class="head"><h2>시창 · 악보 보고 부르기</h2><p class="muted small">짧은 멜로디가 나옵니다. 먼저 들어 보고, 카운트인 1마디 뒤에 부르면 음마다 맞았는지 판정합니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
@@ -485,9 +500,10 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <div class="head"><h2>청음 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정이나 3화음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem">
       <div class="opt"><span class="lb">문제 종류</span><div class="seg" id="eType" role="group" aria-label="문제 종류"><button type="button" aria-pressed="true" data-v="interval">음정</button><button type="button" aria-pressed="false" data-v="triad">3화음</button></div></div>
+      <div class="opt" id="eDirOpt"><span class="lb">방향</span><div class="seg" id="eDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="true" data-v="asc">상행</button><button type="button" aria-pressed="false" data-v="desc">하행</button><button type="button" aria-pressed="false" data-v="har">동시</button><button type="button" aria-pressed="false" data-v="mix">섞기</button></div></div>
       <div class="opt"><span class="lb">난이도</span><div class="seg" id="eLevel" role="group" aria-label="청음 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
     </div>
-    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">다음 문제</button></div>
+    <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">다음 문제</button><label class="chk" title="기록에서 오답률이 높은 항목을 더 자주 냅니다"><input type="checkbox" id="eWeak"><span>약점 위주</span></label></div>
     <div class="choices" id="eChoices" role="group" aria-label="보기"></div>
     <p class="score" id="eFb" role="status"></p>
     <p class="note" id="eAcc"></p>
@@ -512,6 +528,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <div class="panel" id="statPanel">
     <div class="head"><h2>진도 기록</h2><p class="muted small">항목별 최근 10회 정답률입니다. 이 브라우저에만 저장됩니다.</p></div>
     <div style="overflow-x:auto"><table class="stt" id="statTbl"></table></div>
+    <h3 class="small" style="margin-top:.8rem">지금 약한 항목</h3><div id="weakBox" class="small"></div>
     <div class="row" style="margin-top:.6rem"><button class="btn sm" type="button" id="statReset">기록 지우기</button></div>
   </div>
 </div></div></div>
@@ -1337,6 +1354,9 @@ el('recOn').onchange=()=>el('recOn').checked?recArm():recDisarm();
 el('recEc').onchange=()=>{if(!rec.st)return;if(rec.mr){recM('녹음 중에는 바꿀 수 없습니다. 정지한 뒤 다시 바꿔 주세요.');return}recDisarm();el('recOn').checked=true;recArm()};
 el('recVol').oninput=()=>{if(rec.pb)rec.pb.g.gain.value=el('recVol').value/100};el('recBack').oninput=()=>{if(rec.pb)applyBack()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&rec.st){if(rec.mr)stop();recDisarm()}});addEventListener('pagehide',()=>{if(rec.st){if(rec.mr)stop();recDisarm()}});
+function sightFine(res){const ids=[];for(const x of res.notes){if(x.verdict==='소리 없음')continue;const d='sg:d'+relK(x.pitch),v=x.verdict;ids.push(d);
+  fine(d,v==='맞음'?1:0,v==='높음'?'높게':v==='낮음'?'낮게':v==='옥타브 차이'?'옥타브':null)}
+ const n=res.notes.filter(x=>x.verdict!=='소리 없음');fine('sg:v:hi',1-n.filter(x=>x.verdict==='높음').length/n.length);fine('sg:v:lo',1-n.filter(x=>x.verdict==='낮음').length/n.length);return ids.concat('sg:v:hi','sg:v:lo')}
 function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
@@ -1352,8 +1372,9 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
  try{for(let i=0;i<4;i++)clickAt(t0+i*spb,i===0)}catch(e){tr.stop();singSetBusy(false);msg.textContent='녹음을 시작하지 못했습니다: '+e.message;return}
  sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
  let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
-  if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat);sing.res=res;if(res.notes.some(x=>x.verdict!=='소리 없음'))statRec('sight',res.score/100);const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
+  if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat);sing.res=res;let sids=null;if(res.notes.some(x=>x.verdict!=='소리 없음')){statRec('sight',res.score/100);sids=sightFine(res)}const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
    el('sResult').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 (맞음 ${ok}/${n}음) · 평균 오차 <b>${res.meanAbsCents==null?'—':res.meanAbsCents}</b> cent</p><div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${VCLS[x.verdict]||'none'}"><b>${i+1}</b> ${sn(x.pitch)} ${x.verdict}${x.verdict!=='소리 없음'&&x.medCents!=null?` ${x.medCents>0?'+':''}${Math.round(x.medCents)}c`:''}</span>`).join('')}</div>`;
+   if(sids&&RT.on)rtAnswer(res.score>=60,sids);
    msg.textContent=res.notes.every(x=>x.verdict==='소리 없음')?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'}
   else msg.textContent='중단했습니다.';singDraw()};
  sing.abort=()=>done(false);
@@ -1378,7 +1399,7 @@ async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing
  if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
  else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다. 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`}}
 el('sCal').onclick=singCal;el('sCalZero').onclick=()=>{setLat(0);el('sMsg').textContent='지연 보정을 0 ms로 되돌렸습니다.'};
-el('sRec').onclick=singRec;el('sListen').onclick=singListen;el('sNew').onclick=singNew;el('sStop').onclick=()=>{if(sing.abort)sing.abort()};
+el('sRec').onclick=singRec;el('sListen').onclick=singListen;el('sNew').onclick=()=>RT.on?rtNext():singNew();el('sStop').onclick=()=>{if(sing.abort)sing.abort()};
 el('sBars').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.genBars=+b.dataset.v;segPress('sBars',b);singNew()});
 el('sRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.range=[+b.dataset.lo,+b.dataset.hi];segPress('sRange',b);singNew()});
 el('sLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;sing.level=+b.dataset.v;segPress('sLevel',b);singNew()});
@@ -1390,31 +1411,45 @@ el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 /* 진도 기록: pr-stats {drill:{n,h:[최근 결과 0..1]}} (localStorage, 실패해도 동작) */
 const DRILLS=[['interval','음정'],['triad','3화음'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sight','시창 점수']];
 let STAT={};try{STAT=JSON.parse(localStorage.getItem('pr-stats'))||{}}catch(e){STAT={}}
+/* 세부 통계 pr-stats2 (항목 id 별 최근 60회 + 혼동 쌍). 없으면 옛 pr-stats 에서 이관. 저장 실패해도 동작 */
+const jget=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+let STAT2=window.SingLab?SingLab.migrateStats(jget('pr-stats2'),jget('pr-stats')):null;
+const saveStat2=()=>{try{localStorage.setItem('pr-stats2',JSON.stringify(STAT2))}catch(_){}};
+if(STAT2&&!(jget('pr-stats2')||{}).v)saveStat2();
+function fine(id,frac,chosen){if(!STAT2)return;STAT2=SingLab.recItem(STAT2,id,frac,chosen);saveStat2()}
+const relK=p=>((p-singKeyPc())%12+12)%12;
 function spark(h){if(h.length<2)return '<span class="muted">—</span>';const W=72,H=20,p=h.map((v,i)=>`${(2+i*(W-4)/(h.length-1)).toFixed(1)},${(H-3-v*(H-6)).toFixed(1)}`).join(' ');return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${h.length}회 추이"><polyline points="${p}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${p.split(' ').pop().split(',')[0]}" cy="${p.split(' ').pop().split(',')[1]}" r="2.2" fill="var(--accent)"/></svg>`}
-function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows}
+function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows;
+ const w=STAT2?SingLab.topWeak(STAT2,{n:5}):[];el('weakBox').innerHTML=w.length?`<ol class="wl">${w.map(x=>`<li>${x.text}</li>`).join('')}</ol>`:'<p class="muted">아직 뚜렷한 약점이 없습니다. 항목마다 2번 이상 풀면 계산합니다.</p>'}
 function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}statRender()}
-let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};try{localStorage.removeItem('pr-stats')}catch(_){}statRender()};
+let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2')}catch(_){}statRender()};
 
 /* 청음: 음정 / 3화음. 정답률은 localStorage(실패해도 동작) */
-const ear={type:'interval',level:1,q:null,done:false};
+const ear={type:'interval',level:1,dir:'asc',weak:false,q:null,done:false};
 let earA={};try{earA=JSON.parse(localStorage.getItem('pr-ear'))||{}}catch(e){}
 const earKey=()=>ear.type+ear.level,earName=t=>t==='interval'?'음정':'3화음';
 function earShowAcc(){const a=earA[earKey()]||{n:0,ok:0};el('eAcc').textContent=`${earName(ear.type)} 난이도 ${ear.level} 정답률: ${a.n?`${a.ok}/${a.n} (${Math.round(100*a.ok/a.n)}%)`:'아직 기록 없음'} · 이 브라우저에만 저장됩니다.`}
-function earNew(){clearTimeout(ear.tm);ear.q=SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed()});ear.done=false;
+const wFn=()=>{const wk=SingLab.weakness(STAT2);return id=>SingLab.weightFor(wk,id)};
+function earNew(){earSet(SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed(),dir:ear.dir,weight:ear.weak&&STAT2?wFn():null}))}
+function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;el('eDirOpt').hidden=ear.type!=='interval';
  el('eChoices').innerHTML=ear.q.choices.map(c=>`<button class="btn" type="button" data-c="${c}">${c}</button>`).join('');el('eFb').textContent='';el('eNext').disabled=true;earShowAcc()}
 function earPlay(){if(!ear.q)earNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();const n=ear.q.notes,t=ctx.currentTime+.1;
- if(ear.q.type==='interval'){tone('sing',t,.55,n[0],90);tone('sing',t+.65,.55,n[1],90);for(const p of n)tone('sing',t+1.7,1.2,p,90)}
+ if(ear.q.type==='interval'){const d=ear.q.dir||'asc';if(d==='har')for(const p of n)tone('sing',t,1.4,p,90);else{const o=d==='desc'?[n[1],n[0]]:n;tone('sing',t,.55,o[0],90);tone('sing',t+.65,.55,o[1],90)}}
  else{n.forEach((p,i)=>tone('sing',t+i*.5,.45,p,90));for(const p of n)tone('sing',t+1.9,1.3,p,90)}}
-el('ePlay').onclick=earPlay;el('eNext').onclick=()=>{earNew();earPlay()};
-el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,a=earA[earKey()]||(earA[earKey()]={n:0,ok:0});a.n++;if(ok)a.ok++;statRec(ear.type,ok?1:0);try{localStorage.setItem('pr-ear',JSON.stringify(earA))}catch(_){}
+el('ePlay').onclick=earPlay;el('eNext').onclick=()=>{if(RT.on)return rtNext();earNew();earPlay()};
+el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,a=earA[earKey()]||(earA[earKey()]={n:0,ok:0});a.n++;if(ok)a.ok++;statRec(ear.type,ok?1:0);fine(ear.q.item,ok?1:0,ok?null:b.dataset.c);try{localStorage.setItem('pr-ear',JSON.stringify(earA))}catch(_){}
+ if(RT.on)rtAnswer(ok,[ear.q.item]);
  document.querySelectorAll('#eChoices button').forEach(x=>{if(x.dataset.c===ear.q.answer){x.classList.add('ok');x.textContent='✓ '+x.dataset.c}else if(x===b){x.classList.add('bad');x.textContent='✗ '+x.dataset.c}});
  el('eFb').textContent=ok?`정답입니다. ${ear.q.label}에서 시작한 ${ear.q.answer}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다(${ear.q.label}에서 시작).`;el('eNext').disabled=false;earShowAcc()});
-el('eType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ear.type=b.dataset.v;segPress('eType',b);earNew()});
-el('eLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;ear.level=+b.dataset.v;segPress('eLevel',b);earNew()});
+el('eType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.type=b.dataset.v;segPress('eType',b);earNew()});
+el('eLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.level=+b.dataset.v;segPress('eLevel',b);earNew()});
+el('eDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.dir=b.dataset.v;segPress('eDir',b);earNew()});
+el('eWeak').onchange=()=>{if(RT.on){el('eWeak').checked=ear.weak;return}ear.weak=el('eWeak').checked;earNew()};
 /* 코드 진행 받아쓰기. 블록 코드 + 베이스 근음, 소리는 tone('sing') */
 const prog={level:1,q:null,ans:[],cur:0,done:false};
 const keyLab=()=>`${NAMES[singKeyPc()]} 메이저`;
-function progNew(){prog.q=SingLab.makeProgression({key:singKeyPc(),level:prog.level,seed:seed(),songChords:CH.map(c=>c.q==='sus4'||c.q==='sus2'||c.q==='dim'?{root:NaN,minor:false}:{root:c.root,minor:c.minor}),songKey:KEY});prog.ans=[null,null,null,null];prog.cur=0;prog.done=false;prog.rev=prog.chk=false;
+function progNew(){progSet(SingLab.makeProgression({key:singKeyPc(),level:prog.level,seed:seed(),songChords:CH.map(c=>c.q==='sus4'||c.q==='sus2'||c.q==='dim'?{root:NaN,minor:false}:{root:c.root,minor:c.minor}),songKey:KEY}))}
+function progSet(q){prog.q=q;prog.ans=[null,null,null,null];prog.cur=0;prog.done=false;prog.rev=prog.chk=false;
  const ds=prog.level<2?[0,1,2,3,4,5]:[0,1,2,3,4,5,6];el('pChoices').innerHTML=ds.map(d=>`<button class="btn" type="button" data-d="${d}">${SingLab.DEG_L[d]}</button>`).join('');
  el('pFb').textContent=`키: ${keyLab()}. 먼저 「들어보기」.`;progSlots()}
 function progSlots(){el('pSlots').innerHTML=prog.q.chords.map((c,i)=>{const a=prog.ans[i],L=SingLab.DEG_L;let cls='btn',t=a==null?'?':L[a];
@@ -1422,14 +1457,15 @@ function progSlots(){el('pSlots').innerHTML=prog.q.chords.map((c,i)=>{const a=pr
   return `<button class="${cls}" type="button" data-i="${i}" aria-label="${i+1}번째 코드 ${a==null?'비어 있음':L[a]}">${t}</button>`}).join('')}
 function progPlay(){if(!prog.q)progNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();const t=ctx.currentTime+.1;
  prog.q.chords.forEach((c,i)=>{for(const p of c.notes)tone('sing',t+i*1.4,1.25,p,72);tone('sing',t+i*1.4,1.25,c.bass,100)})}
+function progFine(){const L=SingLab.DEG_L,ids=prog.q.chords.map((c,i)=>{const a=prog.ans[i],id='pg:'+L[c.deg]+':'+i;fine(id,a===c.deg?1:0,a===c.deg||a==null?null:L[a]);return id});return ids}
 function progFinish(rec){prog.done=true;const n=prog.q.chords.filter((c,i)=>prog.ans[i]===c.deg).length;if(rec)statRec('prog',n/4);return n}
-el('pPlay').onclick=progPlay;el('pNext').onclick=()=>{progNew();progPlay()};
+el('pPlay').onclick=progPlay;el('pNext').onclick=()=>{if(RT.on)return rtNext();progNew();progPlay()};
 el('pSlots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||prog.done)return;prog.cur=+b.dataset.i;progSlots()});
 el('pChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||prog.done||!prog.q)return;prog.ans[prog.cur]=+b.dataset.d;const nx=prog.ans.findIndex(x=>x==null);prog.cur=nx>=0?nx:Math.min(3,prog.cur+1);progSlots()});
-el('pCheck').onclick=()=>{if(!prog.q||prog.done)return;if(prog.ans.some(x=>x==null)){el('pFb').textContent='빈 칸이 있습니다. 4칸을 모두 채우고 확인하세요.';return}prog.chk=true;const n=progFinish(true);progSlots();
+el('pCheck').onclick=()=>{if(!prog.q||prog.done)return;if(prog.ans.some(x=>x==null)){el('pFb').textContent='빈 칸이 있습니다. 4칸을 모두 채우고 확인하세요.';return}prog.chk=true;const n=progFinish(true);const pids=progFine();progSlots();if(RT.on)rtAnswer(n===4,pids);
  const q=prog.q;el('pFb').textContent=`${n}/4 맞음. ${keyLab()}${q.source==='song'?` · 현재 곡 ${q.from+1}–${q.from+4}마디의 코드`:' · 무작위 진행'}.`};
-el('pReveal').onclick=()=>{if(!prog.q)progNew();if(!prog.done){prog.rev=true;prog.done=true;statRec('prog',0);progSlots()}el('pFb').textContent=`정답: ${prog.q.chords.map(c=>c.label).join(' – ')} (${keyLab()})`};
-el('pLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;prog.level=+b.dataset.v;segPress('pLevel',b);progNew()});
+el('pReveal').onclick=()=>{if(!prog.q)progNew();if(!prog.done){prog.rev=true;prog.done=true;statRec('prog',0);const pids=progFine();progSlots();if(RT.on)rtAnswer(false,pids)}el('pFb').textContent=`정답: ${prog.q.chords.map(c=>c.label).join(' – ')} (${keyLab()})`};
+el('pLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;prog.level=+b.dataset.v;segPress('pLevel',b);progNew()});
 
 /* 멜로디 받아쓰기: SingLab.makeExercise 2마디, 첫 음 제공, 음높이 순서만 채점(박자 제외) */
 const md={ex:[],ans:[],done:false},MD_LO=60,MD_HI=72;
@@ -1437,7 +1473,8 @@ const MD_KEYS={KeyA:60,KeyW:61,KeyS:62,KeyE:63,KeyD:64,KeyF:65,KeyT:66,KeyG:67,K
 const MD_LET=Object.fromEntries(Object.entries(MD_KEYS).map(([k,p])=>[p,k.slice(3)]));
 (function(){const bl=[1,3,6,8,10],wh=[0,2,4,5,7,9,11,12];let h='';wh.forEach(o=>{h+=`<button class="wk" type="button" data-p="${60+o}" aria-label="${sn(60+o)}">${MD_LET[60+o]}</button>`});
  bl.forEach(o=>{const wi=wh.findIndex(w=>w>o)-1;h+=`<button class="bk" type="button" data-p="${60+o}" aria-label="${sn(60+o)}" style="left:${(wi+1)/8*100}%">${MD_LET[60+o]}</button>`});el('mdKeys').innerHTML=h})();
-function mdNew(){md.ex=SingLab.makeExercise({key:singKeyPc(),minor:false,bars:2,lo:MD_LO,hi:MD_HI,seed:seed(),level:1});md.ans=md.ex.length?[md.ex[0][2]]:[];md.done=false;
+function mdNew(){mdSet(SingLab.makeExercise({key:singKeyPc(),minor:false,bars:2,lo:MD_LO,hi:MD_HI,seed:seed(),level:1}))}
+function mdSet(ex){md.ex=ex;md.ans=md.ex.length?[md.ex[0][2]]:[];md.done=false;
  el('mdFb').textContent=md.ex.length?`${keyLab()} · 음 ${md.ex.length}개 중 첫 음(${sn(md.ex[0][2])})은 주어졌습니다. 「들어보기」 후 나머지 ${md.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.`:'문제를 만들 수 없습니다.';mdSlots()}
 function mdSlots(){el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a);if(i===0)t+=' (주어짐)';
   if(md.done&&i>0){const ok=a===n[2];cls+=ok?' ok':' lo';t=ok?'✓ '+sn(a):`✗ ${a==null?'—':sn(a)} → ${sn(n[2])}`}return `<span class="${cls}"><b>${i+1}</b> ${t}</span>`}).join('')}
@@ -1445,12 +1482,50 @@ function mdPlay(){if(!md.ex.length)mdNew();ensureCtx();if(ctx.state==='suspended
 function mdAdd(p){if(md.done||!md.ex.length||md.ans.length>=md.ex.length)return;md.ans.push(p);ensureCtx();if(ctx.state==='suspended')ctx.resume();tone('sing',ctx.currentTime+.01,.4,p,88);mdSlots()}
 function mdUndo(){if(md.done||md.ans.length<=1)return;md.ans.pop();mdSlots()}
 el('mdKeys').addEventListener('click',e=>{const b=e.target.closest('button');if(b)mdAdd(+b.dataset.p)});
-el('mdPlay').onclick=mdPlay;el('mdUndo').onclick=mdUndo;el('mdNext').onclick=()=>{mdNew();mdPlay()};
-el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;md.done=true;const n=md.ex.length-1,ok=md.ex.slice(1).filter((x,i)=>md.ans[i+1]===x[2]).length;statRec('mel',n?ok/n:0);mdSlots();el('mdFb').textContent=`${ok}/${n}음 맞음 (음높이만 채점, 박자 제외). 「들어보기」로 다시 들어 보세요.`};
+el('mdPlay').onclick=mdPlay;el('mdUndo').onclick=mdUndo;el('mdNext').onclick=()=>{if(RT.on)return rtNext();mdNew();mdPlay()};
+el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;md.done=true;const n=md.ex.length-1,ok=md.ex.slice(1).filter((x,i)=>md.ans[i+1]===x[2]).length;statRec('mel',n?ok/n:0);const mids=[];md.ex.forEach((x,i)=>{if(i<1)return;const c=md.ans[i]===x[2],d='md:d'+relK(x[2]),s='md:s'+Math.max(-12,Math.min(12,x[2]-md.ex[i-1][2]));mids.push(d,s);
+  fine(d,c?1:0,c||md.ans[i]==null?null:SingLab.SOLF[relK(md.ans[i])]);fine(s,c?1:0,c||md.ans[i]==null?null:String(Math.max(-12,Math.min(12,md.ans[i]-md.ex[i-1][2]))))});
+ mdSlots();if(RT.on)rtAnswer(n>0&&ok===n,mids);el('mdFb').textContent=`${ok}/${n}음 맞음 (음높이만 채점, 박자 제외). 「들어보기」로 다시 들어 보세요.`};
 /* 컴퓨터 키 입력: 시창·청음 탭이 보이고 입력칸에 포커스가 없을 때만. 전역 단축키보다 먼저 가로챈다(캡처 단계) */
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||el('tab-sing').hidden||!md.ex.length||md.done||sing.busy||typing(e.target)||el('keysheet').open)return;
  const p=MD_KEYS[e.code];if(p==null&&e.key!=='Backspace')return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;if(p==null)mdUndo();else{mdAdd(p);const b=el('mdKeys').querySelector(`[data-p="${p}"]`);b.classList.add('on');setTimeout(()=>b.classList.remove('on'),120)}},true);
-window.onTabShown=t=>{if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
+/* ---------- 오늘의 10분 연습: 블록(음정→코드→받아쓰기→시창)을 차례로 돌리며 위 위젯을 그대로 쓴다. 계획·출제·요약은 sing.js(순수 함수) ---------- */
+const RT={on:false,plan:null,bi:0,sess:null,q:null,t0:0,log:[],tm:0,over:false,answered:false,last:null};
+const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',sight:'singPanel'},ALL_PANELS=['singPanel','earPanel','progPanel','mdPanel','statPanel'];
+function rtPanels(active){for(const id of ALL_PANELS)el(id).hidden=!!active&&id!==active}
+function rtLock(on){el('tab-sing').classList.toggle('rt-on',on);document.querySelectorAll('#tab-sing .opt').forEach(o=>{if(on&&!o.querySelector('#sNew'))o.setAttribute('inert','');else o.removeAttribute('inert')});el('sNew').textContent=on?'다음 문제(건너뛰기)':'새 문제'}
+function rtStart(only){if(RT.on||sing.busy||!window.SingLab)return;if(S.playing)stop();clearInterval(sing.liv);
+ RT.plan=SingLab.makeRoutine(STAT2,{minutes:only?5:10,seed:seed(),only:only||null});RT.log=[];RT.on=true;RT.last=null;rtLock(true);
+ el('rtIdle').hidden=true;el('rtSum').innerHTML='';el('rtRun').hidden=false;clearInterval(RT.tm);RT.tm=setInterval(rtTick,500);rtBlock(0)}
+function rtBlock(i){if(!RT.on)return;if(i>=RT.plan.blocks.length)return rtFinish('');RT.bi=i;const b=RT.plan.blocks[i];
+ RT.sess=SingLab.makeSession(b,STAT2,{seed:seed(),key:singKeyPc(),range:sing.range});RT.t0=performance.now();RT.over=false;rtPanels(RT_PANELS[b.kind]);rtNextQ()}
+function rtNextQ(){if(!RT.on)return;const q=RT.over?null:RT.sess.next();if(!q)return rtBlock(RT.bi+1);RT.q=q;RT.answered=false;rtShowQ(q);rtUi()}
+function rtNext(){rtNextQ()}
+function rtAnswer(ok,items){if(!RT.on||RT.answered)return;RT.answered=true;const b=RT.plan.blocks[RT.bi];RT.sess.answer(RT.q,ok,items);RT.log.push({block:RT.bi,kind:b.kind,label:b.label,ok:!!ok,items:items||[]});rtUi()}
+function rtShowQ(q){const k=q.kind;
+ if(k==='ear'){ear.type=q.type;ear.level=2;if(q.dir)ear.dir=q.dir;segPress('eType',document.querySelector(`#eType [data-v="${q.type}"]`));segPress('eLevel',document.querySelector('#eLevel [data-v="2"]'));segPress('eDir',document.querySelector(`#eDir [data-v="${ear.dir}"]`));
+  earSet(SingLab.earQuiz({type:q.type,key:singKeyPc(),level:2,seed:q.seed,dir:q.dir||'asc',name:q.name}));earPlay()}
+ else if(k==='prog'){prog.level=2;segPress('pLevel',document.querySelector('#pLevel [data-v="2"]'));progSet(SingLab.makeProgression({key:singKeyPc(),level:2,seed:q.seed,degs:q.degs}));progPlay()}
+ else if(k==='mel'){mdSet(q.ex);mdPlay()}
+ else{sing.src='gen';sing.genBars=2;sing.bars=2;sing.level=1;segPress('sSrc',document.querySelector('#sSrc [data-v="gen"]'));segPress('sBars',document.querySelector('#sBars [data-v="2"]'));segPress('sLevel',document.querySelector('#sLevel [data-v="1"]'));singNew();
+  sing.ex=q.ex;sing.track=[];sing.res=null;el('sResult').innerHTML='';el('sMsg').textContent='연습 중: 「들어보기」로 다시 듣고, 준비되면 「부르기」(마이크). 건너뛰려면 「새 문제」.';singDraw();singListen()}}
+function rtUi(){if(!RT.on)return;const b=RT.plan.blocks[RT.bi],n=RT.plan.blocks.length,left=Math.max(0,b.secs-(performance.now()-RT.t0)/1000),done=RT.sess.log.length;
+ el('rtBlk').textContent=`블록 ${RT.bi+1}/${n} · ${b.label}`;el('rtTime').textContent=`남은 ${mmss(left)}`;
+ el('rtBar').value=Math.round(100*(RT.bi+Math.min(1,done/b.maxQ))/n);el('rtBar').setAttribute('aria-valuetext',`블록 ${RT.bi+1}/${n}, 문제 ${done}/${b.maxQ} 답함`);
+ const f=b.focus&&b.focus.length&&b.kind==='ear'?` · 집중: ${b.focus.map(SingLab.itemLabel).join(', ')}`:'';
+ el('rtQ').textContent=`문제 ${RT.q?RT.q.idx:0}/${b.maxQ}${RT.q&&RT.q.retry?' · 틀렸던 문제가 다시 나왔습니다':''}${f}${RT.over?' · 시간이 다 됐습니다. 이 문제를 마치면 다음 블록으로 넘어갑니다.':''}`}
+function rtTick(){if(!RT.on)return;const b=RT.plan.blocks[RT.bi];if(!RT.over&&(performance.now()-RT.t0)/1000>=b.secs){RT.over=true}rtUi()}
+function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing.abort)sing.abort();rtLock(false);rtPanels(null);el('rtRun').hidden=true;el('rtIdle').hidden=false;
+ const sm=SingLab.summary(STAT2,RT.log,{n:3});RT.last=sm;statRender();
+ const pc=a=>a==null?'—':Math.round(a*100)+'%',rows=sm.blocks.map(b=>`<tr><td>${b.label}</td><td class="n">${b.n}</td><td class="n">${b.ok}</td><td class="n">${pc(b.acc)}</td></tr>`).join('');
+ el('rtSum').innerHTML=`<h3 class="small" style="margin-top:1rem">연습 결과${why?` · ${why}`:''}</h3>${sm.blocks.length?`<div style="overflow-x:auto"><table class="stt" id="rtTbl"><tr><th scope="col">블록</th><th scope="col">답한 문제</th><th scope="col">정답</th><th scope="col">정답률</th></tr>${rows}</table></div>`:'<p class="note">답한 문제가 없습니다.</p>'}
+  <h3 class="small" style="margin-top:.8rem">약한 항목 TOP 3</h3>${sm.weak.length?`<ol class="wl" id="rtWeak">${sm.weak.map(w=>`<li>${w.text}</li>`).join('')}</ol>`:'<p class="note">이번에 다룬 항목 중 뚜렷한 약점은 없습니다(항목마다 2번 이상 풀어야 계산합니다).</p>'}
+  <div class="row" style="margin-top:.6rem">${sm.weak.length?'<button class="btn primary" type="button" id="rtAgain">약점만 다시</button>':''}<button class="btn" type="button" id="rtClose">닫기</button></div>
+  <p class="note">신호 기반 기록이며 사람 평가가 아닙니다. 항목별 최근 결과로 계산한 오답률입니다.</p>`;
+ const ag=el('rtAgain');if(ag)ag.onclick=()=>rtStart(sm.weak.map(w=>w.id));el('rtClose').onclick=()=>{el('rtSum').innerHTML=''};
+ try{el('rtPanel').scrollIntoView({block:'start'})}catch(_){}}
+el('rtStart').onclick=()=>rtStart();el('rtSkip').onclick=()=>rtBlock(RT.bi+1);el('rtStop').onclick=()=>rtFinish('중간에 그만뒀습니다');
+window.onTabShown=t=>{if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
 loadSong('onedream');checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 fromHash(true);ready=true;
