@@ -323,9 +323,9 @@ function pmHarmQuestion({range,R,key,hk,wk}){const lo=range[0],hi=Math.max(range
  /* 뿌리 칸: 3up 은 기준=뿌리 또는 3음, 3down 은 목표=뿌리 또는 3음, 5 는 기준=뿌리 → 기준·목표가 항상 반주 화음 안에 있다 */
  const r0=hk==='3up'?(R()<.5?d:d-2):hk==='3down'?(R()<.5?d-2:d-4):d,ch=pmChordOf(key,r0,lo);
  return {mode:'har',ref,target:t.target,iv:PM_HAR,dir:hk,hk,semis:t.semis,key,id:'pm:'+PM_HAR+':'+hk,chord:ch.midis,chordPcs:ch.pcs,chordName:ch.name,rootDeg:ch.rootDeg}}
-/* 반주 새어듦 의심: 판정 중앙값이 목표가 아닌 반주 화음음(음이름 기준, 옥타브 무시) ±band cent 안이고 p10–p90 폭이 maxSpread cent 이하(사람 목소리보다 훨씬 고른 소리)면 true.
+/* 반주 새어듦 의심: 판정 중앙값이 목표가 아닌 반주 화음음(음이름 기준, 옥타브 무시) ±band cent 안이고 p10–p90 폭이 maxSpread(12) cent 이하(사람 목소리보다 훨씬 고른 소리)면 true. 실제 보컬 긴 음은 27% 가 20 cent 이하라 12 로 둔다(bench README §10).
    한계: 이어폰이 가장 확실한 해결이다. 합성음처럼 아주 고른 소리나 반주음(기준음 포함)을 그대로 따라 부른 경우도 같은 안내가 나온다. 목소리가 반주보다 훨씬 커 중앙값이 목소리를 따르면 검출되지 않는다. */
-function pmLeak(res,q,{band=30,maxSpread=20}={}){if(!q||q.mode!=='har'||!res||res.medCents==null||res.spread==null||res.spread>maxSpread)return false;
+function pmLeak(res,q,{band=30,maxSpread=12}={}){if(!q||q.mode!=='har'||!res||res.medCents==null||res.spread==null||res.spread>maxSpread)return false;
  const m=q.target+res.medCents/100,tp=((q.target%12)+12)%12;return (q.chordPcs||[]).some(pc=>pc!==tp&&Math.abs((((m-pc)%12)+18)%12-6)*100<=band)}
 /* 문제 종류별 판정: 화음 부르기는 반주 새어듦 의심 시 verdict '반주 소리 의심'(leak:true, 기록 안 함) */
 function pmJudgeQ(track,q,o={}){const r=pmJudge(track,{target:q.target,...o});return pmLeak(r,q)?{...r,leak:true,ok:false,verdict:'반주 소리 의심'}:r}
