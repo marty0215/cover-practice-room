@@ -102,6 +102,7 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .grid{display:grid;gap:var(--s4)}
 @media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
 .note{font-size:.82rem;color:var(--text-muted);margin-top:.6rem}
+.vcrbox{display:grid;gap:.6rem;margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border);min-width:0}.vcrh{font-size:.92rem}.vcrstr{display:inline-flex;align-items:center;gap:.5rem;min-height:var(--hit)}.vcrstr input{width:150px;max-width:100%;height:var(--hit);accent-color:var(--accent)}#vcrProg{width:100%;height:10px}#vcrMsg{color:var(--text-muted)}
 .head{display:grid;gap:var(--s1);margin-bottom:var(--s4);max-width:44em}
 /* 알림 한 가지: .notice (+ .warn / .ok). 예전 .warnline 도 같은 모양 */
 .notice,.warnline{--nc:var(--accent);border-left:4px solid var(--nc);padding:var(--s3) var(--s4);background:var(--surface);border-radius:0 10px 10px 0;font-size:.9rem}
@@ -503,6 +504,16 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="ch" style="--c:var(--score)"><span class="name" id="origLabel">음원</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="origVol" min="0" max="100" value="0" aria-label="음원 볼륨 (합성과 함께)"><span class="val" id="origVal">0%</span></div>
     <div id="stems"></div>
   </div>
+  <div class="vcrbox" id="vcrBox" hidden>
+    <h4 class="vcrh">가운데 소리 줄이기 · A/B 비교</h4>
+    <div class="row"><label class="small vcrstr">줄이는 정도 <input type="range" id="vcrStr" min="0" max="100" value="100" aria-label="가운데 소리 줄이는 정도"> <span class="val" id="vcrStrVal">100%</span></label>
+      <button class="btn sm primary" type="button" id="vcrGo">가운데 소리 줄이기 만들기</button><button class="btn sm" type="button" id="vcrCancel" hidden>취소</button></div>
+    <progress id="vcrProg" max="100" value="0" aria-label="가운데 소리 줄이기 진행" hidden></progress>
+    <p class="msg" id="vcrMsg" role="status"></p>
+    <div class="row"><span class="small" id="abLab">A/B 비교</span><div class="seg" id="abSel" role="group" aria-labelledby="abLab"><button type="button" aria-pressed="false" data-ab="orig">원곡</button><button type="button" aria-pressed="false" data-ab="vr" disabled>보컬 줄임</button><button type="button" aria-pressed="false" data-ab="gen">생성 반주</button></div></div>
+    <p class="note" id="abInfo" role="status"></p>
+    <p class="note" id="abNote">가운데 소리 줄이기(보컬이 가운데에 있을 때만 효과): 신호만으로 가운데에 모인 소리를 줄입니다. 가운데에 있는 다른 소리(스네어·솔로 등)도 같이 줄고, 보컬의 잔향·더블링은 남습니다. 이 브라우저 안에서만 처리하며 만든 음원은 저장하지 않습니다. 청취 평가는 없습니다.</p>
+  </div>
   </section>
   <section class="sec" aria-labelledby="hSound"><h3 class="sh" id="hSound">소리와 음색</h3>
     <div class="seg" id="modesel" role="group" aria-label="소리"><button aria-pressed="true" data-m="real">실제 렌더</button><button aria-pressed="false" data-m="synth">브라우저 합성</button></div>
@@ -822,12 +833,13 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 </dialog>
 
 <audio id="real" preload="none"></audio>
+<audio id="realVcr" preload="auto" hidden></audio>
 
 <script src="sing.js"></script>
 <script src="noteedit.js"></script>
 <script>
 /* 업로드 분석에만 필요한 스크립트(TF.js·Basic Pitch·보컬 추정)는 필요할 때 한 번만 불러온다. 실패하면 다음 시도에서 다시 불러온다 */
-const LIBS={tf:{src:'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js',ok:()=>!!window.tf,ms:60000},bp:{src:'vendor/basicpitch.js',ok:()=>!!window.BasicPitchLib,ms:20000},vocal:{src:'vocal.js',ok:()=>!!window.VocalLine,ms:20000},staff:{src:'staff.js',ok:()=>!!window.Staff,ms:20000},musicxml:{src:'musicxml.js',ok:()=>!!window.MusicXML,ms:20000}};
+const LIBS={tf:{src:'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js',ok:()=>!!window.tf,ms:60000},bp:{src:'vendor/basicpitch.js',ok:()=>!!window.BasicPitchLib,ms:20000},vocal:{src:'vocal.js',ok:()=>!!window.VocalLine,ms:20000},vreduce:{src:'vreduce.js',ok:()=>!!window.VocalReduce,ms:20000},staff:{src:'staff.js',ok:()=>!!window.Staff,ms:20000},musicxml:{src:'musicxml.js',ok:()=>!!window.MusicXML,ms:20000}};
 function loadLib(k){const L=LIBS[k];if(L.ok())return Promise.resolve();if(L.p)return L.p;
  return L.p=new Promise((res,rej)=>{const s=document.createElement('script');const fail=m=>{clearTimeout(to);s.remove();L.p=null;rej(new Error(m))};const to=setTimeout(()=>fail('timeout'),L.ms);
   s.onload=()=>{clearTimeout(to);L.ok()?res():fail('invalid')};s.onerror=()=>fail('load');s.src=L.src;document.head.appendChild(s)})}
@@ -876,7 +888,7 @@ function loadSong(id){if(S.playing)stop();if(typeof sdStop==='function'&&typeof 
  if(!song.audio&&mode==='real'){mode='synth';modeAuto=true;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode))}else if(song.audio&&modeAuto&&mode==='synth'){mode='real';modeAuto=false;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode))}
  el('origLabel').textContent=song.id==='user'?'원곡 음원':'실제 렌더 음원';el('origLabel').closest('.ch').hidden=!song.audio; /* 음원 파일이 없는 곡(연습곡)은 이 채널을 숨김 */el('origVol').setAttribute('aria-label',song.id==='user'?'원곡 볼륨 (합성 반주와 함께)':'실제 렌더 볼륨 (합성과 함께)');el('scrub').max=TOTAL*100;
  for(const lid of ['loopA','loopB']){const s=el(lid);s.innerHTML='';for(let i=1;i<=BARS;i++){const o=document.createElement('option');o.value=i;o.textContent=`${i}마디`;s.appendChild(o)}}el('loopB').value=BARS;
- if(song.audio){el('real').src=song.audio}else el('real').removeAttribute('src');el('real').load();
+ if(song.audio){el('real').src=song.audio}else el('real').removeAttribute('src');el('real').load();vcrReset();
  document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));
  el('songdesc').textContent=song.desc;el('inventory').textContent=song.inventory||'';el('cedNote').textContent='';
  el('legend').innerHTML=PARTS.map(p=>`<span style="--c:var(--${p})">${PARTDEF[p].name}${p==='drums'?' (킥·스네어·하이햇)':''}</span>`).join('');
@@ -914,6 +926,7 @@ const userInv=sg=>{const low=sg.chords.filter((c,i)=>sg.conf[i]<.15&&!sg.edits[i
 let ctx,master,masterGain,noise,gains={},mute={},solo={},vol={},drumOn={36:true,38:true,42:true};
 const anySolo=()=>Object.values(solo).some(Boolean),audible=p=>anySolo()?!!solo[p]:!mute[p],eff=p=>(audible(p)?1:0)*(vol[p]??1);
 const masterLevel=()=>el('master').value/100, origLevel=()=>el('origVol').value/100;
+var vcrEl=document.getElementById('realVcr'),AB={on:false,sel:null,cur:{o:1,v:0,g:0},gain:{o:1,v:1,g:1},tm:0,gk:null,busy:false},VCR={url:null,busy:false,cancel:false,strength:100,lo:null,lv:null,gen:false,sec:0};
 /* ---------- 공용 마이크 관리: getUserMedia 는 여기서만 부른다. 같은 조건이면 스트림 하나를 소유자(owner)별 참조 수로 나눠 쓰고, 마지막 소유자가 놓으면 트랙을 끈다.
    에코 제거(ec): 스트림이 이미 열려 있으면 처음 열 때의 값을 그대로 쓴다(다른 기능의 입력을 끊지 않으려고). 녹음의 ec 옵션은 마이크를 쥔 다른 기능이 없을 때만 새로 반영된다(Mic.ec 가 실제 값). 음높이 기능은 ec=false 로 연다. ---------- */
 const Mic={st:null,ec:false,own:new Map(),pend:null,sctx:null,src:null,an:null,calls:0,
@@ -1004,7 +1017,7 @@ function tick(){const horizon=ctx.currentTime+.18;let guard=0;
   if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;stepUp();seekIdx(S.a);if(S.withAudio){const wrapAt=S.anchorT;setTimeout(()=>{if(S.playing)real.currentTime=S.a*spb0()},Math.max(0,(wrapAt-ctx.currentTime)*1000))}continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
 function play(o){if(sing&&sing.busy)return;sdStop();/* 받아쓰기 원곡 구간 재생이 공유 real 요소를 쥔 채 남으면 낡은 timeupdate·타이머가 연습 재생을 멈춘다 */pmDroneStop();/* 「기준음 듣기」 반주가 재생 위에 겹치지 않게 */if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();SAMP.hat=null;if(mode!=='real')loadSamples(PARTS);S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
  S.anchorT=now+ci*S.spb;S.anchorB=start;S.startB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
- real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();
+ real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio)||(AB.on&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();if(AB.on)applyBack();
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
  if(mode==='synth'){seekIdx(start);S.timer=setInterval(tick,30)}
  recBegin();applyBack();draw()}
@@ -1058,8 +1071,8 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typin
 document.addEventListener('keyup',e=>{if(e.code==='Space'&&!typing(e.target)&&!el('keysheet').open&&!ownBtn(e.target))e.preventDefault()}); // 포커스된 버튼이 Space로 또 눌리는 것을 막는다
 
 /* mode + stems */
-el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
-function applyMode(){const r=mode==='real';document.querySelector('#modesel [data-m=real]').disabled=!song.audio;el('stems').classList.toggle('off',r);el('transpose').disabled=r;el('keyDn').disabled=r;el('keyUp').disabled=r;el('click').disabled=r;el('origVol').disabled=r||!song.audio;const nm=song.id==='user'?'원곡 파일':'실제 렌더';document.querySelector('#modesel [data-m=real]').textContent=song.id==='user'?'원곡만 재생':'실제 렌더';el('modeNote').textContent=r?`${nm}은 한 파일이라 파트 끄기·키 변경·메트로놈은 브라우저 합성에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.`:`브라우저 합성 반주는 채보 데이터를 즉석에서 소리로 만든 것입니다(음색은 아래에서 샘플 또는 합성으로 고릅니다). 파트·키·메트로놈을 자유롭게 바꿀 수 있고, "${nm} 볼륨"을 올리면 ${nm}이 함께 재생됩니다(키 변경은 ${nm}에 적용되지 않습니다).`}
+el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();if(AB.on)abOff();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
+function applyMode(){const r=mode==='real';document.querySelector('#modesel [data-m=real]').disabled=!song.audio;el('stems').classList.toggle('off',r);el('transpose').disabled=r;el('keyDn').disabled=r;el('keyUp').disabled=r;el('click').disabled=r;el('origVol').disabled=r||!song.audio||AB.on;const nm=song.id==='user'?'원곡 파일':'실제 렌더';document.querySelector('#modesel [data-m=real]').textContent=song.id==='user'?'원곡만 재생':'실제 렌더';el('modeNote').textContent=r?`${nm}은 한 파일이라 파트 끄기·키 변경·메트로놈은 브라우저 합성에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.`:`브라우저 합성 반주는 채보 데이터를 즉석에서 소리로 만든 것입니다(음색은 아래에서 샘플 또는 합성으로 고릅니다). 파트·키·메트로놈을 자유롭게 바꿀 수 있고, "${nm} 볼륨"을 올리면 ${nm}이 함께 재생됩니다(키 변경은 ${nm}에 적용되지 않습니다).`}
 function buildStems(){const w=el('stems');w.innerHTML='';for(const p of PARTS){const d=document.createElement('div');d.className='ch';d.style.setProperty('--c',`var(--${p})`);const nm=PARTDEF[p].name.replace(/ \(.*$/,'');
  d.innerHTML=`<span class="name">${nm}</span><span class="ms"><button class="mute" type="button" aria-pressed="${!!mute[p]}" data-p="${p}" title="${nm} 끄기">M</button><button class="solo" type="button" aria-pressed="${!!solo[p]}" data-p="${p}" title="${nm}만 듣기">S</button></span><input type="range" min="0" max="100" value="${Math.round((vol[p]??1)*100)}" aria-label="${nm} 볼륨" data-v="${p}"><span class="val" data-val="${p}">${Math.round((vol[p]??1)*100)}%</span>`+(p==='drums'?`<div class="sub"><label class="chk"><input type="checkbox" ${drumOn[36]?'checked':''} data-d="36"> 킥</label><label class="chk"><input type="checkbox" ${drumOn[38]?'checked':''} data-d="38"> 스네어</label><label class="chk"><input type="checkbox" ${drumOn[42]?'checked':''} data-d="42"> 하이햇</label></div>`:`<div class="sub hint">${PARTDEF[p].hint||''}</div>`);w.appendChild(d)}}
 function syncMS(){document.querySelectorAll('#stems .mute').forEach(b=>b.setAttribute('aria-pressed',!!mute[b.dataset.p]));document.querySelectorAll('#stems .solo').forEach(b=>b.setAttribute('aria-pressed',!!solo[b.dataset.p]))}
@@ -1454,7 +1467,7 @@ function tapHit(t=performance.now()/1000){const last=TAP.t[TAP.t.length-1];if(la
  o.textContent=`탭 BPM 약 ${r.bpm}(${r.n}탭 기준, 추정)${k===2?` · 분석 BPM ${an}의 약 두 배입니다. 2×가 맞을 수 있어요.`:k===.5?` · 분석 BPM ${an}의 약 절반입니다. ½×가 맞을 수 있어요.`:''}`;return r.bpm}
 el('tapBtn').onclick=()=>tapHit();window.tapHit=tapHit; /* 시험용: 가짜 시각으로 부를 수 있게 노출 */
 el('tapApply').onclick=()=>{if(!(TAP.bpm>=40&&TAP.bpm<=220)){el('bpmMsg').textContent=`탭 BPM ${TAP.bpm||'—'}은 40~220 범위를 벗어나 적용하지 않았습니다.`;return}if(realign(TAP.bpm,+el('offIn').value)){TAP.t=[];TAP.bpm=0;el('tapApply').disabled=true;el('tapOut').textContent='적용했습니다. 마디를 다시 맞췄습니다(채보·고친 음은 그대로, 손으로 고친 코드는 새 마디에 맞춰 다시 추정).'}};
-el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(S.playing)stop();if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
+el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(S.playing)stop();if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();vcrReset();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
 
 /* ---------- 저장: 분석 결과(채보 음·BPM·첫 박·수정한 코드·스타일)만 IndexedDB에. 원본 파일은 저장하지 않음. 실패해도 페이지는 정상 ---------- */
 const DB={open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('practice-room',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('blocked'))}catch(e){rej(e)}})},
@@ -1801,7 +1814,68 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)fuStop()});
 const rec={st:null,mr:null,tk:[],n:0,tm:0,pb:null,busy:false};
 const RMIME=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'],RMAX=5;
 const recM=t=>{el('recMsg').textContent=t};
-function applyBack(){const k=rec.pb?el('recBack').value/100:1;if(masterGain)masterGain.gain.setTargetAtTime(masterLevel()*k,ctx.currentTime,.02);real.volume=(mode==='real'?masterLevel():masterLevel()*origLevel())*k}
+function applyBack(){const k=rec.pb?el('recBack').value/100:1;if(AB.on){const m=masterLevel()*k,c=AB.cur;if(masterGain)masterGain.gain.setTargetAtTime(m*c.g,ctx.currentTime,.004);real.volume=Math.min(1,m*c.o);vcrEl.volume=Math.min(1,m*c.v);return}vcrEl.volume=0;if(masterGain)masterGain.gain.setTargetAtTime(masterLevel()*k,ctx.currentTime,.02);real.volume=(mode==='real'?masterLevel():masterLevel()*origLevel())*k}
+/* ---------- 가운데 소리 줄이기(vreduce.js) · 원곡/보컬 줄임/생성 반주 A/B ----------
+   올린 음원·데모 음원을 이 브라우저 안에서만 처리한다(전송·저장 없음, 만든 음원은 메모리의 Blob 주소뿐). 줄이는 정도를 바꾸면 다시 만든다(두 소리를 겹치지 않아 울림 없음) */
+vcrEl.preservesPitch=true;vcrEl.webkitPreservesPitch=true;
+real.addEventListener('play',()=>{if(AB.on&&S.playing&&vcrEl.getAttribute('src')){try{vcrEl.currentTime=real.currentTime}catch(_){}vcrEl.playbackRate=real.playbackRate;vcrEl.play().catch(()=>{})}});
+real.addEventListener('pause',()=>vcrEl.pause());
+real.addEventListener('seeked',()=>{if(AB.on&&vcrEl.getAttribute('src')){try{vcrEl.currentTime=real.currentTime}catch(_){}}});
+real.addEventListener('ratechange',()=>{vcrEl.playbackRate=real.playbackRate});
+real.addEventListener('timeupdate',()=>{if(AB.on&&S.playing&&!real.paused&&vcrEl.getAttribute('src')&&Math.abs(vcrEl.currentTime-real.currentTime)>.05){try{vcrEl.currentTime=real.currentTime}catch(_){}}});
+const vcrMsg=t=>{el('vcrMsg').textContent=t||''};
+const VCR_EX=30; /* 음량 맞춤은 처음 30초 발췌로 잰다(곡 전체를 다시 재지 않는다) */
+function vcrUi(){const b=VCR.busy;el('vcrGo').disabled=b||!song.audio;el('vcrGo').textContent=VCR.url?'다시 만들기':'가운데 소리 줄이기 만들기';el('vcrCancel').hidden=!b;el('vcrProg').hidden=!b;el('vcrStr').disabled=b;
+ const vb=document.querySelector('#abSel [data-ab=vr]');vb.disabled=!VCR.url;
+ document.querySelectorAll('#abSel button').forEach(x=>x.setAttribute('aria-pressed',AB.on&&AB.sel===x.dataset.ab?'true':'false'))}
+function vcrReset(){VCR.job=null;if(VCR.url){URL.revokeObjectURL(VCR.url);VCR.url=null}vcrEl.pause();vcrEl.removeAttribute('src');vcrEl.load();VCR.lo=VCR.lv=VCR.lg=null;AB.gk=null;AB.gain={o:1,v:1,g:1};if(AB.on)abOff();
+ el('vcrBox').hidden=!song.audio;vcrMsg('');el('abInfo').textContent='';vcrUi()}
+async function vcrDecode(){const r=await fetch(song.audio);if(!r.ok)throw new Error('음원을 읽지 못했습니다');const ab=await r.arrayBuffer();
+ if(ab.byteLength>30e6&&!confirm(`파일이 ${(ab.byteLength/1048576).toFixed(0)} MB입니다. 길이가 10분을 넘을 수 있고, 처리에 몇 분 이상 걸리며 메모리를 많이 씁니다(브라우저가 느려지거나 멈출 수 있음). 계속할까요?`))throw new Error('길이 때문에 취소했습니다');
+ const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext,dc=new OC(2,1,44100);
+ const buf=await new Promise((ok,no)=>{const q=dc.decodeAudioData(ab,ok,no);if(q&&q.catch)q.catch(no)});
+ if(buf.duration>1200)throw new Error(`길이 ${Math.round(buf.duration/60)}분: 20분이 넘는 음원은 메모리 때문에 처리하지 않습니다. 필요한 부분만 잘라 올려 주세요`);
+ if(buf.duration>600&&!confirm(`길이 ${Math.round(buf.duration/60)}분: 10분이 넘는 음원입니다. 처리에 몇 분 이상 걸리고 메모리를 많이 씁니다. 계속할까요?`))throw new Error('길이 때문에 취소했습니다');
+ return buf}
+function vcrWav(out,sr){const n=out.length*2,h=new DataView(new ArrayBuffer(44)),w=(o,s)=>{for(let i=0;i<s.length;i++)h.setUint8(o+i,s.charCodeAt(i))};
+ w(0,'RIFF');h.setUint32(4,36+n,true);w(8,'WAVEfmt ');h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,2,true);h.setUint32(24,sr,true);h.setUint32(28,sr*4,true);h.setUint16(32,4,true);h.setUint16(34,16,true);w(36,'data');h.setUint32(40,n,true);
+ return new Blob([h.buffer,out.buffer],{type:'audio/wav'})}
+async function vcrBuild(){if(VCR.busy||!song.audio)return;VCR.busy=true;const my=VCR.job={},alive=()=>{if(VCR.job!==my)throw new Error('취소했습니다')},yld=()=>new Promise(r=>setTimeout(r,0));
+ if(S.playing)stop();if(AB.on)abOff();VCR.strength=+el('vcrStr').value;const st=VCR.strength/100;el('vcrProg').value=0;vcrUi();
+ try{vcrMsg('음원을 읽는 중…');await loadLib('vreduce');const buf=await vcrDecode();alive();
+  const L=buf.getChannelData(0),R=buf.numberOfChannels>1?buf.getChannelData(1):L,sr=buf.sampleRate,n=L.length,mo=VocalReduce.isMono(L,R);
+  if(mo.mono){if(VCR.url){URL.revokeObjectURL(VCR.url);VCR.url=null;vcrEl.removeAttribute('src')}vcrMsg(mo.silent?'소리가 거의 없는 음원이라 만들지 않았습니다.':`이 음원은 왼쪽·오른쪽이 거의 같아(옆 소리 비율 ${mo.sideDb.toFixed(0)} dB) 가운데 소리를 따로 줄일 수 없습니다. 모노 음원이라 이 기능은 쓸 수 없습니다.`);return}
+  const out=new Int16Array(n*2),job=VocalReduce.createJob(L,R,sr,{strength:st},(p,l,r)=>{for(let i=0;i<l.length;i++){const a=l[i],b=r[i];out[2*(p+i)]=a>=1?32767:a<=-1?-32768:Math.round(a*32767);out[2*(p+i)+1]=b>=1?32767:b<=-1?-32768:Math.round(b*32767)}});
+  const t0=performance.now();while(!job.done){alive();job.step(160);const q=job.pos/job.frames;el('vcrProg').value=Math.round(q*100);const el_=(performance.now()-t0)/1000;vcrMsg(`처리 중… ${Math.round(q*100)}%${q>.05?` · 약 ${Math.max(0,Math.round(el_/q-el_))}초 남음`:''}`);await yld()}
+  alive();
+  const ne=Math.min(n,Math.round(VCR_EX*sr)),x0=L.subarray(0,ne),x1=R.subarray(0,ne),v0=new Float32Array(ne),v1=new Float32Array(ne);for(let i=0;i<ne;i++){v0[i]=out[2*i]/32768;v1[i]=out[2*i+1]/32768}
+  VCR.lo=lufsOf([x0,x1],sr);VCR.lv=lufsOf([v0,v1],sr);VCR.sec=ne/sr;AB.gk=null;
+  const blob=vcrWav(out,sr);if(VCR.url)URL.revokeObjectURL(VCR.url);VCR.url=URL.createObjectURL(blob);vcrEl.src=VCR.url;vcrEl.load();
+  vcrMsg(`가운데 소리 줄이기 완료(줄이는 정도 ${VCR.strength}%, ${(n/sr).toFixed(0)}초). 신호 처리 결과이며 청취 평가는 없습니다. 보컬 잔향·더블링은 남습니다.`)}
+ catch(e){if(VCR.job===my||String(e.message).includes('취소'))vcrMsg(e.message.includes('취소')?'취소했습니다.':'만들지 못했습니다: '+e.message);else vcrMsg('')}
+ finally{VCR.busy=false;if(VCR.job===my)el('vcrProg').value=0;vcrUi()}}
+el('vcrGo').onclick=vcrBuild;el('vcrCancel').onclick=()=>{VCR.job=null};
+el('vcrStr').oninput=()=>{el('vcrStrVal').textContent=el('vcrStr').value+'%'};
+el('vcrStr').onchange=()=>{if(VCR.url&&!VCR.busy)vcrBuild()};
+/* A/B: 세 소리를 같은 재생 위치에서 동시에 돌리고 이득만 30 ms 로 바꾼다. 음량은 처음 30초 발췌의 LUFS 근사로 맞춘다 */
+function abOff(){AB.on=false;AB.sel=null;clearInterval(AB.tm);AB.cur={o:1,v:0,g:0};vcrEl.pause();applyBack();el('origVol').disabled=mode==='real'||!song.audio;vcrUi()}
+function abFade(t){clearInterval(AB.tm);const f=Object.assign({},AB.cur),t0=performance.now(),D=30,step=()=>{const x=Math.min(1,(performance.now()-t0)/D);for(const k of ['o','v','g'])AB.cur[k]=f[k]+(t[k]-f[k])*x;applyBack();if(x>=1)clearInterval(AB.tm)};AB.tm=setInterval(step,5);step()}
+const abTarget=s=>({o:s==='orig'?AB.gain.o:0,v:s==='vr'?AB.gain.v:0,g:s==='gen'?AB.gain.g:0});
+async function abLoud(needGen){if(AB.busy)return;AB.busy=true;try{
+  if(VCR.lo==null){const buf=await vcrDecode(),sr=buf.sampleRate,ne=Math.min(buf.length,Math.round(VCR_EX*sr)),L=buf.getChannelData(0).subarray(0,ne),R=(buf.numberOfChannels>1?buf.getChannelData(1):buf.getChannelData(0)).subarray(0,ne);VCR.lo=lufsOf([L,R],sr);VCR.sec=ne/sr}
+  if(needGen){const ps=expParts(),key=song.id+JSON.stringify(expSig().k);if(ps.length&&AB.gk!==key){el('abInfo').textContent='생성 반주 음량 재는 중…';if(SAMP.on)await loadSamples(ps);const len=Math.ceil(VCR.sec/rate()*EXP_SR),W=await renderCore(ps,1,true,len);VCR.lg=lufsOf(W,EXP_SR);AB.gk=key}else if(!ps.length)VCR.lg=null}
+  const Lv={o:VCR.lo,v:VCR.lv,g:VCR.lg},g={};for(const k of ['o','v','g']){const db=isFinite(VCR.lo)&&Lv[k]!=null&&isFinite(Lv[k])?Math.max(-15,Math.min(15,VCR.lo-Lv[k])):0;g[k]=Math.pow(10,db/20)}
+  const mx=Math.max(g.o,g.v,g.g);for(const k of ['o','v','g'])AB.gain[k]=g[k]/mx;
+  const f=x=>x!=null&&isFinite(x)?x.toFixed(1):'—';el('abInfo').textContent=`음량 맞춤(처음 ${VCR.sec.toFixed(0)}초 발췌, LUFS 근사): 원곡 ${f(VCR.lo)} · 보컬 줄임 ${f(VCR.lv)} · 생성 반주 ${f(VCR.lg)} LUFS`}
+ catch(e){el('abInfo').textContent='음량을 맞추지 못해 그대로 비교합니다: '+e.message}finally{AB.busy=false}}
+async function abSet(sel){if(!song.audio)return;if(AB.on&&AB.sel===sel){abOff();return}
+ let fromReal=false;if(mode==='real'){fromReal=true;if(S.playing)stop();mode='synth';modeAuto=false;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()}
+ const first=!AB.on;AB.on=true;AB.sel=sel;el('origVol').disabled=true;if(first)AB.cur=fromReal?{o:1,v:0,g:0}:{o:origLevel(),v:0,g:1};vcrUi();
+ await abLoud(true);if(!AB.on||AB.sel!==sel)return;
+ if(S.playing){if(!S.withAudio){S.withAudio=true;try{real.currentTime=nowBeat()*spb0()}catch(_){}if(!S.pending)real.play().catch(()=>{})}else if(!real.paused&&vcrEl.getAttribute('src')&&vcrEl.paused){try{vcrEl.currentTime=real.currentTime}catch(_){}vcrEl.playbackRate=real.playbackRate;vcrEl.play().catch(()=>{})}}
+ abFade(abTarget(sel));
+ el('abNote').dataset.sel=sel}
+el('abSel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;abSet(b.dataset.ab)});
 async function recArm(){if(rec.st||rec.busy)return;
  if(!navigator.mediaDevices||!window.MediaRecorder){el('recOn').checked=false;recM('이 브라우저는 녹음(MediaRecorder)을 지원하지 않습니다.');return}
  rec.busy=true;let st,ecNote='';
