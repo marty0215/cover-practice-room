@@ -679,6 +679,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="sroll stbox" id="mdStaffBox" hidden><div id="mdStaff"></div></div>
     <div class="pk" id="mdKeys" role="group" aria-label="건반 (C4부터 C5)"></div>
     <p class="score" id="mdFb" role="status"></p>
+    <ul class="note small" id="mdHint" role="status" style="margin:.3rem 0 0;padding-left:1.1rem"></ul>
   </div>
   <div class="panel sp" data-sp="dict" id="rhyPanel">
     <div class="head"><h2>받아쓰기 · 리듬</h2><p class="muted small" id="rhDesc"></p><details class="help"><summary>도움말</summary><p>카운트인 4박 뒤에 1–2마디 리듬이 딱따기 소리로 나옵니다. 받아쓰기는 박마다 음표 타일을 골라 칸을 채우고, 따라 치기는 카운트인 뒤 박자에 맞춰 <kbd>Space</kbd>나 큰 버튼(터치)을 칩니다. 따라 치기 중에는 <kbd>Space</kbd>가 재생 단축키로 쓰이지 않습니다. 소리가 나오는 시각은 브라우저가 알려 주는 출력 지연을 반영하지만, 블루투스 이어폰은 값이 부정확할 수 있습니다.</p></details></div>
@@ -2041,8 +2042,9 @@ const MD_LET=Object.fromEntries(Object.entries(MD_KEYS).map(([k,p])=>[p,k.slice(
 function mdNew(){mdSet(SingLab.makeExercise({key:singKeyPc(),minor:false,bars:2,lo:MD_LO,hi:MD_HI,seed:seed(),level:1}))}
 function mdSet(ex){md.src='gen';sdStop();sdUi();md.ex=ex;md.ans=md.ex.length?[md.ex[0][2]]:[];md.done=false;
  el('mdFb').textContent=md.ex.length?`${keyLab()} · 음 ${md.ex.length}개 중 첫 음(${sn(md.ex[0][2],md.src)})은 주어졌습니다. 「들어보기」 후 나머지 ${md.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.`:'문제를 만들 수 없습니다.';mdSlots()}
-function mdSlots(){document.querySelectorAll('#mdKeys [data-p]').forEach(b=>b.setAttribute('aria-label',sn(+b.dataset.p,md.src)));el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a,md.src);if(i===0)t+=' (주어짐)';
+function mdSlots(){if(!md.done&&el('mdHint').firstChild)el('mdHint').innerHTML='';document.querySelectorAll('#mdKeys [data-p]').forEach(b=>b.setAttribute('aria-label',sn(+b.dataset.p,md.src)));el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a,md.src);if(i===0)t+=' (주어짐)';
   if(md.done&&i>0){const ok=a===n[2];cls+=ok?' ok':' lo';t=ok?'✓ '+sn(a,md.src):`✗ ${a==null?'—':sn(a,md.src)} → ${sn(n[2],md.src)}`}return `<span class="${cls}"><b>${i+1}</b> ${t}</span>`}).join('');mdStaff()}
+function mdHints(){const u=el('mdHint');u.innerHTML=md.done?SingLab.dictHints(SingLab.dictDiag(md.ex,md.ans),{max:2}).map(t=>`<li>${t}</li>`).join(''):''}
 function mdPlay(){if(md.src==='song')return sdPlay();if(!md.ex.length)mdNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();const spb=60/84,t=ctx.currentTime+.1;for(const [s,d,p] of md.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92)}
 function mdAdd(p){if(md.done||!md.ex.length||md.ans.length>=md.ex.length)return;md.ans.push(p);ensureCtx();if(ctx.state==='suspended')ctx.resume();tone('sing',ctx.currentTime+.01,.4,p,88);mdSlots()}
 function mdUndo(){if(md.done||md.ans.length<=1)return;md.ans.pop();mdSlots()}
@@ -2050,7 +2052,7 @@ el('mdKeys').addEventListener('click',e=>{const b=e.target.closest('button');if(
 el('mdPlay').onclick=mdPlay;el('mdUndo').onclick=mdUndo;el('mdNext').onclick=()=>{if(RT.on)return rtNext();if(md.src==='song'){sdNew();return}mdNew();mdPlay()};
 el('mdCheck').onclick=()=>{if(md.done||!md.ex.length)return;if(md.src==='song')return sdCheck();md.done=true;const n=md.ex.length-1,ok=md.ex.slice(1).filter((x,i)=>md.ans[i+1]===x[2]).length;statRec('mel',n?ok/n:0);const mids=[];md.ex.forEach((x,i)=>{if(i<1)return;const c=md.ans[i]===x[2],d='md:d'+relK(x[2]),s='md:s'+Math.max(-12,Math.min(12,x[2]-md.ex[i-1][2]));mids.push(d,s);
   fine(d,c?1:0,c||md.ans[i]==null?null:SingLab.SOLF[relK(md.ans[i])]);fine(s,c?1:0,c||md.ans[i]==null?null:String(Math.max(-12,Math.min(12,md.ans[i]-md.ex[i-1][2]))))});
- mdSlots();if(RT.on)rtAnswer(n>0&&ok===n,mids);el('mdFb').textContent=`${ok}/${n}음 맞음 (음높이만 채점, 박자 제외). 「들어보기」로 다시 들어 보세요.`};
+ mdSlots();if(RT.on)rtAnswer(n>0&&ok===n,mids);el('mdFb').textContent=`${ok}/${n}음 맞음 (음높이만 채점, 박자 제외). 「들어보기」로 다시 들어 보세요.`;mdHints()};
 /* 곡 받아쓰기(이 곡에서): 순수 함수(창·단선율·정답·채점)는 sing.js dict*. 입력 UI·채점 표시는 위 멜로디 받아쓰기(md)를 그대로 쓴다. 통계 id sd:<층> (루틴에는 넣지 않음) */
 const sd={on:false,layer:null,size:2,wins:[],i:-1,hear:'real',slow:false,done:{},song:null,tm:0,aud:false,g:null,vo:[],t1:0};
 const sdEst=()=>song.id==='user',sdName=l=>l==='score'&&song.melName?song.melName:SingLab.DICT_LAB[l];
@@ -2089,7 +2091,7 @@ function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state==='su
   for(const [type,det,amp] of [['triangle',0,1],['sine',-6,.5]]){const o=ctx.createOscillator();o.type=type;o.frequency.value=hz(p);o.detune.value=det;const a=ctx.createGain();a.gain.value=amp;o.connect(a).connect(e);o.start(st);o.stop(st+du+.6);sd.vo.push(o)}}
  sd.tm=setTimeout(sdStop,((w.b-w.a)*4*spb+.8)*1000)}
 function sdCheck(){if(md.done||!md.ex.length||sd.i<0)return;sdStop();md.done=true;const g=SingLab.dictGrade(md.ex,md.ans);statRec('sd',g.frac);fine('sd:'+sd.layer,g.frac,null);sdDone().add(sd.wins[sd.i].a);mdSlots();sdWinLab();
- el('mdFb').textContent=`${g.ok}/${g.n}음 맞음 (음높이만 채점, 박자 제외).${sdEst()?' 정답은 자동 채보(추정)입니다.':''} 「들어보기」로 다시 들어 보세요.`}
+ el('mdFb').textContent=`${g.ok}/${g.n}음 맞음 (음높이만 채점, 박자 제외).${sdEst()?' 정답은 자동 채보(추정)입니다.':''} 「들어보기」로 다시 들어 보세요.`;mdHints()}
 el('mdSrc').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;sd.on=b.dataset.v==='song';segPress('mdSrc',b);sdStop();if(sd.on)sdRefresh();else{sdUi();mdNew()}});
 el('sdLayer').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.l===sd.layer)return;sd.layer=b.dataset.l;sd.i=-1;sdRefresh()});
 el('sdSize').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||+b.dataset.v===sd.size)return;sd.size=+b.dataset.v;sd.i=-1;sdRefresh()});

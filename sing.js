@@ -355,6 +355,31 @@ function dictNext(wins,done,cur,dir=1,skip=true){const n=wins.length;if(!n)retur
 /* 채점: ex[0] 은 주어진 첫 음. ans[i] 와 ex[i][2] 를 비교(둘째 음부터). 반환 {n,ok,frac,marks:[null|true|false]} */
 function dictGrade(ex,ans){const n=Math.max(0,ex.length-1);let ok=0;const marks=ex.map((x,i)=>{if(!i)return null;const c=!!ans&&ans[i]===x[2];if(c)ok++;return c});return {n,ok,frac:n?ok/n:0,marks}}
 /* 창의 원곡 음원 구간(초). 음원 시간 = 박 x 60/bpm (재생 위치 규칙과 같음) */
+/* 받아쓰기 오답 진단(순수): ans·user 는 음높이 배열 또는 [시작,길이,음높이] 음 배열. 첫 음(0번)은 주어진 음이라 1번부터 비교.
+   cat: cascade(한 음이 틀린 뒤 나머지 음정은 맞음) · octave · interval(앞 정답 음 기준 음정 1–2반음 차) · contour(방향) · repeat(자기 입력의 반복 짐작) · count(음 개수). idx 는 0 기준 음 번호 */
+function dictDiag(ans,user,{key=0}={}){const P=a=>(Array.isArray(a)?a:[]).map(x=>Array.isArray(x)?x[2]:x),A=P(ans),U=P(user),out=[],sg=Math.sign;
+ const miss=i=>U[i]==null,bad=[];for(let i=1;i<A.length;i++)if(!miss(i)&&U[i]!==A[i])bad.push(i);
+ const add=(cat,idx,detail)=>{if(idx.length)out.push({cat,count:idx.length,idx,detail:detail||[]})};
+ let casc=null;if(bad.length>=2){const f=bad[0],d=U[f]-A[f];let ok=d%12!==0;for(let i=f;i<A.length&&ok;i++)if(miss(i)||U[i]-A[i]!==d)ok=false;if(ok)casc={from:f,off:d}}
+ if(casc){add('cascade',bad,[{from:casc.from,off:casc.off}])}
+ else{const oc=[],iv=[],ct=[];for(const i of bad){const a=A[i]-A[i-1],u=U[i]-A[i-1];
+   if((U[i]-A[i])%12===0)oc.push(i);else if(sg(u)!==sg(a))ct.push(i);else if(a!==0&&Math.abs(u-a)<=2)iv.push(i)}
+  add('octave',oc);add('interval',iv,iv.map(i=>({i,a:A[i]-A[i-1],u:U[i]-A[i-1]})));add('contour',ct,ct.map(i=>({i,a:sg(A[i]-A[i-1]),u:sg(U[i]-A[i-1])})));
+  const rp=bad.filter(i=>{if(i<2)return false;for(let k=1;k<i;k++)if(U[i]===U[k]&&U[i-1]===U[k-1]&&A[i]!==A[k])return true;return false});add('repeat',rp)}
+ if(U.length!==A.length)out.push({cat:'count',count:Math.abs(A.length-U.length),idx:[],detail:[{ans:A.length,user:U.length}]});
+ return out}
+const DD_ORDER=['cascade','octave','interval','contour','repeat','count'];
+function ivNameSt(n){const a=Math.abs(n);if(a===0)return '같은 음';const e=INTERVALS.find(x=>x[1]===a);return e?`${e[0]} ${n>0?'위':'아래'}(${a}반음)`:`${a}반음 ${n>0?'위':'아래'}`}
+/* 진단 -> 짧은 안내문 최대 max 개(우선순위: 연쇄·옥타브·음정 크기·방향·반복·개수) */
+function dictHints(diag,{max=2,key=0}={}){const by={};for(const d of diag||[])by[d.cat]=d;const out=[];
+ for(const c of DD_ORDER){const d=by[c];if(!d||out.length>=max)continue;const i0=d.idx[0]+1;
+  if(c==='cascade')out.push(`${d.detail[0].from+1}번째 음부터 모두 같은 만큼 어긋났습니다. 한 음이 틀린 뒤 나머지 음정은 맞음: 시작 기준만 고치면 됩니다.`);
+  else if(c==='octave')out.push(`${i0}번째 음${d.count>1?' 등':''}: 음 이름은 맞고 옥타브가 다릅니다. 앞 음과 비교해 위인지 아래인지 먼저 정하세요.`);
+  else if(c==='interval'){const x=d.detail[0];out.push(`${x.i+1}번째 음: 정답은 앞 음에서 ${ivNameSt(x.a)}, 입력은 ${ivNameSt(x.u)}.`)}
+  else if(c==='contour'){const x=d.detail[0],w=v=>v>0?'위':v<0?'아래':'같은 높이';out.push(`${x.i+1}번째 음: 정답은 앞 음에서 ${w(x.a)}로 가는데 입력은 ${w(x.u)}입니다. 방향부터 다시 들어 보세요.`)}
+  else if(c==='repeat')out.push(`${i0}번째 음: 앞 도막과 반복처럼 보여도 매번 직접 확인하세요.`);
+  else if(c==='count')out.push(`입력한 음이 ${d.detail[0].user}개, 정답은 ${d.detail[0].ans}개입니다.`)}
+ return out}
 function dictSpan(win,bpm){const spb=60/(bpm||100);return {t0:win.a*4*spb,t1:win.b*4*spb}}
 
 /* ---------- 리듬 받아쓰기·따라 치기 ----------
@@ -554,5 +579,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
