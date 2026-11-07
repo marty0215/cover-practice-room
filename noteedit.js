@@ -53,5 +53,20 @@ function letterPitch(pc,ref,lo,hi){lo=lo==null?21:lo;hi=hi==null?108:hi;if(!isFi
 function stepCursor(ns,sel,cur,now){if(sel>=0&&ns[sel])return q(ns[sel][0]+ns[sel][1]);if(cur!=null&&isFinite(cur))return snapDn(cur);return snapDn(now||0)}
 /* 기준 음높이: 고른 음, 없으면 커서 앞에서 가장 가까운 음, 없으면 null */
 function stepRef(ns,sel,cursor){if(sel>=0&&ns[sel])return ns[sel][2];let b=null;for(const n of ns)if(n[0]<cursor-1e-9&&(b===null||n[0]>=b[0]))b=n;return b?b[2]:null}
+/* ---------- 셋잇단·스윙 감지(제안만, 자동 적용 아님) ----------
+   채보 음의 박 단위 시작(양자화 전 값)에서 박 안 위상 f(0~1)를 뽑는다. 16분 격자는 0·.25·.5·.75, 셋잇단 8분은 0·.333·.667 에 봉우리가 선다.
+   박 위(박에서 .08 이내) 음은 두 격자가 같아 빼고, 나머지(박 사이 음)를 두 격자 중 어느 쪽에 더 가까운지 센다.
+   swingDetect: 박 사이 음 >= min(40) 이고 셋잇단 격자가 더 가까운 비율 >= frac(.6) 이고 제곱오차도 셋잇단이 작을 때만 hit.
+   tripBeats: 박마다 두 격자의 제곱오차를 비교해 셋잇단이 더 맞는 박 번호 목록(같으면 16분 격자). 임계값은 합성 조정 집합으로만 정했고 실제 곡 정답은 없다 */
+const SW_NEAR=.08,SW_D16=f=>{const k=Math.round(f*4);return Math.abs(f-k/4)},SW_D3=f=>{const k=Math.round(f*3);return Math.abs(f-k/3)};
+function swingStats(notes){let n=0,all=0,t3=0,s16=0,s3=0;const ph=[];
+ for(const x of notes||[]){const s=x&&x[0];if(!isFinite(s)||s<0)continue;all++;const f=s-Math.floor(s);if(Math.min(f,1-f)<=SW_NEAR)continue;n++;const a=SW_D16(f),b=SW_D3(f);if(b<a)t3++;s16+=a*a;s3+=b*b;if(f>=.4&&f<=.8)ph.push(f)}
+ ph.sort((a,b)=>a-b);const m=ph.length?ph[ph.length>>1]:null;
+ return {all,n,t3,frac:n?t3/n:0,rms16:n?Math.sqrt(s16/n):0,rms3:n?Math.sqrt(s3/n):0,median:m,ratio:m==null?null:m/(1-m)}}
+function swingDetect(notes,o){o=o||{};const s=swingStats(notes);s.hit=s.n>=(o.min==null?40:o.min)&&s.frac>=(o.frac==null?.6:o.frac)&&s.rms3<s.rms16;return s}
+function tripBeats(notes){const B={};for(const x of notes||[]){const s=x&&x[0];if(!isFinite(s)||s<0)continue;const b=Math.floor(s),f=s-b,a=SW_D16(f),c=SW_D3(f),e=B[b]||(B[b]={a:0,c:0});e.a+=a*a;e.c+=c*c}
+ return Object.keys(B).map(Number).filter(b=>B[b].c+1e-4<B[b].a).sort((p,q)=>p-q)}
+const SWG={swingStats,swingDetect,tripBeats};
 const api={STEP_DUR,STEP_NAME,stepKey,letterPitch,stepCursor,stepRef,G,MINL,snap,snapDn,clampP,addNote,moveNote,resizeNote,deleteNote,hit,isEdge,hist,hpush,hundo,hredo,diff,toSec,fromSec,clone};
+Object.assign(api,SWG);
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.NoteEdit=api})(typeof window!=='undefined'?window:globalThis);
