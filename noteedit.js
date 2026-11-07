@@ -45,7 +45,7 @@ function stepKey(e){if(!e||e.alt)return null;const k=e.key,cd=/^Key([A-G])$/.exe
  if(mod)return k==='ArrowUp'?{t:'oct',d:1}:k==='ArrowDown'?{t:'oct',d:-1}:null;
  if(k==='Backspace'||k==='Delete')return {t:'del'};if(e.shift)return null;
  if(/^[1-6]$/.test(k))return {t:'dur',beats:STEP_DUR[k]};
- const lt=/^[a-g]$/i.test(k)?k.toLowerCase():cd?cd[1].toLowerCase():null;/* 한글 자판 등 IME 에서는 e.key 가 'ㅁ' 이라 e.code(KeyA–KeyG)로 */
+ const lt=/^[a-g]$/i.test(k)?k.toLowerCase():(cd&&!/^[a-z]$/i.test(k||''))?cd[1].toLowerCase():null;/* 한글 자판 등 IME 에서는 e.key 가 'ㅁ' 이라 e.code(KeyA–KeyG)로 */
  if(lt)return {t:'letter',l:lt.toUpperCase(),pc:LET_PC[lt]};
  if(k==='ArrowUp'||k==='ArrowDown')return {t:'semi',d:k==='ArrowUp'?1:-1};return null}
 /* 음 이름 글자의 음높이: 기준음(ref)에 가장 가까운 옥타브, 같으면 아래. lo..hi 안에서 */
