@@ -521,14 +521,14 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <div class="vcrbox" id="vcrBox" hidden>
     <h4 class="vcrh">보컬 줄이기 · A/B 비교</h4>
     <div class="row"><label class="small vcrstr">줄이는 정도 <input type="range" id="vcrStr" min="0" max="100" value="100" aria-label="보컬 줄이는 정도"> <span class="val" id="vcrStrVal">100%</span></label>
-      <label class="tgl"><input type="checkbox" id="vcrPerc" checked aria-label="타악 보호(스네어 같은 순간적인 소리를 덜 줄임)"><span>타악 보호</span></label>
+      <label class="tgl"><input type="checkbox" id="vcrPerc" checked aria-label="타악 보호(켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄임)"><span>타악 보호</span></label>
       <button class="btn sm primary" type="button" id="vcrGo">보컬 줄인 음원 만들기</button><button class="btn sm" type="button" id="vcrCancel" hidden>취소</button></div>
     <progress id="vcrProg" max="100" value="0" aria-label="보컬 줄이기 진행" hidden></progress>
     <p class="msg" id="vcrMsg" role="status"></p>
     <div class="row"><span class="small" id="abLab">A/B 비교</span><div class="seg" id="abSel" role="group" aria-labelledby="abLab"><button type="button" aria-pressed="false" data-ab="orig">데모 음원</button><button type="button" aria-pressed="false" data-ab="vr" disabled aria-describedby="abHint">보컬 줄인 음원</button><button type="button" aria-pressed="false" data-ab="gen">합성 반주</button></div></div>
     <p class="note" id="abHint">먼저 「보컬 줄인 음원 만들기」를 누르세요.</p>
     <p class="note" id="abInfo" role="status"></p>
-    <p class="note" id="abNote">보컬 줄이기(보컬이 가운데에 있을 때만 효과): 신호만으로 가운데에 모인 소리를 줄입니다. 가운데에 있는 다른 소리(스네어·솔로 등)도 같이 줄고(「타악 보호」는 스네어처럼 순간적인 소리를 덜 줄이며 처리가 약 2배 걸림), 보컬의 잔향·더블링은 남습니다. 이 브라우저 안에서만 처리하며 만든 음원은 저장하지 않습니다. 청취 평가는 없습니다.</p>
+    <p class="note" id="abNote">보컬 줄이기(보컬이 가운데에 있을 때만 효과): 신호만으로 가운데에 모인 소리를 줄입니다. 가운데에 있는 다른 소리(스네어·솔로 등)도 같이 줄고(타악 보호를 켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄입니다. 처리가 약 2배 걸림), 보컬의 잔향·더블링은 남습니다. 이 브라우저 안에서만 처리하며 만든 음원은 저장하지 않습니다. 청취 평가는 없습니다.</p>
   </div>
   </section>
   <section class="sec" aria-labelledby="hSound"><h3 class="sh" id="hSound">소리와 음색</h3>
@@ -1551,7 +1551,7 @@ el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)retu
 
 /* 곡 구간 띠(연습 탭 구간 반복 카드). 같은 글자 = 같은 소리끼리 묶음(절·후렴 판정 아님). 누르면 그 구간 반복 */
 const SECC=['--bass','--drums','--keys','--guitar','--vocal','--edit','--score'];
-function renderSecStrip(){const pn=el('secPanel'),sc=song&&song.sections;if(!sc||!sc.segs||!sc.segs.length||song.id!=='user'){pn.hidden=true;el('secStrip').innerHTML='';return}pn.hidden=false;const lt=[...new Set(sc.segs.map(s=>s.l))];
+function renderSecStrip(){const pn=el('secPanel'),sc=song&&song.sections;if(!sc||!sc.segs||sc.segs.length<2||song.id!=='user'){pn.hidden=true;el('secStrip').innerHTML='';return}pn.hidden=false;const lt=[...new Set(sc.segs.map(s=>s.l))];
  el('secStrip').innerHTML=sc.segs.map(s=>{const n=s.b-s.a,c=SECC[lt.indexOf(s.l)%SECC.length];return `<button class="secb" type="button" data-a="${s.a}" data-b="${s.b}" style="flex-grow:${n};--c:var(${c})" aria-label="${s.l} 구간 ${s.a+1}~${s.b}마디 반복"><b>${s.l}</b><span>${s.a+1}–${s.b}마디</span></button>`}).join('')}
 el('secStrip').addEventListener('click',e=>{const c=e.target.closest('.secb');if(!c)return;const a=+c.dataset.a,b=+c.dataset.b;setLoopBars(a+1,b);seekTo(a*4)});
 /* 마디별 소리 대역 활동 히트맵(채보 탭). 값은 곡 안 0~1, 악기 이름은 붙이지 않는다. 마디 번호·칸을 누르면 그 마디 반복 */
@@ -1932,7 +1932,7 @@ async function vcrDecode(){const r=await fetch(song.audio);if(!r.ok)throw new Er
 function vcrWav(out,sr){const n=out.length*2,h=new DataView(new ArrayBuffer(44)),w=(o,s)=>{for(let i=0;i<s.length;i++)h.setUint8(o+i,s.charCodeAt(i))};
  w(0,'RIFF');h.setUint32(4,36+n,true);w(8,'WAVEfmt ');h.setUint32(16,16,true);h.setUint16(20,1,true);h.setUint16(22,2,true);h.setUint32(24,sr,true);h.setUint32(28,sr*4,true);h.setUint16(32,4,true);h.setUint16(34,16,true);w(36,'data');h.setUint32(40,n,true);
  return new Blob([h.buffer,out.buffer],{type:'audio/wav'})}
-async function vcrBuild(){if(VCR.busy||!song.audio)return;VCR.busy=true;const my=VCR.job={},alive=()=>{if(VCR.job!==my)throw new Error('취소했습니다')},yld=()=>new Promise(r=>setTimeout(r,0));
+async function vcrBuild(){if(VCR.busy||!song.audio)return;VCR.busy=true;VCR.dirty=false;const tk0=VCR.tok||0,my=VCR.job={},alive=()=>{if(VCR.job!==my)throw new Error('취소했습니다')},yld=()=>new Promise(r=>setTimeout(r,0));
  if(S.playing)stop();if(AB.on)abOff();VCR.strength=+el('vcrStr').value;VCR.perc=el('vcrPerc').checked;const st=VCR.strength/100;el('vcrProg').value=0;vcrUi();
  try{vcrMsg('음원을 읽는 중…');await loadLib('vreduce');const buf=await vcrDecode();alive();
   const L=buf.getChannelData(0),R=buf.numberOfChannels>1?buf.getChannelData(1):L,sr=buf.sampleRate,n=L.length,mo=VocalReduce.isMono(L,R);
@@ -1944,11 +1944,13 @@ async function vcrBuild(){if(VCR.busy||!song.audio)return;VCR.busy=true;const my
   VCR.lo=lufsOf([x0,x1],sr);VCR.lv=lufsOf([v0,v1],sr);VCR.sec=ne/sr;AB.gk=null;
   const blob=vcrWav(out,sr);if(VCR.url)URL.revokeObjectURL(VCR.url);VCR.url=URL.createObjectURL(blob);vcrEl.src=VCR.url;vcrEl.load();
   vcrMsg(`보컬 줄인 음원 완료(줄이는 정도 ${VCR.strength}%, ${(n/sr).toFixed(0)}초). 신호 처리 결과이며 청취 평가는 없습니다. 보컬 잔향·더블링은 남습니다.${VCR.perc?' 타악 보호 켬.':''}`)}
- catch(e){if(VCR.job===my||String(e.message).includes('취소'))vcrMsg(e.message.includes('취소')?'취소했습니다.':'만들지 못했습니다: '+e.message);else vcrMsg('')}
- finally{VCR.busy=false;if(VCR.job===my)el('vcrProg').value=0;vcrUi()}}
+ catch(e){if(tk0!==(VCR.tok||0)){/* 만드는 중 곡이 바뀜: 새 곡의 메시지를 건드리지 않는다 */}else if(VCR.job===my||String(e.message).includes('취소'))vcrMsg(e.message.includes('취소')?'취소했습니다.':'만들지 못했습니다: '+e.message);else vcrMsg('')}
+ finally{VCR.busy=false;if(VCR.job===my)el('vcrProg').value=0;vcrUi();
+  /* 만드는 중 슬라이더·타악 보호가 바뀌었으면 최신 값으로 한 번 더 만든다(화면 값과 결과가 어긋나지 않게) */
+  if(VCR.dirty&&VCR.job===my&&tk0===(VCR.tok||0)&&(String(el('vcrStr').value)!==String(VCR.strength)||el('vcrPerc').checked!==VCR.perc))vcrBuild();VCR.dirty=false}}
 el('vcrGo').onclick=vcrBuild;el('vcrCancel').onclick=()=>{VCR.job=null};
 el('vcrStr').oninput=()=>{el('vcrStrVal').textContent=el('vcrStr').value+'%'};
-let vcrDeb=0;el('vcrPerc').onchange=()=>{if(VCR.url&&!VCR.busy)vcrBuild()};el('vcrStr').onchange=()=>{clearTimeout(vcrDeb);vcrDeb=setTimeout(()=>{if(VCR.url&&!VCR.busy&&el('vcrStr').value!==String(VCR.strength))vcrBuild()},600)}; /* 키보드 화살표를 연달아 눌러도 마지막 입력 0.6초 뒤 한 번만 다시 만든다 */
+let vcrDeb=0;el('vcrPerc').onchange=()=>{if(VCR.busy)VCR.dirty=true;else if(VCR.url)vcrBuild()};el('vcrStr').onchange=()=>{clearTimeout(vcrDeb);vcrDeb=setTimeout(()=>{if(VCR.busy)VCR.dirty=true;else if(VCR.url&&el('vcrStr').value!==String(VCR.strength))vcrBuild()},600)}; /* 키보드 화살표를 연달아 눌러도 마지막 입력 0.6초 뒤 한 번만 다시 만든다 */
 /* A/B: 세 소리를 같은 재생 위치에서 동시에 돌리고 이득만 30 ms 로 바꾼다. 음량은 처음 30초 발췌의 LUFS 근사로 맞춘다 */
 function abOff(){AB.on=false;AB.sel=null;clearInterval(AB.tm);AB.cur={o:1,v:0,g:0};vcrEl.pause();applyBack();el('origVol').disabled=mode==='real'||!song.audio;vcrUi()}
 function abFade(t){clearInterval(AB.tm);const f=Object.assign({},AB.cur),t0=performance.now(),D=30,step=()=>{const x=Math.min(1,(performance.now()-t0)/D);for(const k of ['o','v','g'])AB.cur[k]=f[k]+(t[k]-f[k])*x;applyBack();if(x>=1)clearInterval(AB.tm)};AB.tm=setInterval(step,5);step()}

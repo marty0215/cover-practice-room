@@ -2,7 +2,7 @@
    → 4마디 배수 선호 경계 선택 → 구간끼리 비슷하면 같은 글자(A·B·C…). "같은 소리끼리 묶은 이름"일 뿐 절·후렴 판정이 아니다.
    window.Sections / node: module.exports. 마디 0부터, 구간은 [a,b) 반열림. */
 (function(root){
-const DEF={ctr:0,sm:4,L:2,wB:.3,bd:.5,lam:.7,k:0,minAbs:.06,minRange:.03,minLen:3,snap:.7,tau:.6,minBars:8};
+const DEF={ctr:0,sm:4,L:2,wB:.3,bd:.5,lam:.7,k:0,minAbs:.06,minRange:.03,minLen:3,snap:.7,tau:.6,minBars:8,silE:.02};
 /* 마디별 특징. chroma={C,n,fps}(audioChroma 결과), bandRows={rows:[{id,v}]}(Bands.perBar). 둘 다 없으면 null */
 function barFeatures(chroma,bandRows,bars,bpm,offset,o){o=Object.assign({},DEF,o);if(!(bars>0)||!(bpm>0))return null;const bs=240/bpm,hasC=chroma&&chroma.C&&chroma.n>0&&chroma.fps>0;
  const ids=['low','lm','pres','hi','perc'],br=bandRows&&bandRows.rows?ids.map(id=>bandRows.rows.find(r=>r.id===id)).filter(Boolean):[];
@@ -17,7 +17,9 @@ function barFeatures(chroma,bandRows,bars,bpm,offset,o){o=Object.assign({},DEF,o
  F.nc=hasC?12:0;return F}
 /* 마디 쌍 유사도 = (1-wB)·크로마 코사인 + wB·소리 대역 유사도(1 − 평균제곱차의 제곱근/bd; 대역 값은 곡 안 0~1). 코사인은 크기(조용함/시끄러움)를 못 보므로 대역은 따로 잰다 */
 function ssm(F,o){o=Object.assign({},DEF,o);const n=F.length,nc=F.nc==null?12:F.nc,D=n?F[0].length:0,nbd=D-nc,S=Array.from({length:n},()=>new Float64Array(n)),nr=F.map(x=>{let s=0;for(let k=0;k<nc;k++)s+=x[k]*x[k];return Math.sqrt(s)});
- const wb=nc&&nbd?o.wB:nc?0:1;for(let i=0;i<n;i++)for(let j=i;j<n;j++){let c=0,b=0;if(nc){let d=0;const a=F[i],bb=F[j];for(let k=0;k<nc;k++)d+=a[k]*bb[k];c=nr[i]>1e-9&&nr[j]>1e-9?d/(nr[i]*nr[j]):(i===j?1:0)}
+ /* 무음 마디(대역 평균이 silE 미만, 대역이 없으면 크로마가 0): 무음끼리는 같고(1) 소리 있는 마디와는 다르다(0). 코사인은 크기를 못 봐서 무음끼리 0 이 되어 도입 무음이 쪼개졌다 */
+ const sil=F.map((x,i)=>{if(nbd){let e=0;for(let k=nc;k<D;k++)e+=x[k];return e/nbd<o.silE}return nr[i]<1e-9});
+ const wb=nc&&nbd?o.wB:nc?0:1;for(let i=0;i<n;i++)for(let j=i;j<n;j++){if(sil[i]||sil[j]){S[i][j]=S[j][i]=sil[i]&&sil[j]?1:0;continue}let c=0,b=0;if(nc){let d=0;const a=F[i],bb=F[j];for(let k=0;k<nc;k++)d+=a[k]*bb[k];c=nr[i]>1e-9&&nr[j]>1e-9?d/(nr[i]*nr[j]):(i===j?1:0)}
   if(nbd){let q=0;for(let k=nc;k<D;k++){const e=F[i][k]-F[j][k];q+=e*e}b=Math.max(0,1-Math.sqrt(q/nbd)/o.bd)}S[i][j]=S[j][i]=(1-wb)*c+wb*b}return S}
 /* 대비 늘리기: 서로 다른 마디 쌍 유사도의 5 백분위를 0, 1을 1로. 폭이 minRange 미만이면(곡 전체가 한 소리) null */
 function stretch(S,minRange){const v=[];for(let i=0;i<S.length;i++)for(let j=i+1;j<S.length;j++)v.push(S[i][j]);if(!v.length)return null;v.sort((a,b)=>a-b);const lo=v[Math.floor(.05*(v.length-1))],sp=1-lo;if(!(sp>=minRange))return null;
