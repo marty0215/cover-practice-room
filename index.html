@@ -426,6 +426,7 @@ details.help>p{margin:0 0 var(--s2);max-width:44em}
 /* 좁은 화면: 메뉴 6개가 가로 스크롤에 숨지 않게 3칸 격자, 음역 버튼은 3칸 균등 */
 @media (max-width:560px){.subnav{display:grid;grid-template-columns:repeat(3,1fr);width:100%}.subnav button{white-space:normal;padding:0 .4rem}.subnav button:nth-child(3n+1){border-left:0}.subnav button:nth-child(n+4){border-top:1px solid var(--control-border)}#pmRange,#sRange{display:grid;grid-template-columns:repeat(3,1fr);width:100%}#pmRange button,#sRange button{white-space:normal;line-height:1.25;padding:.3rem .4rem}#pmPanel .opt:has(#pmWeak)>.lb{display:none}}
 .sp-off{display:none}
+.seg button[hidden]{display:none}#vrDet summary{cursor:pointer;min-height:44px;display:flex;align-items:center}#vrRes{margin:.3rem 0}
 .rt-on .sp-off{display:block}
 .rt-on #singNav{display:none}
 .toolbar{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);align-items:center;margin-bottom:var(--s2)}
@@ -575,11 +576,20 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     </div>
     <div id="rtSum" aria-live="polite"></div>
   </div>
+  <div class="panel sp" data-sp="sight pitch" id="vrPanel">
+    <details id="vrDet"><summary><b>음역 찾기</b> · 내 음역으로 연습</summary>
+      <p class="note">편한 소리로 낮은 음과 높은 음을 각각 3초 동안 길게 내면 음역을 재서 시창·음정 부르기 문제를 그 안에서 냅니다. 소리는 이 브라우저 안에서 음높이로만 계산하고 저장하거나 보내지 않습니다.</p>
+      <div class="row" style="gap:.5rem"><button class="btn" type="button" id="vrLow">① 낮은 음 재기</button><button class="btn" type="button" id="vrHigh">② 높은 음 재기</button><button class="btn" type="button" id="vrStop" hidden>■ 그만</button></div>
+      <p class="note" id="vrMsg" role="status" aria-live="polite"></p>
+      <p class="score" id="vrRes" aria-live="polite"></p>
+      <div class="row" style="gap:.5rem"><button class="btn primary" type="button" id="vrApply" disabled>이 음역으로 연습</button><button class="btn sm ghost" type="button" id="vrClear" hidden>내 음역 지우기</button></div>
+    </details>
+  </div>
   <div class="panel sp" data-sp="sight" id="singPanel">
     <div class="head"><h2>시창 · 악보 보고 부르기</h2><p class="muted small">짧은 멜로디를 먼저 들어 보고, 카운트인 1마디 뒤에 부르면 음마다 판정합니다.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
       <div class="opt"><span class="lb">마디</span><div class="seg" id="sBars" role="group" aria-label="마디 수"><button type="button" aria-pressed="false" data-v="2">2</button><button type="button" aria-pressed="true" data-v="4">4</button><button type="button" aria-pressed="false" data-v="8">8</button></div></div>
-      <div class="opt"><span class="lb">음역</span><div class="seg" id="sRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button></div></div>
+      <div class="opt"><span class="lb">음역</span><div class="seg" id="sRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button><button type="button" aria-pressed="false" data-lo="0" data-hi="0" data-my="1" hidden>내 음역</button></div></div>
       <div class="opt"><span class="lb">난이도</span><div class="seg" id="sLevel" role="group" aria-label="난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
       <div class="opt"><span class="lb">키</span><div class="seg" id="sKey" role="group" aria-label="키"><button type="button" aria-pressed="true" data-v="song" id="sKeySong">곡 키</button><button type="button" aria-pressed="false" data-v="C">C</button></div></div>
       <div class="opt"><span class="lb">멜로디</span><div class="seg" id="sSrc" role="group" aria-label="멜로디 출처"><button type="button" aria-pressed="true" data-v="gen">생성 연습곡</button><button type="button" aria-pressed="false" data-v="song">현재 곡</button></div></div>
@@ -600,7 +610,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="head"><h2>음정 부르기 · 기준음 듣고 따라 내기</h2><p class="muted small">기준음을 듣고 같은 음, 또는 말한 음정만큼 위·아래 음을 소리 내어 길게 유지하세요.</p></div>
     <div class="row" style="gap:.8rem 1.2rem;align-items:flex-start">
       <div class="opt"><span class="lb">연습</span><div class="seg" id="pmMode" role="group" aria-label="연습 종류"><button type="button" aria-pressed="true" data-v="same">같은 음 내기</button><button type="button" aria-pressed="false" data-v="iv">음정 위/아래</button><button type="button" aria-pressed="false" data-v="har">화음 부르기</button></div></div>
-      <div class="opt"><span class="lb">음역</span><div class="seg" id="pmRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button></div></div>
+      <div class="opt"><span class="lb">음역</span><div class="seg" id="pmRange" role="group" aria-label="음역"><button type="button" aria-pressed="false" data-lo="45" data-hi="60">낮은 (A2–C4)</button><button type="button" aria-pressed="true" data-lo="52" data-hi="67">중간 (E3–G4)</button><button type="button" aria-pressed="false" data-lo="57" data-hi="72">높은 (A3–C5)</button><button type="button" aria-pressed="false" data-lo="0" data-hi="0" data-my="1" hidden>내 음역</button></div></div>
       <div class="opt" id="pmDirOpt" hidden><span class="lb">방향</span><div class="seg" id="pmDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="false" data-v="asc">위로</button><button type="button" aria-pressed="false" data-v="desc">아래로</button><button type="button" aria-pressed="true" data-v="mix">섞기</button></div></div>
       <div class="opt" id="pmHkOpt" hidden><span class="lb">화음</span><div class="seg" id="pmHk" role="group" aria-label="화음 종류"><button type="button" aria-pressed="false" data-v="3up">3도 위</button><button type="button" aria-pressed="false" data-v="3down">3도 아래</button><button type="button" aria-pressed="false" data-v="5">5도 위</button><button type="button" aria-pressed="true" data-v="mix">섞기</button></div></div>
       <div class="opt" id="pmIvOpt" hidden><label class="lb" for="pmIv">음정</label><select id="pmIv"><option value="">섞기</option></select></div>
@@ -1806,6 +1816,29 @@ el('pmListen').onclick=pmListen;el('pmRec').onclick=pmRec;el('pmNew').onclick=()
 el('pmMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.mode=b.dataset.v;segPress('pmMode',b);el('pmDirOpt').hidden=el('pmIvOpt').hidden=pm.mode!=='iv';el('pmHkOpt').hidden=el('pmHeadph').hidden=pm.mode!=='har';pmNew()});
 el('pmHk').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.hk=b.dataset.v;segPress('pmHk',b);pmNew()});
 el('pmRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.range=[+b.dataset.lo,+b.dataset.hi];segPress('pmRange',b);pmNew()});
+/* ---------- 음역 찾기: 낮은 음·높은 음을 3초씩 재서(SingLab.rangeFromTake, 안정 프레임 p10/p90) 「내 음역」을 만든다. 마이크는 단계마다 열고 닫는다(Mic 'vr'). sing.busy·sing.abort 를 같이 써서 탭 이동·숨김 때 끊긴다. 저장: localStorage 'pr-myrange' = [낮은 MIDI, 높은 MIDI] ---------- */
+const vr={busy:false,lo:null,hi:null,sec:3};
+function vrBtns(b){vr.busy=b;sing.busy=b;for(const id of ['vrLow','vrHigh','vrApply'])el(id).disabled=b||(id==='vrApply'&&!(SingLab.rangeResult(vr.lo,vr.hi).ok));el('vrStop').hidden=!b;for(const id of ['sListen','sRec','sNew','sCal','pmListen','pmRec','pmNew'])if(el(id))el(id).disabled=b}
+function vrShow(why){const r=SingLab.rangeResult(vr.lo,vr.hi),t=[];if(vr.lo!=null)t.push('낮은 음 '+SingLab.noteNm(vr.lo));if(vr.hi!=null)t.push('높은 음 '+SingLab.noteNm(vr.hi));
+ el('vrRes').textContent=r.ok?`내 음역 ${r.label} · ${r.hint} 쪽(참고용 신호 추정)`:t.join(' · ');el('vrApply').disabled=vr.busy||!r.ok;if(why&&vr.lo!=null&&vr.hi!=null&&!r.ok)el('vrMsg').textContent=r.reason+'.'}
+async function vrMeasure(which){if(sing.busy||!window.SingLab)return;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
+ const msg=el('vrMsg'),nm=which==='low'?'낮은':'높은';msg.textContent='마이크를 여는 중입니다…';vrBtns(true);let tr,cut=false,last=null;sing.abort=()=>{cut=true}; /* 마이크를 여는 동안 「그만」도 받는다 */
+ try{tr=await micTracker('vr',f=>{last=f},()=>{if(sing.abort)sing.abort()})}catch(e){sing.abort=null;vrBtns(false);const n=e&&e.name;msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ sing.abort=null;if(cut){tr.stop();vrBtns(false);msg.textContent='중단했습니다.';return}
+ if(el('tab-sing').hidden||document.hidden||el('vrPanel').classList.contains('sp-off')){tr.stop();vrBtns(false);msg.textContent='화면을 벗어나 측정을 시작하지 않았습니다.';return}
+ const t0=performance.now();let fin=false,iv=0;const done=ok=>{if(fin)return;fin=true;clearInterval(iv);tr.stop();sing.abort=null;vrBtns(false);
+  if(!ok){msg.textContent='중단했습니다.';vrShow();return}
+  const r=SingLab.rangeFromTake(tr.track,which);if(!r.ok){msg.textContent=`${nm} 음을 잡지 못했습니다(${r.reason}). 조용한 곳에서 편한 소리로 길게 내고 다시 재 보세요.`;vrShow();return}
+  if(which==='low')vr.lo=r.midi;else vr.hi=r.midi;msg.textContent=`${nm} 음 ${SingLab.noteNm(r.midi)} 확인.`+((which==='low'?vr.hi:vr.lo)==null?` 이어서 ${which==='low'?'② 높은':'① 낮은'} 음도 재 주세요.`:'');vrShow(true)};
+ sing.abort=()=>done(false);
+ iv=setInterval(()=>{const left=Math.max(0,vr.sec-(performance.now()-t0)/1000),m=last&&last[1]!=null&&last[2]>=.6?' · 지금 '+sn(Math.round(last[1])):'';msg.textContent=`${nm} 음을 편하게 길게 내세요… ${Math.ceil(left)}초${m}`;if(left<=0)done(true)},100)}
+el('vrLow').onclick=()=>vrMeasure('low');el('vrHigh').onclick=()=>vrMeasure('high');el('vrStop').onclick=()=>{if(sing.abort)sing.abort()};
+/* 내 음역 적용: 연습 음역은 양 끝에서 1반음 안쪽(rangeWithMargin). 두 음역 줄의 4번째 버튼을 보이고 누른다 */
+function vrSet(lo,hi,press){const [a,z]=SingLab.rangeWithMargin(lo,hi);for(const id of ['sRange','pmRange']){const b=document.querySelector(`#${id} [data-my]`);b.dataset.lo=a;b.dataset.hi=z;b.textContent=`내 음역 (${SingLab.noteNm(lo)}–${SingLab.noteNm(hi)})`;b.hidden=false;if(press)segPress(id,b)}el('vrClear').hidden=false;if(press){sing.range=[a,z];pm.range=[a,z]}}
+function vrApply(){const r=SingLab.rangeResult(vr.lo,vr.hi);if(!r.ok||vr.busy)return;vrSet(r.lo,r.hi,true);try{localStorage.setItem('pr-myrange',JSON.stringify([r.lo,r.hi]))}catch(e){}singNew();pmNew();el('vrMsg').textContent=`「내 음역 (${SingLab.noteNm(r.lo)}–${SingLab.noteNm(r.hi)})」으로 연습합니다. 양 끝에서 1반음 안쪽에서 문제를 냅니다.`}
+function vrClear(){if(vr.busy)return;try{localStorage.removeItem('pr-myrange')}catch(e){}for(const id of ['sRange','pmRange']){const m=document.querySelector(`#${id} [data-my]`),was=m.getAttribute('aria-pressed')==='true';m.hidden=true;if(was){const d=document.querySelector(`#${id} [data-lo="52"]`);segPress(id,d);if(id==='sRange')sing.range=[52,67];else pm.range=[52,67]}}el('vrClear').hidden=true;vr.lo=vr.hi=null;vrShow();singNew();pmNew();el('vrMsg').textContent='내 음역을 지웠습니다. 기본 음역(중간)으로 돌아갑니다.'}
+el('vrApply').onclick=vrApply;el('vrClear').onclick=vrClear;
+try{const v=JSON.parse(localStorage.getItem('pr-myrange')||'null');if(Array.isArray(v)&&v.length===2&&Number.isInteger(v[0])&&Number.isInteger(v[1])&&v[0]>=28&&v[1]<=96&&SingLab.rangeResult(v[0],v[1]).ok){vr.lo=v[0];vr.hi=v[1];vrSet(v[0],v[1],true);vrShow()}}catch(e){}
 el('pmDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||sing.busy)return;pm.dir=b.dataset.v;segPress('pmDir',b);pmNew()});
 el('pmIv').onchange=()=>{if(sing.busy)return;pm.iv=el('pmIv').value;pmNew()};el('pmWeak').onchange=()=>{pm.weak=el('pmWeak').checked;if(!sing.busy)pmNew()};
 
@@ -1979,9 +2012,9 @@ const RT={skips:[],on:false,plan:null,bi:0,sess:null,q:null,t0:0,log:[],tm:0,ove
 /* 시창·청음 하위 탐색: 한 번에 한 묶음만. 마지막 선택은 localStorage(실패해도 동작). 오늘의 연습 중에는 연습 코드가 패널을 직접 고른다 */
 const SUBS=['today','quiz','dict','sight','pitch','stat'];let singSub='today';
 try{const v=localStorage.getItem('pr-sing-sub');if(SUBS.includes(v))singSub=v}catch(e){}
-function setSub(v,save){if(!SUBS.includes(v))v='today';if(v!=='dict'&&window.rhyAbort)rhyAbort();if(v!=='pitch'){pmDroneStop();if(pm.busy&&sing.abort)sing.abort()}singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',p.dataset.sp!==v));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
+function setSub(v,save){if(!SUBS.includes(v))v='today';if(v!=='dict'&&window.rhyAbort)rhyAbort();if(v!=='sight'&&v!=='pitch'&&vr.busy&&sing.abort)sing.abort();if(v!=='pitch'){pmDroneStop();if(pm.busy&&sing.abort)sing.abort()}singSub=v;document.querySelectorAll('#tab-sing .sp').forEach(p=>p.classList.toggle('sp-off',!p.dataset.sp.split(' ').includes(v)));document.querySelectorAll('#singNav button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sub===v));if(save!==false){try{localStorage.setItem('pr-sing-sub',v)}catch(e){}}if(window.SingLab){if(v==='sight')singDraw();if(v==='stat')statRender()}}
 el('singNav').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!RT.on)setSub(b.dataset.sub)});
-const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',rhy:'rhyPanel',sight:'singPanel',pitch:'pmPanel'},ALL_PANELS=['singPanel','earPanel','progPanel','mdPanel','rhyPanel','pmPanel','statPanel'];
+const RT_PANELS={ear:'earPanel',prog:'progPanel',mel:'mdPanel',rhy:'rhyPanel',sight:'singPanel',pitch:'pmPanel'},ALL_PANELS=['vrPanel','singPanel','earPanel','progPanel','mdPanel','rhyPanel','pmPanel','statPanel'];
 function rtPanels(active){for(const id of ALL_PANELS)el(id).hidden=!!active&&id!==active}
 function rtLock(on){el('tab-sing').classList.toggle('rt-on',on);document.querySelectorAll('#tab-sing .opt').forEach(o=>{if(on&&!o.querySelector('#sNew,#sView,#sStLab,#mdView,#mdStLab'))o.setAttribute('inert','');else o.removeAttribute('inert')});el('sNew').textContent=on?'다음 문제(건너뛰기)':'새 문제'}
 function rtStart(only){if(RT.on||sing.busy||!window.SingLab)return;if(S.playing)stop();setSub('today',false);clearInterval(sing.liv);

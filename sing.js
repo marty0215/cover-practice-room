@@ -333,7 +333,7 @@ function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null,k
  if(mode==='har'){const h=pmHarmQuestion({range,R,key,hk,wk});if(h)return h}
  if(mode!=='iv'){const ref=lo+Math.floor(R()*(hi-lo+1));return {mode:'same',ref,target:ref,iv:PM_SAME,dir:'same',semis:0,id:'pm:'+PM_SAME+':same'}}
  let c=[];for(const [n,s] of INTERVALS)for(const d of ['asc','desc'])if((!iv||n===iv)&&(!dir||d===dir)&&hi-lo>=s)c.push([n,s,d]);
- if(!c.length)c=[['완전5도',7,'asc']];const W=wk?c.map(x=>weightFor(wk,'pm:'+x[0]+':'+x[2])):null,[n,s,d]=pickWeighted(c,W,R);
+ if(!c.length){if(hi-lo<1){const ref=lo+Math.floor(R()*(hi-lo+1));return {mode:'same',ref,target:ref,iv:PM_SAME,dir:'same',semis:0,id:'pm:'+PM_SAME+':same'}}const s=Math.min(7,hi-lo),n=INTERVALS.find(x=>x[1]===s)[0];c=[[n,s,'asc']]} /* 좁은 음역: 들어가는 가장 큰 음정(최대 완전5도)으로 대신 */const W=wk?c.map(x=>weightFor(wk,'pm:'+x[0]+':'+x[2])):null,[n,s,d]=pickWeighted(c,W,R);
  const a=d==='asc'?lo:lo+s,b=d==='asc'?hi-s:hi,ref=a+Math.floor(R()*(Math.max(a,b)-a+1));
  return {mode:'iv',ref,target:ref+(d==='asc'?s:-s),iv:n,dir:d,semis:s,id:'pm:'+n+':'+d}}
 /* 기록 [초,midi|null,conf] → 판정. 첫 발성(t0 이후 연속 run 프레임 이상 유성)의 skip 초 뒤부터 win 초 창에서 cent 중앙값을 낸다.
@@ -351,5 +351,24 @@ function pmJudge(track,{target,t0=0,tol=50,minConf=.5,skip=.15,win=.6,run=3,spre
 function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.leak||res.verdict==='불안정'||res.verdict==='소리 없음')return [];
  return [[q.id,res.ok?1:0,res.ok?null:res.octave?'옥타브':res.verdict==='높음'?'높게':'낮게']]}
 
-const api={yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+/* ---------- 음역 찾기(순수 함수) ----------
+   rangeFromTake: 한 번 부른 기록 [초,midi,conf] 에서 안정된 유성 프레임만 모아 p10(낮은 음) 또는 p90(높은 음)을 낸다.
+   안정 = 신뢰도 ≥minConf, 유성인 앞뒤 프레임과 ±1 반음 안이고 이웃 하나는 유성(잡음·옥타브 튐 제외). 그 뒤 중앙값에서 ±maxDev 반음 넘는 프레임도 뺀다. 안정 프레임이 minFrames(20 ms 간격 기준 0.5초) 미만이면 ok:false. */
+function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[],vo=f=>!!f&&f[1]!=null&&f[2]>=minConf&&f[1]>=28&&f[1]<=96;let st=[];
+ for(let i=0;i<T.length;i++){if(!vo(T[i]))continue;const nb=[T[i-1],T[i+1]].filter(vo);if(nb.length&&nb.every(f=>Math.abs(f[1]-T[i][1])<=1))st.push(T[i][1])}
+ if(st.length>=minFrames){const o=st.slice().sort((x,y)=>x-y),med=o[o.length>>1];st=st.filter(m=>Math.abs(m-med)<=maxDev)}
+ if(st.length<minFrames)return {ok:false,n:st.length,reason:'소리가 짧거나 불안정했습니다'};
+ const o=st.sort((x,y)=>x-y),q=p=>o[Math.floor(p*(o.length-1))];return {ok:true,n:o.length,midi:Math.round(which==='high'?q(.9):q(.1)),med:o[o.length>>1]}}
+const noteNm=m=>NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
+/* 낮은 음 lo·높은 음 hi → {ok,span,label,hint,reason}. 5반음 미만이거나 뒤집히면 ok:false */
+function rangeResult(lo,hi,{minSpan=5}={}){if(lo==null||hi==null)return {ok:false,reason:'낮은 음과 높은 음을 모두 재 주세요'};if(hi<lo)return {ok:false,reason:'낮은 음이 높은 음보다 높게 잡혔습니다. 다시 재 보세요'};
+ const span=hi-lo;if(span<minSpan)return {ok:false,span,reason:'음역이 너무 좁게 잡혔습니다. 낮은 음과 높은 음을 더 멀리 내서 다시 재 보세요'};
+ return {ok:true,lo,hi,span,label:rangeLabel(lo,hi),hint:voiceHint(lo,hi)}}
+function rangeLabel(lo,hi){const s=hi-lo,o=Math.floor(s/12),r=s%12;return noteNm(lo)+'–'+noteNm(hi)+', '+(o?o+'옥타브':'')+(o&&r?' ':'')+(r?r+'반음':'')}
+/* 중심 음높이로 본 참고용 추정(신호 기반, 정답 아님): 중심 MIDI 56 미만 낮은 · 62 미만 중간 · 그 이상 높은 */
+function voiceHint(lo,hi){const c=(lo+hi)/2;return c<56?'낮은 음역':c<62?'중간 음역':'높은 음역'}
+/* 연습용 음역: 양 끝에서 margin 반음 안쪽. 안쪽이 6반음 미만으로 줄면 여유 0 */
+function rangeWithMargin(lo,hi,margin=1){return hi-lo>=6+2*margin?[lo+margin,hi-margin]:[lo,hi]}
+
+const api={rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
