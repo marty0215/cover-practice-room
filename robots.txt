@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://marty0215.github.io/cover-practice-room/sitemap.xml
