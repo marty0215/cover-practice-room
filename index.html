@@ -1367,7 +1367,7 @@ function tapHit(t=performance.now()/1000){const last=TAP.t[TAP.t.length-1];if(la
  TAP.bpm=r.bpm;el('tapApply').disabled=false;const an=+el('bpmIn').value,k=SingLab.tapRatio(r.bpm,an);
  o.textContent=`탭 BPM 약 ${r.bpm}(${r.n}탭 기준, 추정)${k===2?` · 분석 BPM ${an}의 약 두 배입니다. 2×가 맞을 수 있어요.`:k===.5?` · 분석 BPM ${an}의 약 절반입니다. ½×가 맞을 수 있어요.`:''}`;return r.bpm}
 el('tapBtn').onclick=()=>tapHit();window.tapHit=tapHit; /* 시험용: 가짜 시각으로 부를 수 있게 노출 */
-el('tapApply').onclick=()=>{if(!(TAP.bpm>=40&&TAP.bpm<=220)){el('bpmMsg').textContent=`탭 BPM ${TAP.bpm||'—'}은 40~220 범위를 벗어나 적용하지 않았습니다.`;return}if(realign(TAP.bpm,+el('offIn').value)){TAP.t=[];TAP.bpm=0;el('tapApply').disabled=true;el('tapOut').textContent='적용했습니다. 마디를 다시 맞췄습니다(채보는 그대로).'}};
+el('tapApply').onclick=()=>{if(!(TAP.bpm>=40&&TAP.bpm<=220)){el('bpmMsg').textContent=`탭 BPM ${TAP.bpm||'—'}은 40~220 범위를 벗어나 적용하지 않았습니다.`;return}if(realign(TAP.bpm,+el('offIn').value)){TAP.t=[];TAP.bpm=0;el('tapApply').disabled=true;el('tapOut').textContent='적용했습니다. 마디를 다시 맞췄습니다(채보·고친 음은 그대로, 손으로 고친 코드는 새 마디에 맞춰 다시 추정).'}};
 el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(S.playing)stop();if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
 
 /* ---------- 저장: 분석 결과(채보 음·BPM·첫 박·수정한 코드·스타일)만 IndexedDB에. 원본 파일은 저장하지 않음. 실패해도 페이지는 정상 ---------- */
