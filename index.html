@@ -311,7 +311,9 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 .menu .pop{z-index:40;position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--tpH,130px) + 8px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--control-border);border-radius:12px;padding:.8rem;display:grid;gap:.5rem;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 @media(max-width:700px){
  .tp-in{gap:0;padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))}
- .chips{display:none}.brand{font-size:.95rem}.top .in{gap:.4rem}.top .seg button{padding:0 .5rem;font-size:.8rem}.top .seg .lg{display:none}.top .seg .sm{display:inline}.top .ibtn{min-width:40px}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
+ .chips{display:none}.brand{font-size:.95rem}.top .in{gap:.4rem}.top .seg button{padding:0 .5rem;font-size:.8rem}.top .seg .lg{display:none}.top .seg .sm{display:inline}.top .ibtn{min-width:40px}
+/* 좁은 화면: 곡 선택을 둘째 줄 전체 폭으로, 테마·도움말은 제목 줄 오른쪽에 */
+@media (max-width:560px){.top .brand{flex:1}#songsel{order:5;width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}#songsel button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
  .tp-r2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:.4rem .7rem;padding-bottom:2px}
  .play{width:48px;height:48px}
  .now{min-width:3.2rem}
@@ -846,7 +848,7 @@ function loadSong(id){if(S.playing)stop();if(typeof sdStop==='function'&&typeof 
  if(song.muteDef&&(!prevS||prevS.id!==id))Object.assign(mute,song.muteDef);else if(prevS&&prevS.muteDef&&!song.muteDef)mute.score=true; /* 곡별 기본 켬/끔: 채보 곡은 채보 음 끔, 연습곡은 멜로디 가이드 켬 */
  PARTDEF.score.name=song.melName||'채보 음 (원곡에서 들린 음)';PARTDEF.score.hint=song.melName?'끄고 멜로디 없이 반주만 듣기':'모델이 받아 적은 음. 기본은 꺼짐';PNAME.score=song.melName||'채보 전체';
  if(!song.audio&&mode==='real'){mode='synth';modeAuto=true;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode))}else if(song.audio&&modeAuto&&mode==='synth'){mode='real';modeAuto=false;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode))}
- el('origLabel').textContent=song.id==='user'?'원곡 음원':'실제 렌더 음원';el('origVol').setAttribute('aria-label',song.id==='user'?'원곡 볼륨 (합성 반주와 함께)':'실제 렌더 볼륨 (합성과 함께)');el('scrub').max=TOTAL*100;
+ el('origLabel').textContent=song.id==='user'?'원곡 음원':'실제 렌더 음원';el('origLabel').closest('.ch').hidden=!song.audio; /* 음원 파일이 없는 곡(연습곡)은 이 채널을 숨김 */el('origVol').setAttribute('aria-label',song.id==='user'?'원곡 볼륨 (합성 반주와 함께)':'실제 렌더 볼륨 (합성과 함께)');el('scrub').max=TOTAL*100;
  for(const lid of ['loopA','loopB']){const s=el(lid);s.innerHTML='';for(let i=1;i<=BARS;i++){const o=document.createElement('option');o.value=i;o.textContent=`${i}마디`;s.appendChild(o)}}el('loopB').value=BARS;
  if(song.audio){el('real').src=song.audio}else el('real').removeAttribute('src');el('real').load();
  document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));
