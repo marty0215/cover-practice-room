@@ -71,8 +71,8 @@ const INTERVALS=[['단2도',1],['장2도',2],['단3도',3],['장3도',4],['완�
 /* 청음 문제: type 'interval' | 'triad' | 'seventh' | 'degree'. level 1 은 키 안의 음만(7화음은 maj7·7·m7, 도수는 장음계 7음), 2 는 전부(7화음 5종, 도수 12음).
    dir: 'asc' 상행 | 'desc' 하행 | 'har' 동시 | 'mix' 섞기(음정만). name: 지정하면 그 음정/화음으로 고정. weight: id→가중치 함수(약점 위주). item 은 통계 id */
 const SV_ALL=[['메이저7',[0,4,7,11]],['도미넌트7',[0,4,7,10]],['마이너7',[0,3,7,10]],['하프 디미니시',[0,3,6,10]],['디미니시7',[0,3,6,9]]];
-/* 으뜸음 찾기: 무작위 장조(key 0–11)에서 으뜸화음(I)이 한 번도 안 나오는 다이아토닉 4코드. 1 은 V 로 끝(끌림 강함), 2 는 IV·vi 로 끝. 처음·끝·가운데 모두 I 아님. 도수 0–6 */
-const TK_P={1:[[3,5,1,4],[5,3,1,4],[1,5,3,4],[3,2,5,4],[2,5,1,4],[5,1,3,4]],2:[[3,4,2,5],[2,5,1,3],[1,4,5,3],[5,1,4,3],[1,4,2,5],[3,1,4,5],[5,2,4,3],[2,3,1,5]]},TK_LAB={1:'V 화음으로 끝남',2:'IV·vi 화음으로 끝남'};
+/* 으뜸음 찾기: 무작위 장조(key 0–11)에서 으뜸화음(I)이 한 번도 안 나오는 다이아토닉 4코드. 1 은 V 로 끝(끌림 강함), 2 는 IV·ii 로 끝. 처음·끝·가운데 모두 I 아님. 도수 0–6 */
+const TK_P={1:[[3,5,1,4],[5,3,1,4],[1,5,3,4],[3,2,5,4],[2,5,1,4],[5,1,3,4]],2:[[1,4,5,3],[5,1,4,3],[5,2,4,3],[2,5,4,3],[3,4,2,1],[5,3,4,1],[4,5,3,1]]},TK_LAB={1:'V 화음으로 끝남',2:'IV·ii 화음으로 끝남'}; /* vi 로 끝내면 나란한 단조(vi 가 으뜸)로 들려 답이 둘이 되므로 2단계 끝은 IV·ii */
 function tonicQuiz({level=1,seed=1}={}){const lv=level<2?1:2,R=rng(seed);for(let i=0;i<4;i++)R(); /* 작은 연속 시드의 첫 출력 상관을 버림 */
  const key=Math.floor(R()*12),ps=TK_P[lv],degs=ps[Math.floor(R()*ps.length)].slice();let prev=null;const cad=degs.map(d=>{const v=voiceTriad((key+MAJ[d])%12,DEG_Q[d],prev);prev=v.notes;return {notes:v.notes,bass:v.bass}}),t=voiceTriad(key,'maj',prev);
  return {type:'tonic',level:lv,key,degs,answer:NAMES[key],choices:NAMES.slice(),cad,tonic:{notes:t.notes,bass:t.bass},notes:[],label:NAMES[key]+' 메이저',item:'tk:'+lv}}
