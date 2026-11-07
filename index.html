@@ -1234,7 +1234,7 @@ function arrExt(sg,pf,mel,src){
   const fp=[];for(const [id,nm,ns,cap,mn] of roles){/* 베이스는 강박(1·3박) 온셋만: 약박 경과음은 정상, 강박 코드 밖 음은 코드와 어긋난 베이스 */const x=inB(ns,b).filter(n=>id!=='bass'||Math.abs((n[0]-b*4+.05)%2-.05)<.05);if(x.length<mn)continue;let out=0,k=0;for(const n of x){const r=isOut(n,b,n[0]);if(r===null)continue;k++;if(r)out++}if(k<mn)continue;fp.push({p:id,nm,n:k,out,share:r2(out/k),cap,flag:out/k>cap})}
   o.f=fp.length?{parts:fp,flag:fp.some(q=>q.flag)}:null;
   if(voices.length<2||(sg.silent&&sg.silent[b]))o.cl=null;else{let n=0;for(let i=0;i<voices.length;i++)for(let j=i+1;j<voices.length;j++)for(const x of touch(voices[i][1],b))for(const y of touch(voices[j][1],b)){const t=Math.max(x[0],y[0]);if(t<b*4-E||t>=b*4+4-E||ovl(x,y)<=.25)continue;const d=Math.abs(x[2]-y[2]);if(d>14||(d%12!==1&&d%12!==11))continue;if(isOut(x,b,t)||isOut(y,b,t))n++}o.cl={n,flag:n>0}}
-  const bb=inB(bass,b);if(!bb.length)o.h=null;else{const lo=Math.min(...bb.map(n=>n[2])),hi=Math.max(...bb.map(n=>n[2]));let mud=0;for(const k of touch(comp.flatMap(p=>P[p]),b))for(const x of touch(bass,b)){const t=Math.max(k[0],x[0]);if(t<b*4-E||t>=b*4+4-E||ovl(k,x)<=.05)continue;const d=k[2]-x[2];if(d>=0&&d<7&&k[2]<55){mud++;break}}
+  const bb=inB(bass,b);if(!bb.length||(sg.silent&&sg.silent[b]))o.h=null;else{const lo=Math.min(...bb.map(n=>n[2])),hi=Math.max(...bb.map(n=>n[2]));let mud=0;for(const k of touch(comp.flatMap(p=>P[p]),b))for(const x of touch(bass,b)){const t=Math.max(k[0],x[0]);if(t<b*4-E||t>=b*4+4-E||ovl(k,x)<=.05)continue;const d=k[2]-x[2];if(d>=0&&d<7&&k[2]<55){mud++;break}}
    o.h={lo,hi,hz:Math.round(440*2**((lo-69)/12)),low:lo<28,high:hi>52,mud,flag:lo<28||hi>52||mud>0}}
   for(const [k,v] of [['f',o.f],['g',o.cl],['h',o.h]])if(v)sum2[k][v.flag?'warn':'ok']++;bars.push(o)}
  /* 병행 5도·8도(참고): 베이스–멜로디, 둘 다 같은 방향으로 움직이고 P5→P5 또는 P8→P8. 같은 음 반복·붙들린 옥타브 겹침은 세지 않음 */
@@ -1255,7 +1255,7 @@ function arrExt(sg,pf,mel,src){
  vl.keepPct=shN?Math.round(100*vl.keepN/shN):null;
  /* 베이스 근음(경고 가능): 1박 베이스 음이 코드 근음 또는 슬래시 베이스인 마디의 비율. 3음이 베이스인데 앞뒤로 순차(1–2반음)로 이어지면 전위로 보고 감점하지 않는다 */
  const rb={ok:0,miss:0,exempt:0,n:0};
- for(let b=0;b<B;b++){bars[b].br=null;if(sg.silent&&sg.silent[b])continue;const t=b*4,idx=[];bass.forEach((n,i)=>{if(n[0]<=t+.06&&n[0]+n[1]>t+.05)idx.push(i)});if(!idx.length)continue;
+ for(let b=0;b<B;b++){bars[b].br=null;if(sg.silent&&sg.silent[b])continue;const t=b*4,idx=[];/* 1박에 울리는 베이스 중 반 박 전(당김음) 이후에 시작한 음만: 앞 코드에서 붙들려 넘어온 음은 이 마디의 베이스 선택이 아님(검수 #10) */bass.forEach((n,i)=>{if(n[0]<=t+.06&&n[0]>=t-.5&&n[0]+n[1]>t+.05)idx.push(i)});if(!idx.length)continue;
   const last=Math.max(...idx.map(i=>bass[i][0])),cs=idx.filter(i=>bass[i][0]===last).sort((x,y)=>bass[x][2]-bass[y][2]),i0=cs[0],pc=((bass[i0][2]%12)+12)%12,sp=sg.split&&sg.split[b],cstr=sp?sp.a:sg.chords[b];let ch;try{ch=parseChord(cstr)}catch(e){continue}
   const okPc=new Set([ch.root,ch.bass!=null?ch.bass:ch.root]),iv=(QT[ch.q]||QT[''])[1],third=(ch.q==='sus4'||ch.q==='sus2')?-1:(ch.root+iv)%12,pv=bass[i0-1],nx=bass[i0+1],st=(a,c)=>a&&Math.abs(a[2]-c[2])>=1&&Math.abs(a[2]-c[2])<=2;
   const o={bass:NAMES[pc],chord:cstr,ok:okPc.has(pc),exempt:false};if(!o.ok&&pc===third&&st(pv,bass[i0])&&st(nx,bass[i0])){o.exempt=true}
@@ -1264,7 +1264,7 @@ function arrExt(sg,pf,mel,src){
  bars.forEach((o,i)=>{o.vl=vlBars[i]});
  return{bars,sum2,vl,rb,par:{n,bars:pb,on:!!(mel.length&&bass.length)}}}
 /* 베이스 음역 문구(순수) */
-const arrHMsg=h=>{const t=[];if(h.low)t.push(`베이스 최저 MIDI ${h.lo}(약 ${h.hz} Hz)`+(h.lo<28?' · 약 41 Hz 아래, 작은 스피커에서 잘 안 들림':''));if(h.high)t.push(`베이스 최고 MIDI ${h.hi}(하드 상한 52 초과)`);if(h.mud)t.push(`베이스 바로 위(7반음 이내) G3 아래 건반·기타 ${h.mud}곳(저역 탁함)`);return t};
+const arrHMsg=h=>{const t=[];if(h.low)t.push(`베이스 최저 MIDI ${h.lo}(약 ${h.hz} Hz)`+(h.lo<28?' · 약 41 Hz 아래, 작은 스피커에서 잘 안 들림':''));if(h.high)t.push(`베이스 최고 MIDI ${h.hi}(하드 상한 52 초과)`);if(h.mud)t.push(`베이스 바로 위(7반음 미만) G3 아래 건반·기타 ${h.mud}곳(저역 탁함)`);return t};
 function arrCheck(sg,pf=chordPcs){
  const P=sg.parts,B=sg.bars,E=1e-6,has=p=>P[p]&&P[p].length,r2=x=>Math.round(x*100)/100,
  top=topOf,
@@ -1982,8 +1982,8 @@ el('bkMerge').onclick=()=>bkApply(true);el('bkRepl').onclick=()=>bkApply(false);
 /* 청음: 음정 / 3화음. 정답률은 localStorage(실패해도 동작) */
 const ear={type:'interval',level:1,dir:'asc',weak:false,q:null,done:false};
 let earA={};try{earA=JSON.parse(localStorage.getItem('pr-ear'))||{}}catch(e){}
-const earKey=()=>ear.type+ear.level,earName=t=>({interval:'음정',triad:'3화음',seventh:'7화음',degree:'음계 도수',tonic:'으뜸음 찾기',cadence:'카덴스 듣기',func:'화음 기능',inversion:'전위 듣기',reading:'악보 읽기'})[t]||'3화음';
-function earShowAcc(){const a=earA[earKey()]||{n:0,ok:0};el('eAcc').textContent=`${earName(ear.type)} 난이도 ${ear.level} 정답률: ${a.n?`${a.ok}/${a.n} (${Math.round(100*a.ok/a.n)}%)`:'아직 기록 없음'} · 이 브라우저에만 저장됩니다.`}
+const EAR_NOLV={func:1,inversion:1},earKey=()=>ear.type+(EAR_NOLV[ear.type]?1:ear.level),earName=t=>({interval:'음정',triad:'3화음',seventh:'7화음',degree:'음계 도수',tonic:'으뜸음 찾기',cadence:'카덴스 듣기',func:'화음 기능',inversion:'전위 듣기',reading:'악보 읽기'})[t]||'3화음';
+function earShowAcc(){const a=earA[earKey()]||{n:0,ok:0};el('eAcc').textContent=`${earName(ear.type)}${EAR_NOLV[ear.type]?'':` 난이도 ${ear.level}`} 정답률: ${a.n?`${a.ok}/${a.n} (${Math.round(100*a.ok/a.n)}%)`:'아직 기록 없음'} · 이 브라우저에만 저장됩니다.`}
 const wFn=()=>{const wk=SingLab.weakness(STAT2);return id=>SingLab.weightFor(wk,id)};
 function earNew(){earSet(SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed(),dir:ear.dir,weight:ear.weak&&STAT2?wFn():null}))}
 function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;el('eDirOpt').hidden=ear.type!=='interval';el('eLevelOpt').hidden=ear.type==='func'||ear.type==='inversion';el('eLv3').hidden=ear.type!=='reading';readStaff(q);el('ePlay').disabled=q.type==='reading';

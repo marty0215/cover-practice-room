@@ -122,7 +122,7 @@ const FN_POOL={T:[[0,''],[5,'m']],S:[[3,''],[1,'m']],D:[[4,''],[4,'7']]},FN_KO={
 function funcQuiz({key=0,seed=1,name=null,weight=null}={}){const R=rng(seed);for(let i=0;i<4;i++)R();key=pcm(key);
  const f=name&&FN_POOL[name]?name:pickWeighted(FN_ALL,weight?FN_ALL.map(x=>weight('fn:'+x)):null,R),pl=FN_POOL[f],[deg,q]=pl[Math.floor(R()*pl.length)];
  let prev=null;const cad=[0,3,4,0].map(d=>{const v=voiceTriad((key+MAJ[d])%12,'maj',prev);prev=v.notes;return {notes:v.notes,bass:v.bass}});
- const root=(key+MAJ[deg])%12,tv=q==='7'?voiceSeventh(root,prev):voiceTriad(root,q==='m'?'min':'maj',prev),c={root,q},rn=romanOf(c,key),nm=chordLabel(c,key);
+ const root=(key+MAJ[deg])%12,c={root,q};let tv=q==='7'?voiceSeventh(root,prev):voiceTriad(root,q==='m'?'min':'maj',prev);/* I 목표가 카덴스 끝 화음과 똑같은 소리면 「같은 화음 반복 = 토닉」으로 답이 드러남: 맨 아래 음을 한 옥타브 올려 다른 자리바꿈으로 */if(tv.notes.join()===prev.join()){const n=tv.notes.slice().sort((x,y)=>x-y);n[0]+=12;tv={notes:n.sort((x,y)=>x-y),bass:tv.bass}}const rn=romanOf(c,key),nm=chordLabel(c,key);
  return {type:'func',key,fn:f,deg,answer:FN_KO[f],choices:FN_ALL.map(x=>FN_KO[x]),cad,target:{notes:tv.notes,bass:tv.bass},notes:[],roman:rn,chordName:nm,label:KEYN[key]+' 메이저',
   info:`${KEYN[key]} 메이저에서 ${rn} = ${nm} → ${FN_KO[f]}`,item:'fn:'+f}}
 /* 전위 듣기: 무작위 근음의 메이저·마이너 3화음. 가장 낮은 음이 전위의 베이스음(근음·3음·5음)이고 베이스를 따로 겹치지 않는다. 가장 낮은 음은 E3–D#4(52–63) */
