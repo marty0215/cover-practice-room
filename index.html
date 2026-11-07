@@ -831,7 +831,7 @@ const chordName=i=>fmtChord(CH[i]);
 const chordFull=i=>{const sp=song.split&&song.split[i];return sp?fmtChord(parseChord(sp.a))+' │ '+fmtChord(parseChord(sp.b)):chordName(i)};
 /* 지금 박(마디 안 0..3)에 울리는 코드 이름: 반마디 분할이면 앞 2박은 앞 코드, 뒤 2박은 뒤 코드 */
 const chordAt=(i,beat)=>{const sp=song.split&&song.split[i];return sp?fmtChord(parseChord(beat>=2?sp.b:sp.a)):chordName(i)};
-const noteName=p=>{const q=p+transpose;return NAMES[q%12]+(Math.floor(q/12)-1)};
+const noteName=p=>SingLab.noteNmK(p+transpose,KEY+transpose); /* 음 이름도 코드 이름과 같은 조 철자(F 장조 Bb4, A#4 아님) */
 const spb0=()=>60/song.bpm;
 
 let viewPref=8;
@@ -1621,7 +1621,7 @@ document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+
 
 /* ---------- 시창·청음 탭 (sing.js). 마이크 소리는 음높이로만 계산하고 저장·전송하지 않는다. 신호 기반 판정 ---------- */
 Object.assign(sing,{lat:0,bars:4,genBars:4,src:'gen',rangeSong:null,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
-const sn=p=>NAMES[p%12]+(Math.floor(p/12)-1);
+const snKey=src=>src==='song'?((KEY%12)+12)%12:singKeyPc(),sn=(p,src)=>SingLab.noteNmK(p,snKey(src)); /* 시창·받아쓰기 음 이름은 오선보 음 아래 글자(조 철자)와 같게: 곡 윗선율은 곡 키, 그 밖은 고른 키 */
 const singKeyPc=()=>sing.keyMode==='C'?0:((KEY+transpose)%12+12)%12;
 const singSpb=()=>60/(song.bpm*rate());
 const VCLS={'맞음':'ok','높음':'hi','낮음':'lo','옥타브 차이':'oct','소리 없음':'none'};
@@ -1665,7 +1665,7 @@ function singDraw(){const c=el('sRoll');if(!c)return;if(STV.v==='staff'&&window.
  g.font='600 14px "JetBrains Mono",monospace';g.textBaseline='middle';
  ex.forEach(([s,d,p],i)=>{const w=Math.max(4,x(d)-3);g.fillStyle=css('--keys');g.fillRect(x(s)+1.5,y(p)-rh/2,w,rh);
   if(sing.res){const v=sing.res.notes[i].verdict;g.strokeStyle=v==='맞음'?css('--ok'):v==='소리 없음'?mu:css('--warn');g.lineWidth=2.5;g.strokeRect(x(s)+1.5,y(p)-rh/2,w,rh);g.lineWidth=1}
-  if(w>26){g.fillStyle=css('--bg');g.fillText(sn(p),x(s)+6,y(p))}});
+  if(w>26){g.fillStyle=css('--bg');g.fillText(sn(p,sing.src),x(s)+6,y(p))}});
  const tr=sing.track;if(tr&&tr.length){g.strokeStyle=css('--loop');g.lineWidth=3;g.lineJoin='round';let prev=null;g.beginPath();
   for(const f of tr){if(f[1]==null||f[2]<.5){prev=null;continue}const b=(f[0]-sing.lat-sing.t0)/sing.spb;if(b<-.2||b>tot+.3){prev=null;continue}const yy=y(f[1]);if(yy<0||yy>H){prev=null;continue}
    if(prev&&f[0]-prev[0]<.09&&Math.abs(f[1]-prev[1])<1.5)g.lineTo(x(b),yy);else g.moveTo(x(b),yy);prev=f}g.stroke();g.lineWidth=1}
@@ -1675,7 +1675,7 @@ window.singDraw=singDraw;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&sing.abort)sing.abort()});addEventListener('pagehide',()=>{if(sing.abort)sing.abort()});
 /* ---------- 따라 부르기: 마이크 음높이를 채보 롤 위에 겹쳐 그린다(신호 기반 판정). 멜로디 = arrCheck 와 같은 윗선(원래 옥타브). 마이크 소리는 저장하지 않는다 ---------- */
 const fu={tr:null,on:false,busy:false,fr:[],st:{},tot:{n:0,k:0},last:-1,ps:0,mel:[],ui:0};
-const fuNm=m=>NAMES[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);
+const fuNm=m=>sn(Math.round(m)); /* 고른 키의 철자(sn 과 같게) */
 function fuTarget(b){for(const n of fu.mel){if(n[0]>b)break;if(b<n[0]+n[1])return n}return null}
 function fuNear(b){let r=fu.mel[0]||null;for(const n of fu.mel){if(n[0]>b)break;r=n}return r}
 function fuFrame(f){if(!fu.on)return;const m=f[1],vo=m!=null&&f[2]>=.5;let b=null,tn=null;
@@ -1764,7 +1764,7 @@ async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length
  sing.spb=spb;sing.t0=rec0;sing.track=tr.track;sing.res=null;el('sResult').innerHTML='';
  let finished=false;const done=score=>{if(finished)return;finished=true;clearInterval(sing.iv);tr.stop();sing.head=null;singSetBusy(false);sing.abort=null;
   if(score){const res=SingLab.scoreTake(sing.ex,tr.track,b=>rec0+b*spb+sing.lat);sing.res=res;let sids=null;if(res.notes.some(x=>x.verdict!=='소리 없음')){statRec('sight',res.score/100);sids=sightFine(res)}const ok=res.notes.filter(x=>x.verdict==='맞음').length,n=res.notes.length;
-   el('sResult').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 (맞음 ${ok}/${n}음) · 평균 오차 <b>${res.meanAbsCents==null?'—':res.meanAbsCents}</b> cent</p><div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${VCLS[x.verdict]||'none'}"><b>${i+1}</b> ${sn(x.pitch)} ${x.verdict}${x.verdict!=='소리 없음'&&x.medCents!=null?` ${x.medCents>0?'+':''}${Math.round(x.medCents)}c`:''}</span>`).join('')}</div>`;
+   el('sResult').innerHTML=`<p class="score">점수 <b>${res.score}</b>점 (맞음 ${ok}/${n}음) · 평균 오차 <b>${res.meanAbsCents==null?'—':res.meanAbsCents}</b> cent</p><div class="chips2">${res.notes.map((x,i)=>`<span class="vc ${VCLS[x.verdict]||'none'}"><b>${i+1}</b> ${sn(x.pitch,sing.src)} ${x.verdict}${x.verdict!=='소리 없음'&&x.medCents!=null?` ${x.medCents>0?'+':''}${Math.round(x.medCents)}c`:''}</span>`).join('')}</div>`;
    if(sids&&RT.on)rtAnswer(res.score>=60,sids);
    msg.textContent=res.notes.every(x=>x.verdict==='소리 없음')?'소리가 거의 잡히지 않았습니다. 마이크 위치와 입력 음량을 확인하고 다시 해 보세요.':'끝났습니다. 신호 기반 판정이며 사람 평가가 아닙니다.'}
   else msg.textContent='중단했습니다.';singDraw()};
@@ -1958,9 +1958,9 @@ const MD_LET=Object.fromEntries(Object.entries(MD_KEYS).map(([k,p])=>[p,k.slice(
  bl.forEach(o=>{const wi=wh.findIndex(w=>w>o)-1;h+=`<button class="bk" type="button" data-p="${60+o}" aria-label="${sn(60+o)}" style="left:${(wi+1)/8*100}%">${MD_LET[60+o]}</button>`});el('mdKeys').innerHTML=h})();
 function mdNew(){mdSet(SingLab.makeExercise({key:singKeyPc(),minor:false,bars:2,lo:MD_LO,hi:MD_HI,seed:seed(),level:1}))}
 function mdSet(ex){md.src='gen';sdStop();sdUi();md.ex=ex;md.ans=md.ex.length?[md.ex[0][2]]:[];md.done=false;
- el('mdFb').textContent=md.ex.length?`${keyLab()} · 음 ${md.ex.length}개 중 첫 음(${sn(md.ex[0][2])})은 주어졌습니다. 「들어보기」 후 나머지 ${md.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.`:'문제를 만들 수 없습니다.';mdSlots()}
-function mdSlots(){el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a);if(i===0)t+=' (주어짐)';
-  if(md.done&&i>0){const ok=a===n[2];cls+=ok?' ok':' lo';t=ok?'✓ '+sn(a):`✗ ${a==null?'—':sn(a)} → ${sn(n[2])}`}return `<span class="${cls}"><b>${i+1}</b> ${t}</span>`}).join('');mdStaff()}
+ el('mdFb').textContent=md.ex.length?`${keyLab()} · 음 ${md.ex.length}개 중 첫 음(${sn(md.ex[0][2],md.src)})은 주어졌습니다. 「들어보기」 후 나머지 ${md.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.`:'문제를 만들 수 없습니다.';mdSlots()}
+function mdSlots(){document.querySelectorAll('#mdKeys [data-p]').forEach(b=>b.setAttribute('aria-label',sn(+b.dataset.p,md.src)));el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a,md.src);if(i===0)t+=' (주어짐)';
+  if(md.done&&i>0){const ok=a===n[2];cls+=ok?' ok':' lo';t=ok?'✓ '+sn(a,md.src):`✗ ${a==null?'—':sn(a,md.src)} → ${sn(n[2],md.src)}`}return `<span class="${cls}"><b>${i+1}</b> ${t}</span>`}).join('');mdStaff()}
 function mdPlay(){if(md.src==='song')return sdPlay();if(!md.ex.length)mdNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();const spb=60/84,t=ctx.currentTime+.1;for(const [s,d,p] of md.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92)}
 function mdAdd(p){if(md.done||!md.ex.length||md.ans.length>=md.ex.length)return;md.ans.push(p);ensureCtx();if(ctx.state==='suspended')ctx.resume();tone('sing',ctx.currentTime+.01,.4,p,88);mdSlots()}
 function mdUndo(){if(md.done||md.ans.length<=1)return;md.ans.pop();mdSlots()}
@@ -1995,7 +1995,7 @@ function sdRefresh(){if(sd.song!==song){sd.song=song;sd.done={};sd.layer=null;sd
  sdSet(i)}
 function sdWinLab(){const w=sd.wins[sd.i];el('sdWin').textContent=w?`${w.a+1}${w.b-w.a>1?'–'+w.b:''}마디 · ${sd.i+1}/${sd.wins.length} · 음 ${w.n}개${sdDone().has(w.a)?' · 푼 구간':''}`:''}
 function sdSet(i){sdStop();sd.i=i;const w=sd.wins[i],r=SingLab.dictRef(w);md.src='song';md.ex=r.ex;md.ans=[r.ex[0][2]];md.done=false;sdWinLab();
- el('mdFb').textContent=`음 ${r.ex.length}개 중 첫 음(${sn(r.ex[0][2])})은 주어졌습니다. 「들어보기」 후 나머지 ${r.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.${r.folded?' 음역이 넓어 건반 한 옥타브 안으로 접은 음이 있습니다.':''}`;mdSlots();sdUi()}
+ el('mdFb').textContent=`음 ${r.ex.length}개 중 첫 음(${sn(r.ex[0][2],'song')})은 주어졌습니다. 「들어보기」 후 나머지 ${r.ex.length-1}개를 입력하세요. 박자는 채점하지 않습니다.${r.folded?' 음역이 넓어 건반 한 옥타브 안으로 접은 음이 있습니다.':''}`;mdSlots();sdUi()}
 function sdNew(){if(!sd.wins.length)return;sdSet(SingLab.dictNext(sd.wins,sdDone(),sd.i,1));sdPlay()}
 function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();pmDroneStop();sdStop();
  const w=sd.wins[sd.i],r=sd.slow?.75:1;
