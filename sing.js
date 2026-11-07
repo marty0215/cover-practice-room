@@ -655,7 +655,7 @@ function streak(log,today){const o=pruneLog(log);let k=toKey(today);if(!k)return
 /* 오늘까지 7일: [{key,dow(0=일),n,min}] 오래된 날부터 */
 function week(log,today){const o=pruneLog(log),t=toKey(today),out=[];if(!t)return out;for(let i=6;i>=0;i--){const k=shiftKey(t,-i),r=o.days[k];out.push({key:k,dow:new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10),12).getDay(),n:r?r.n:0,min:r?Math.round(r.ms/60000):0})}return out}
 /* 백업 파일: 허용 키만, 키마다 검증·정리 후 문자열로 보관 */
-const BK_APP='cover-practice-room',BK_VER=1,BK_MAX=2e6,BK_KEYS=['pr-stats','pr-stats2','pr-days1','pr-ear','pr-myrange','pr-miclat','pr-rt-pm','pr-stview','pr-stlab','pr-ladder1'];
+const BK_APP='cover-practice-room',BK_VER=1,BK_MAX=2e6,BK_KEYS=['pr-stats','pr-stats2','pr-days1','pr-ear','pr-myrange','pr-miclat','pr-rt-pm','pr-stview','pr-stlab','pr-ladder1','pr-primer','pr-primerlog','pr-timbremix'];
 const isObj=x=>x&&typeof x==='object'&&!Array.isArray(x);
 const clean1=(k,raw)=>{if(typeof raw!=='string'||raw.length>BK_MAX/2)return null;let v;try{v=JSON.parse(raw)}catch(e){return null}
  switch(k){
@@ -668,10 +668,13 @@ const clean1=(k,raw)=>{if(typeof raw!=='string'||raw.length>BK_MAX/2)return null
   case 'pr-rt-pm':return v===0||v===1?String(v):null;
   case 'pr-stview':return v==='staff'||v==='roll'?v==='staff'?'"staff"':'"roll"':null;
   case 'pr-ladder1':{if(!isObj(v)||v.v!==1||!isObj(v.t))return null;return JSON.stringify(ladClean(v))}
+  case 'pr-primer':return PRIMERS.includes(v)?JSON.stringify(v):null;
+  case 'pr-primerlog':{if(!isObj(v)||v.v!==1||!isObj(v.p))return null;return JSON.stringify(primerClean(v))}
+  case 'pr-timbremix':return v===0||v===1?String(v):null;
   case 'pr-stlab':return v==='sol'||v==='name'?JSON.stringify(v):null}
  return null};
 /* 저장소엔 pr-stview/pr-stlab 이 따옴표 없는 문자열로 있으므로 파일 안에서는 JSON 문자열로 감싸 다룬다 */
-const RAW_STR=new Set(['pr-stview','pr-stlab']),toFileVal=(k,s)=>s==null?null:RAW_STR.has(k)?JSON.stringify(s):s,fromFileVal=(k,s)=>RAW_STR.has(k)?JSON.parse(s):s;
+const RAW_STR=new Set(['pr-stview','pr-stlab','pr-primer']),toFileVal=(k,s)=>s==null?null:RAW_STR.has(k)?JSON.stringify(s):s,fromFileVal=(k,s)=>RAW_STR.has(k)?JSON.parse(s):s;
 /* get(key) -> 저장 문자열|null. 허용 키만 담는다 */
 function buildBackup(get,now=Date.now()){const data={};for(const k of BK_KEYS){let s=null;try{s=get(k)}catch(e){}const f=toFileVal(k,s);if(f==null)continue;const c=clean1(k,f);if(c!=null)data[k]=fromFileVal(k,c)}
  return {app:BK_APP,kind:'progress',v:BK_VER,exported:new Date(now).toISOString(),data}}
@@ -690,15 +693,38 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
  const mItems=(a,b,cap)=>{const o={};for(const id of new Set([...Object.keys(a||{}),...Object.keys(b||{})])){const x=a&&a[id],y=b&&b[id];if(x&&y){const h=(y.h.length>=x.h.length?y.h:x.h).slice(-cap);o[id]={n:Math.max(h.length,(+x.n||0)+(+y.n||0)),h}}else o[id]=x||y}return o};
  for(const k of Object.keys(inc)){const a=cur[k]==null?null:J(cur[k]),b=J(inc[k]);
   if(cur[k]==null){out[k]=inc[k];continue}
-  if(!['pr-stats','pr-stats2','pr-days1','pr-ear','pr-ladder1'].includes(k)){out[k]=cur[k];continue}
+  if(!['pr-stats','pr-stats2','pr-days1','pr-ear','pr-ladder1','pr-primerlog'].includes(k)){out[k]=cur[k];continue}
   if(a==null||b==null){out[k]=inc[k];continue}
   if(k==='pr-stats'){out[k]=JSON.stringify(mItems(a,b,30))}
   else if(k==='pr-stats2'){const m=migrateStats(a,null),n=migrateStats(b,null),s=newStats();s.items=mItems(m.items,n.items,60);for(const id of new Set([...Object.keys(m.conf),...Object.keys(n.conf)])){const c={},x=m.conf[id]||{},y=n.conf[id]||{};for(const q of new Set([...Object.keys(x),...Object.keys(y)]))c[q]=(x[q]||0)+(y[q]||0);s.conf[id]=c}out[k]=JSON.stringify(migrateStats(s,null))}
   else if(k==='pr-days1'){const x=pruneLog(a),y=pruneLog(b),o=newLog();o.last=Math.max(x.last,y.last);for(const d of new Set([...Object.keys(x.days),...Object.keys(y.days)])){const p=x.days[d]||{n:0,ms:0},q=y.days[d]||{n:0,ms:0};o.days[d]={n:Math.max(p.n,q.n),ms:Math.max(p.ms,q.ms)}}out[k]=JSON.stringify(pruneLog(o))}
   else if(k==='pr-ear'){const o={};for(const id of new Set([...Object.keys(a),...Object.keys(b)])){const x=a[id],y=b[id];o[id]=x&&y?{n:x.n+y.n,ok:x.ok+y.ok}:x||y}out[k]=JSON.stringify(o)}
+  else if(k==='pr-primerlog'){const x=primerClean(a),y=primerClean(b),o=primerNew();for(const p of PRIMERS){const u=x.p[p],w=y.p[p];if(u||w)o.p[p]=!u?w:!w?u:w.length>=u.length?w:u}out[k]=JSON.stringify(o)}
   else if(k==='pr-ladder1'){const x=ladClean(a),y=ladClean(b),o=ladNew();for(const ty of LAD_TYPES){const p=x.t[ty],q=y.t[ty];if(p&&q){const w=q.k>p.k||(q.k===p.k&&q.h.length>=p.h.length)?q:p;o.t[ty]={on:p.on||q.on?1:0,k:w.k,h:w.h}}else if(p||q)o.t[ty]=p||q}out[k]=JSON.stringify(o)}
   else out[k]=cur[k]}
  return out}
 
-const api={LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+/* 으뜸음 프라이머(음계 도수 퀴즈): 질문 음 앞에 조성을 세우는 방법. 어려운 순서 cs -> c -> drone -> none */
+const PRIMERS=['cs','c','drone','none'],PRIMER_KO={cs:'카덴스+음계',c:'카덴스',drone:'으뜸음 드론',none:'없음'},PRIMER_DEFAULT='c',PRIMER_CH=.7,PRIMER_SC=.18,PRIMER_GAP=.8,PRIMER_WIN=20,PRIMER_PCT=.9,PRIMER_DAYS=3,MAJ_SC=[0,2,4,5,7,9,11,12,11,9,7,5,4,2,0];
+const normPrimer=p=>PRIMERS.includes(p)?p:PRIMER_DEFAULT;
+/* 재생 계획(시각은 0 기준, 초). cad: [{notes,bass}] I-IV-V-I, q: 질문 음. 질문 음은 항상 마지막 이벤트 */
+function primerPlan(mode,cad,q){mode=normPrimer(mode);const ev=[],tonic=60+(((cad[0].bass-60)%12)+12)%12;let t=0;
+ if(mode==='cs'||mode==='c'){cad.forEach((c,i)=>ev.push({k:'chord',t:i*PRIMER_CH,d:PRIMER_CH,notes:c.notes,bass:c.bass}));t=cad.length*PRIMER_CH}
+ if(mode==='cs'){MAJ_SC.forEach((s,i)=>ev.push({k:'scale',t:t+i*PRIMER_SC,d:PRIMER_SC+.04,p:tonic+s}));t+=MAJ_SC.length*PRIMER_SC}
+ if(mode==='drone'){const dp=36+(((cad[0].bass-36)%12)+12)%12;ev.push({k:'drone',t:0,d:2.6,p:dp});t=.4}
+ else if(mode!=='none')t+=PRIMER_GAP;
+ ev.push({k:'q',t,d:1.2,p:q});return {mode,ev,qAt:t,end:t+1.2}}
+const primerNew=()=>({v:1,p:{}});
+/* 로그: {v:1,p:{모드:[[날짜키,0|1],...최근 20]}} */
+function primerClean(L){const o=primerNew();if(!isObj(L)||!isObj(L.p))return o;for(const p of PRIMERS){const a=L.p[p];if(!Array.isArray(a))continue;const r=[];for(const e of a){if(Array.isArray(e)&&isKey(e[0])&&(e[1]===0||e[1]===1))r.push([e[0],e[1]])}if(r.length)o.p[p]=r.slice(-PRIMER_WIN)}return o}
+function primerRec(L,p,ok,ts){const o=primerClean(L);p=normPrimer(p);const k=toKey(ts);if(!k)return o;o.p[p]=(o.p[p]||[]).concat([[k,ok?1:0]]).slice(-PRIMER_WIN);return o}
+/* 제안만(자동 이동 없음): 이 프라이머의 최근 20답이 정답률 90% 이상이고 서로 다른 3일 이상에 걸칠 때 다음 단계를 권한다 */
+function primerSuggest(L,p){p=normPrimer(p);const i=PRIMERS.indexOf(p),a=(primerClean(L).p[p]||[]),n=a.length,acc=n?a.reduce((s,e)=>s+e[1],0)/n:null,days=new Set(a.map(e=>e[0])).size;
+ return {next:i<PRIMERS.length-1?PRIMERS[i+1]:null,n,acc,days,suggest:i<PRIMERS.length-1&&n>=PRIMER_WIN&&acc>=PRIMER_PCT&&days>=PRIMER_DAYS}}
+/* 음색·옥타브 섞기: 이미 있는 음색(기본 합성 sing, 건반 keys, 기타 guitar, 삼각파 score)만. 옥타브는 -1/0/+1 중 모든 음이 C2(36)~C7(96) 안에 남는 것만 */
+const MIX_VOICES=['sing','keys','guitar','score'],MIX_KO={sing:'기본 합성',keys:'건반',guitar:'기타',score:'삼각파 합성'},MIX_LO=36,MIX_HI=96,MIX_TYPES=['interval','triad','seventh','degree'];
+function octaveShifts(ps){const a=(ps||[]).filter(Number.isFinite);if(!a.length)return [0];const lo=Math.min(...a),hi=Math.max(...a);return [-1,0,1].filter(s=>lo+12*s>=MIX_LO&&hi+12*s<=MIX_HI)}
+function mixPlan(ps,rnd=Math.random){const sh=octaveShifts(ps),v=MIX_VOICES[Math.floor(rnd()*MIX_VOICES.length)%MIX_VOICES.length],s=sh.length?sh[Math.floor(rnd()*sh.length)%sh.length]:0;return {voice:v,shift:s}}
+function qPitches(q){const o=[];if(!q)return o;for(const k of ['notes','scale','melody'])if(Array.isArray(q[k]))o.push(...q[k]);if(Array.isArray(q.cad))for(const c of q.cad){if(c.notes)o.push(...c.notes);if(Number.isFinite(c.bass))o.push(c.bass)}if(q.target){if(q.target.notes)o.push(...q.target.notes);if(Number.isFinite(q.target.bass))o.push(q.target.bass)}return o.filter(Number.isFinite)}
+const api={PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
