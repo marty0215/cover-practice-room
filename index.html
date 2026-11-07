@@ -1483,6 +1483,8 @@ el('sKey').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 /* 진도 기록: pr-stats {drill:{n,h:[최근 결과 0..1]}} (localStorage, 실패해도 동작) */
 const DRILLS=[['interval','음정'],['triad','3화음'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sight','시창 점수']];
 let STAT={};try{STAT=JSON.parse(localStorage.getItem('pr-stats'))||{}}catch(e){STAT={}}
+if(!STAT||typeof STAT!=='object'||Array.isArray(STAT))STAT={};for(const k of Object.keys(STAT)){const r=STAT[k];if(!r||!Array.isArray(r.h))delete STAT[k];else{r.h=r.h.filter(x=>typeof x==='number'&&isFinite(x));r.n=Math.max(r.h.length,+r.n|0)}} /* 깨진 저장값은 버린다 */
+const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 /* 세부 통계 pr-stats2 (항목 id 별 최근 60회 + 혼동 쌍). 없으면 옛 pr-stats 에서 이관. 저장 실패해도 동작 */
 const jget=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
 let STAT2=window.SingLab?SingLab.migrateStats(jget('pr-stats2'),jget('pr-stats')):null;
@@ -1492,7 +1494,7 @@ function fine(id,frac,chosen){if(!STAT2)return;STAT2=SingLab.recItem(STAT2,id,fr
 const relK=p=>((p-singKeyPc())%12+12)%12;
 function spark(h){if(h.length<2)return '<span class="muted">—</span>';const W=72,H=20,p=h.map((v,i)=>`${(2+i*(W-4)/(h.length-1)).toFixed(1)},${(H-3-v*(H-6)).toFixed(1)}`).join(' ');return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${h.length}회 추이"><polyline points="${p}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${p.split(' ').pop().split(',')[0]}" cy="${p.split(' ').pop().split(',')[1]}" r="2.2" fill="var(--accent)"/></svg>`}
 function statRender(){const rows=DRILLS.map(([id,nm])=>{const r=STAT[id],a=SingLab.lastAcc(r,10),h=r&&Array.isArray(r.h)?r.h.slice(-10):[];return `<tr><td>${nm}</td><td class="n">${r&&r.n||0}</td><td class="n">${a==null?'—':Math.round(a*100)+'%'}</td><td>${spark(h)}</td></tr>`}).join('');{const none=DRILLS.every(([id])=>!(STAT[id]&&STAT[id].n));el('statEmpty').hidden=!none;el('statTbl').parentElement.hidden=none;el('rtEmpty').hidden=!none}el('statTbl').innerHTML='<tr><th>항목</th><th>횟수</th><th>최근 10회</th><th>추이</th></tr>'+rows;
- const w=STAT2?SingLab.topWeak(STAT2,{n:5}):[];el('weakBox').innerHTML=w.length?`<ol class="wl">${w.map(x=>`<li>${x.text}</li>`).join('')}</ol>`:'<p class="muted">아직 뚜렷한 약점이 없습니다. 항목마다 2번 이상 풀면 계산합니다.</p>'}
+ const w=STAT2?SingLab.topWeak(STAT2,{n:5}):[];el('weakBox').innerHTML=w.length?`<ol class="wl">${w.map(x=>`<li>${esc(x.text)}</li>`).join('')}</ol>`:'<p class="muted">아직 뚜렷한 약점이 없습니다. 항목마다 2번 이상 풀면 계산합니다.</p>'}
 function statRec(id,frac){STAT=SingLab.recStat(STAT,id,frac);try{localStorage.setItem('pr-stats',JSON.stringify(STAT))}catch(_){}statRender()}
 let statArm=0;el('statReset').onclick=()=>{const b=el('statReset');if(!statArm){b.textContent='정말 지우기';statArm=setTimeout(()=>{statArm=0;b.textContent='기록 지우기'},3000);return}clearTimeout(statArm);statArm=0;b.textContent='기록 지우기';STAT={};if(window.SingLab)STAT2=SingLab.newStats();try{localStorage.removeItem('pr-stats');localStorage.removeItem('pr-stats2')}catch(_){}statRender()};
 
@@ -1596,7 +1598,7 @@ function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing
  const sm=SingLab.summary(STAT2,RT.log,{n:3});RT.last=sm;statRender();
  const pc=a=>a==null?'—':Math.round(a*100)+'%',rows=sm.blocks.map(b=>`<tr><td>${b.label}</td><td class="n">${b.n}</td><td class="n">${b.ok}</td><td class="n">${pc(b.acc)}</td></tr>`).join('');
  el('rtSum').innerHTML=`<h3 class="small" style="margin-top:1rem">연습 결과${why?` · ${why}`:''}</h3>${sm.blocks.length?`<div style="overflow-x:auto"><table class="stt" id="rtTbl"><tr><th scope="col">블록</th><th scope="col">답한 문제</th><th scope="col">정답</th><th scope="col">정답률</th></tr>${rows}</table></div>`:'<p class="note">답한 문제가 없습니다.</p>'}
-  <h3 class="small" style="margin-top:.8rem">약한 항목 TOP 3</h3>${sm.weak.length?`<ol class="wl" id="rtWeak">${sm.weak.map(w=>`<li>${w.text}</li>`).join('')}</ol>`:'<p class="note">이번에 다룬 항목 중 뚜렷한 약점은 없습니다(항목마다 2번 이상 풀어야 계산합니다).</p>'}
+  <h3 class="small" style="margin-top:.8rem">약한 항목 TOP 3</h3>${sm.weak.length?`<ol class="wl" id="rtWeak">${sm.weak.map(w=>`<li>${esc(w.text)}</li>`).join('')}</ol>`:'<p class="note">이번에 다룬 항목 중 뚜렷한 약점은 없습니다(항목마다 2번 이상 풀어야 계산합니다).</p>'}
   <div class="row" style="margin-top:.6rem">${sm.weak.length?'<button class="btn primary" type="button" id="rtAgain">약점만 다시</button>':''}<button class="btn" type="button" id="rtClose">닫기</button></div>
   <p class="note">신호 기반 기록이며 사람 평가가 아닙니다. 항목별 최근 결과로 계산한 오답률입니다.</p>`;
  const ag=el('rtAgain');if(ag)ag.onclick=()=>rtStart(sm.weak.map(w=>w.id));el('rtClose').onclick=()=>{el('rtSum').innerHTML=''};
@@ -1604,13 +1606,13 @@ function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing
 el('rtStart').onclick=()=>rtStart();el('rtSkip').onclick=()=>rtBlock(RT.bi+1);el('rtStop').onclick=()=>rtFinish('중간에 그만뒀습니다');
 window.onTabShown=t=>{if(t!=='sing'&&RT.on)rtFinish('탭을 떠나 중단했습니다');if(t!=='sing'&&sing.abort)sing.abort();if(t!=='score')fuStop();if(t==='sing'){el('sKeySong').textContent=`곡 키 (${tn(KEY)})`;if(sing.src==='song'&&!sing.busy)singNew();else singDraw();statRender()}};
 
-{let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&SONGS[v]&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
+{let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&Object.prototype.hasOwnProperty.call(SONGS,v)&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();earNew();progNew();mdNew();statRender()}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 setSub(singSub,false);
 /* 처음 안내: 첫 방문에만(localStorage 실패 시에는 매번 보이되 닫을 수 있음) */
 (function(){const o=el('onb');let seen=false;try{seen=localStorage.getItem('pr-onb')==='1';if(!seen)localStorage.setItem('pr-onb','1')}catch(e){}
  if(seen)return;o.hidden=false;el('onbClose').onclick=()=>{o.hidden=true};
  el('onbPlay').onclick=()=>{showTab('practice');if(location.hash!=='#practice'){tabClick=true;location.hash='practice'}if(!S.playing)play()};
- el('onbMute').onclick=()=>{showTab('practice');const b=document.querySelector('#stems .mute');if(b){b.scrollIntoView({block:'center'});b.focus()}}})();
+ el('onbMute').onclick=()=>{showTab('practice');if(mode==='real'&&!el('modesel').querySelector('[data-m=synth]').disabled)el('modesel').querySelector('[data-m=synth]').click(); /* 파트 끄기는 브라우저 합성에서만 된다 */const b=document.querySelector('#stems .mute');if(b){b.scrollIntoView({block:'center'});b.focus()}}})();
 el('fuOn').addEventListener('change',()=>{if(el('fuOn').checked)el('fuPanel').open=true});
 if(matchMedia('(min-width:760px)').matches)el('flowHelp').open=true;
 fromHash(true);ready=true;

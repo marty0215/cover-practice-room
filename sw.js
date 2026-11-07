@@ -4,6 +4,8 @@ const V='pr-v4',SHELL=['./','index.html','help.html','sing.js','vendor/basicpitc
 const CDN=['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js'];
 const EXT=u=>u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'||u.hostname==='cdn.jsdelivr.net';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(V);await Promise.all(SHELL.map(u=>fetch(new Request(u,{cache:'reload'})).then(r=>{if(!r.ok)throw new Error(u);return c.put(u,r)})));
+  try{const ix=await (await c.match('samples/index.json')).json(),fs=new Set();JSON.stringify(ix,(k,v)=>{if(typeof v==='string'&&/\.mp3$/.test(v))fs.add('samples/'+v);return v});
+    await Promise.all([...fs].map(f=>fetch(f).then(r=>{if(r.ok&&r.status===200)return c.put(f,r)}).catch(()=>{})))}catch(_){} /* 샘플 음색도 오프라인에서 쓰도록 미리 담는다(실패해도 설치는 계속, 없으면 합성음으로 대신) */
   await Promise.all(CDN.map(u=>fetch(new Request(u,{mode:'no-cors'})).then(r=>c.put(u,r)).catch(()=>{})));
   const all=await self.clients.matchAll();all.forEach(x=>x.postMessage('cached'))})())});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith('pr-v')&&k!==V)await caches.delete(k);await self.clients.claim();

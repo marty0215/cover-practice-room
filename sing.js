@@ -114,7 +114,7 @@ function topLine(notes,{from=0,to=Infinity,lo=52,hi=67,minBeats=.125,eps=.06}={}
 /* 진도 기록: stats {id:{n:총횟수,h:[최근 결과 0..1, 최대 cap개]}} 를 갱신해 돌려준다. lastAcc 는 최근 k회 평균(없으면 null) */
 function recStat(stats,id,frac,cap=30){const s=stats&&typeof stats==='object'?stats:{},r=s[id]&&Array.isArray(s[id].h)?s[id]:{n:0,h:[]};
  const f=Math.max(0,Math.min(1,+frac||0));r.n=(r.n||0)+1;r.h=r.h.concat(f).slice(-cap);s[id]=r;return s}
-function lastAcc(rec,k=10){const h=rec&&rec.h?rec.h.slice(-k):[];return h.length?h.reduce((a,x)=>a+x,0)/h.length:null}
+function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typeof x==='number'&&isFinite(x)).slice(-k):[];return h.length?h.reduce((a,x)=>a+x,0)/h.length:null}
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
