@@ -125,11 +125,11 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
-   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
+   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
 const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
 const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),DG_ITEMS=SOLF.map((_,i)=>'dg:'+i);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
-const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창'};
-const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40}; // 문제당 예상 초 (블록 최대 문제 수 = 시간/이 값)
+const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
+const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40,pitch:30}; // 문제당 예상 초 (블록 최대 문제 수 = 시간/이 값)
 const kindOf=id=>KIND_OF[String(id).split(':')[0]]||null;
 const clamp01=x=>Math.max(0,Math.min(1,+x||0));
 const newStats=()=>({v:2,items:{},conf:{}});
@@ -181,10 +181,10 @@ function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){c
 /* 오늘의 연습 계획. minutes 를 음정 27·코드 27·멜로디 받아쓰기 18·리듬 10·시창 18% 로 나눈다(리듬 1분을 위해 나머지를 비례해 줄임). only(약점 항목 id 들)가 있으면 그 종류의 블록만 균등 분배.
    focus = 그 블록에서 가장 약한 항목(음정 블록은 약한 음정 3개) */
 function makeRoutine(st,{minutes=10,seed=1,only=null}={}){const wk=weakness(st),R=rng(seed),ids=only&&only.length?only:null;
- let kinds=['ear','prog','mel','rhy','sight'],sh={ear:.27,prog:.27,mel:.18,rhy:.1,sight:.18};
+ let kinds=['ear','prog','mel','rhy','sight'],sh={ear:.27,prog:.27,mel:.18,rhy:.1,sight:.18}; // pm(음정 부르기)는 오늘의 연습 블록이 아니라 전용 연습(약점·진도 통계만 공유)
  if(ids){kinds=kinds.filter(k=>ids.some(i=>kindOf(i)===k));sh={};for(const k of kinds)sh[k]=1/kinds.length}
  const pools={ear:IV_ITEMS.concat(extraEar(ids)),prog:[],mel:[],rhy:[],sight:[]};
- for(const id of Object.keys(wk)){const k=kindOf(id);if(k&&k!=='ear'&&!id.startsWith('sg:v:')&&!/:(late|early)$/.test(id))pools[k].push(id)}
+ for(const id of Object.keys(wk)){const k=kindOf(id);if(k&&k!=='ear'&&pools[k]&&!id.startsWith('sg:v:')&&!/:(late|early)$/.test(id))pools[k].push(id)}
  return {minutes,seed,only:ids,blocks:kinds.map(k=>{const secs=Math.round(minutes*60*sh[k]),ok=ids?ids.filter(i=>kindOf(i)===k):null;
   return {kind:k,label:KIND_LAB[k],secs,maxQ:Math.max(2,Math.round(secs/SPQ[k])),focus:weakest(wk,k==='ear'?pools.ear:pools[k],3,R).filter(i=>wk[i]||k==='ear'),only:ok}})}}
 /* 한 블록의 출제기. next() → 문제(없으면 null), answer(q,ok) → 틀리면 다른 문제 2–4개 뒤에 같은 문제를 다시(최대 2번 재출제). log 는 결과 기록 */
@@ -198,6 +198,7 @@ function makeSession(block,st,{seed=1,key=0,range=[52,67]}={}){const R=rng(seed)
 /* 한글 받침 판별 조사 */
 const jong=w=>{const c=String(w).charCodeAt(String(w).length-1)-44032;return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
 const eul=w=>w+(jong(w)?'을':'를'),ro=w=>w+(jong(w)===1?'으로':'로');
+const PM_SAME='동음',pmLab=(iv,d)=>d==='same'||iv===PM_SAME?'같은 음 내기':`${iv} ${d==='desc'?'아래로':'위로'} 부르기`;
 const ivLab=(n,d)=>d==='har'?n+' 동시 화음':n+' '+DIR_KO[d],stepKo=s=>+s===0?'같은 음 반복':(s>0?'위로 ':'아래로 ')+Math.abs(s)+'반음 진행';
 /* 항목 id 를 쉬운 한국어 문장으로. 혼동 쌍(conf)에서 가장 자주 고른 오답이 2번 이상이고 오답의 40% 이상이면 "자주 ~로 고릅니다" */
 function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{},ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),tot=ks.reduce((a,k)=>a+c[k],0),top=ks[0],often=top!=null&&c[top]>=2&&c[top]/tot>=.4,pct=rate!=null?` (오답률 ${Math.round(rate*100)}%)`:'';
@@ -210,6 +211,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  if(p[0]==='md'){const s=+p[1].slice(1);return often?`받아쓰기에서 ${eul(stepKo(s))} 자주 「${stepKo(+top)}」이라고 듣습니다.`:`받아쓰기에서 ${stepKo(s)} 정답률이 낮습니다${pct}.`}
  if(p[0]==='sg'&&p[1]==='v')return p[2]==='hi'?`시창에서 목표보다 높게 부르는 경향이 있습니다${pct}.`:`시창에서 목표보다 낮게 부르는 경향이 있습니다${pct}.`;
  if(p[0]==='sg'){const n=SOLF[+p[1].slice(1)];return often?`시창에서 「${n}」${jong(n)?'을':'를'} 자주 ${top==='옥타브'?'옥타브 어긋나게':top+' '}부릅니다.`.replace('  ',' '):`시창에서 「${n}」 음이 자주 어긋납니다${pct}.`}
+ if(p[0]==='pm'){const l=pmLab(p[1],p[2]);return often?(top==='옥타브'?`${l}에서 자주 옥타브가 어긋납니다.`:`${l}에서 자주 ${top} 부릅니다.`):`${l}가 자주 어긋납니다${pct}.`}
  if(p[0]==='rh'){const c=RCELLS[p[1]];if(!c)return String(id);return often?`리듬 받아쓰기에서 「${c.ko}」 칸을 자주 「${top}」${jong(top)===1?'으로':'로'} 적습니다.`:`리듬 받아쓰기에서 「${c.ko}」 정답률이 낮습니다${pct}.`}
  if(p[0]==='rt'){const l=RCAT_LAB[p[1]];if(!l)return String(id);if(p[2]==='late')return `${l}에서 늦게 칩니다${pct}.`;if(p[2]==='early')return `${l}에서 빠르게 칩니다${pct}.`;return `${l} 타이밍이 자주 어긋납니다${pct}.`}
  return String(id)}
@@ -218,6 +220,7 @@ function itemLabel(id){const p=String(id).split(':');
  if(p[0]==='iv')return ivLab(p[1],p[2]);if(p[0]==='tr')return p[1]+' 3화음';if(p[0]==='sv')return p[1]+' 7화음';if(p[0]==='dg')return SOLF[+p[1]]?`도수 「${SOLF[+p[1]]}」`:String(id);if(p[0]==='pg')return `${+p[2]+1}번째 칸 ${p[1]}`;
  if(p[0]==='md')return p[1][0]==='d'?`받아쓰기 「${SOLF[+p[1].slice(1)]}」`:`받아쓰기 ${stepKo(+p[1].slice(1))}`;
  if(p[0]==='sg')return p[1]==='v'?(p[2]==='hi'?'시창 높게 부름':'시창 낮게 부름'):`시창 「${SOLF[+p[1].slice(1)]}」`;
+ if(p[0]==='pm')return pmLab(p[1],p[2]);
  if(p[0]==='rh')return RCELLS[p[1]]?`리듬 「${RCELLS[p[1]].ko}」`:String(id);
  if(p[0]==='rt')return RCAT_LAB[p[1]]?`${RCAT_LAB[p[1]]} 탭${p[2]==='late'?' 늦음':p[2]==='early'?' 빠름':''}`:String(id);return String(id)}
 /* 약점 상위 n개: 기록 minN 이상, 오답률 rateMin 이상. within 이 있으면 그 id 만 */
@@ -294,5 +297,29 @@ function tapStatItems(res){const by={};for(const x of res.notes){if(!x.cat)conti
  for(const c of Object.keys(by)){for(const x of by[c])out.push(['rt:'+c,x.credit]);const h=by[c].filter(x=>x.dev!=null);if(h.length){out.push(['rt:'+c+':late',1-h.filter(x=>x.verdict==='늦음').length/h.length],['rt:'+c+':early',1-h.filter(x=>x.verdict==='빠름').length/h.length])}}
  return out}
 
-const api={yin,tracker,makeExercise,scoreTake,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+/* ---------- 음정 부르기 (pm) ----------
+   모드 same: 기준음과 같은 음 내기(id pm:동음:same) · 모드 iv: 기준음에서 음정만큼 위/아래로 부르기(id pm:<음정>:<asc|desc>).
+   기준음 [lo,hi] 안에서 목표 음도 같은 범위에 들게 고른다. wk(weakness 결과)가 있으면 약한 항목을 더 자주 낸다 */
+function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null}={}){const R=rng(seed),lo=range[0],hi=Math.max(range[0],range[1]);
+ if(mode!=='iv'){const ref=lo+Math.floor(R()*(hi-lo+1));return {mode:'same',ref,target:ref,iv:PM_SAME,dir:'same',semis:0,id:'pm:'+PM_SAME+':same'}}
+ let c=[];for(const [n,s] of INTERVALS)for(const d of ['asc','desc'])if((!iv||n===iv)&&(!dir||d===dir)&&hi-lo>=s)c.push([n,s,d]);
+ if(!c.length)c=[['완전5도',7,'asc']];const W=wk?c.map(x=>weightFor(wk,'pm:'+x[0]+':'+x[2])):null,[n,s,d]=pickWeighted(c,W,R);
+ const a=d==='asc'?lo:lo+s,b=d==='asc'?hi-s:hi,ref=a+Math.floor(R()*(Math.max(a,b)-a+1));
+ return {mode:'iv',ref,target:ref+(d==='asc'?s:-s),iv:n,dir:d,semis:s,id:'pm:'+n+':'+d}}
+/* 기록 [초,midi|null,conf] → 판정. 첫 발성(t0 이후 연속 run 프레임 이상 유성)의 skip 초 뒤부터 win 초 창에서 cent 중앙값을 낸다.
+   창 안 유성 프레임이 8개 미만·60% 미만이거나 기록이 창 끝 전에 끝났거나 p10–p90 폭이 spread cent 초과면 '불안정'(기록 안 함). 옥타브 차이는 scoreTake 와 같은 기준(±1200±2·tol). */
+function pmJudge(track,{target,t0=0,tol=50,minConf=.5,skip=.15,win=.6,run=3,spread=160}={}){const vo=f=>f[1]!=null&&f[2]>=minConf,tr=track.filter(f=>f[0]>=t0);let on=-1,n=0;
+ for(let i=0;i<tr.length;i++){if(vo(tr[i])){if(++n>=run){on=i-run+1;break}}else n=0}
+ const base={target,onset:null,frames:0,voiced:0,medCents:null,devCents:null,spread:null,octave:false,ok:false};if(on<0)return {...base,verdict:'소리 없음'};
+ const a=tr[on][0]+skip,b=a+win,fr=tr.filter(f=>f[0]>=a&&f[0]<=b),v=fr.filter(vo),r={...base,onset:tr[on][0]-t0,frames:fr.length,voiced:v.length};
+ if(v.length<8||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
+ const c=v.map(f=>(f[1]-target)*100).sort((x,y)=>x-y),med=c[c.length>>1],sp=c[Math.floor(.9*(c.length-1))]-c[Math.floor(.1*(c.length-1))];
+ if(sp>spread)return {...r,medCents:med,spread:sp,verdict:'불안정'};
+ const oct=Math.abs(Math.abs(med)-1200)<tol*2,dev=oct?med-Math.sign(med)*1200:med,ok=!oct&&Math.abs(med)<=tol;
+ return {...r,medCents:med,devCents:dev,spread:sp,octave:oct,ok,verdict:oct?'옥타브 차이':ok?'맞음':med>0?'높음':'낮음'}}
+/* 판정 → 통계 [[id,frac,chosen]]. 소리 없음·불안정은 기록하지 않는다([]) */
+function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.verdict==='불안정'||res.verdict==='소리 없음')return [];
+ return [[q.id,res.ok?1:0,res.ok?null:res.octave?'옥타브':res.verdict==='높음'?'높게':'낮게']]}
+
+const api={yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
