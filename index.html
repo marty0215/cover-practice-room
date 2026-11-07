@@ -534,11 +534,12 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <div class="head"><h2>지금 들리는 음이 어떤 음인지</h2><p class="muted small">재생 위치가 선 위를 따라 움직입니다. 마디를 누르면 그 마디의 음과 드럼 패턴이 아래에 풀려 나옵니다.</p></div>
   <div class="toolbar" role="toolbar" aria-label="채보 보기 설정"><div class="row"><button class="btn sm" id="vPrev">◀ 이전</button><span class="mono small" id="vRange"></span><button class="btn sm" id="vNext">다음 ▶</button></div><div class="seg" id="vLen" role="group" aria-label="보이는 마디 수"><button aria-pressed="false" data-n="4">4마디</button><button aria-pressed="true" data-n="8">8마디</button><button aria-pressed="false" data-n="16">16마디</button></div><div class="row tb-end"><label class="tgl"><input type="checkbox" id="vNames"><span>음이름</span></label><label class="tgl" title="재생 위치를 따라 화면이 넘어갑니다"><input type="checkbox" id="vFollow" checked><span>재생 따라가기</span></label></div></div>
   <div class="toolbar" id="neBar" role="toolbar" aria-label="음 고치기"><button class="btn sm" id="neOn" type="button" aria-pressed="false">음 고치기</button><div class="seg" id="neLayer" role="group" aria-label="고칠 층"></div><span class="legend" style="margin:0"><span class="bx" id="neCount" style="--c:var(--edit)">고친 음 0개</span></span><button class="btn sm" id="neRevert" type="button" title="이 층을 자동 채보 결과로 되돌립니다(되돌리기로 취소 가능)">원래대로</button></div>
-  <div class="toolbar" id="neTools" role="toolbar" aria-label="음 고치기 도구" hidden><button class="btn sm" id="neUndo" type="button">되돌리기</button><button class="btn sm" id="neRedo" type="button">다시하기</button><button class="btn sm" id="neDel" type="button">지우기</button><button class="btn sm" id="neAdd" type="button" title="재생 위치에 음을 넣습니다">음 넣기</button><button class="btn sm" id="nePrev" type="button">◀ 이전 음</button><button class="btn sm" id="neNext" type="button">다음 음 ▶</button><label class="small muted">길이 <select class="nesel" id="neLen" aria-label="새 음 길이"><option value="0.25">16분</option><option value="0.5">8분</option><option value="1" selected>1박</option><option value="2">2박</option></select></label></div>
+  <div class="toolbar" id="neTools" role="toolbar" aria-label="음 고치기 도구" hidden><button class="btn sm" id="neUndo" type="button">되돌리기</button><button class="btn sm" id="neRedo" type="button">다시하기</button><button class="btn sm" id="neDel" type="button">지우기</button><button class="btn sm" id="neAdd" type="button" title="재생 위치에 음을 넣습니다">음 넣기</button><button class="btn sm" id="nePrev" type="button">◀ 이전 음</button><button class="btn sm" id="neNext" type="button">다음 음 ▶</button><label class="small muted">길이 <select class="nesel" id="neLen" aria-label="새 음 길이"><option value="0.25">16분</option><option value="0.5">8분</option><option value="1" selected>1박</option><option value="2">2박</option><option value="3">3박</option><option value="4">4박</option></select></label></div>
   <p class="note" id="neMsg" role="status" aria-live="polite" style="margin-top:0"></p>
-  <details class="help" id="neHelp"><summary>도움말 · 음 고치기</summary><p>자동으로 받아 적은 음이 틀리면 고칠 층(보컬 멜로디 또는 채보 음)을 고르고 「음 고치기」를 켜세요. 빈 칸을 누르면 음이 들어가고(16분 칸에 맞춤), 음을 누르면 선택됩니다. 선택한 음을 끌면 옮겨지고, 오른쪽 끝을 끌면 길이가 바뀝니다. 키보드는 롤에 초점을 둔 채 ↑↓ 반음, ←→ 16분, Shift 와 함께 쓰면 옥타브·1박, Delete 로 지우기, Ctrl+Z 되돌리기입니다. 보컬 멜로디는 한 줄이라 겹치면 앞 음이 잘립니다. 고친 음은 윤곽선으로 표시되고, 따라 부르기·시창(현재 곡)·MIDI 내보내기·저장 분석에 그대로 쓰입니다. 코드 추정은 바뀌지 않습니다.</p></details>
+  <details class="help" id="neHelp"><summary>도움말 · 음 고치기</summary><p>자동으로 받아 적은 음이 틀리면 고칠 층(보컬 멜로디 또는 채보 음)을 고르고 「음 고치기」를 켜세요. 빈 칸을 누르면 음이 들어가고(16분 칸에 맞춤), 음을 누르면 선택됩니다. 선택한 음을 끌면 옮겨지고, 오른쪽 끝을 끌면 길이가 바뀝니다. 키보드는 롤에 초점을 둔 채 ↑↓ 반음, ←→ 16분, Shift 와 함께 쓰면 옥타브·1박, Delete 로 지우기, Ctrl+Z 되돌리기입니다. 스텝 입력(롤에 초점): 숫자 1–6 으로 길이(16분·8분·4분·2분·점2분·온음표)를 고르고, A–G 를 누르면 고른 음 뒤(고른 음이 없으면 점선 커서, 처음엔 재생 위치)에 그 글자의 음(가까운 옥타브, 제자리음)이 들어갑니다. ↑↓ 반음, Ctrl/Cmd+↑↓ 옥타브, Backspace 지우기. 이 키들은 음 고치기를 켜고 롤에 초점이 있을 때만 전역 단축키(1–4 파트 끄기 등)보다 앞서 쓰입니다. 보컬 멜로디는 한 줄이라 겹치면 앞 음이 잘립니다. 고친 음은 윤곽선으로 표시되고, 따라 부르기·시창(현재 곡)·MIDI 내보내기·저장 분석에 그대로 쓰입니다. 코드 추정은 바뀌지 않습니다.</p></details>
   <div class="rollwrap" tabindex="0" role="region" aria-label="채보 롤 (가로로 스크롤)"><canvas class="cv" id="roll" width="1200" height="520" role="img" aria-label="채보 롤: 파트별 음 위치와 재생 위치. 같은 내용을 아래 마디 상세 표와 글로 볼 수 있습니다" aria-describedby="bardetail"></canvas></div>
   <div class="legend" id="legend"></div>
+  <details class="panel fu" id="scStaffPanel"><summary class="sh">오선보로 보기 (선택)</summary><p class="muted small" style="margin:.4rem 0">지금 보이는 마디의 멜로디 층(음 고치기를 켜면 고르는 층)을 오선보로 그립니다. 코드 기호는 오선 위, 박자표는 첫 줄에 있습니다. 한 번에 한 소리만 적는 단선율이라 겹친 음은 가장 높은 음 하나만 남습니다. 신호 기반 추정이며 직접 들어 확인한 것이 아닙니다.</p><div class="sroll stbox" id="scStaffBox"><div id="scStaff"></div></div></details>
   <details class="panel fu" id="fuPanel"><summary class="sh">마이크로 따라 부르기 (선택)</summary><div class="fubody"><div class="row"><label class="chk"><input type="checkbox" id="fuOn"><span>마이크로 따라 부르기</span></label><label class="chk" title="체크하면 한 옥타브 위·아래로 불러도 맞은 것으로 셉니다"><input type="checkbox" id="fuFold" checked><span>옥타브 무시</span></label><span class="legend" style="margin:0"><span class="ln" style="--c:var(--loop)">내 음높이</span></span></div>
     <div class="tuner" id="tuner"><span class="tn" id="tuNote" aria-hidden="true">–</span><div class="tbar" id="tuBar" aria-hidden="true"><i id="tuNeedle"></i></div><span class="tc" id="tuTxt">마이크가 꺼져 있습니다.</span></div>
     <p class="note" id="fuMsg" role="status" style="margin:0">멜로디(채보 윗선)에 맞춰 부르면 내 음높이가 롤 위에 선으로 그려집니다.</p>
@@ -805,6 +806,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>베이스·건반·드럼·기타 끄기/켜기</td></tr>
     <tr><td><kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>4</kbd></td><td>그 파트만 듣기(솔로)</td></tr>
     <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>Delete</kbd></td><td>(채보 탭 「음 고치기」를 켜고 롤에 초점이 있을 때, 음을 고른 뒤) 반음·16분 이동, 지우기. <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>6</kbd> <kbd>A</kbd>–<kbd>G</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>↑</kbd><kbd>↓</kbd> <kbd>Backspace</kbd></td><td>(채보 탭 「음 고치기」 스텝 입력, 롤에 초점이 있을 때만) 길이 16분·8분·4분·2분·점2분·온음표 선택, 그 글자의 음 넣기, 반음, 옥타브, 지우기. 이때 숫자 1–6 은 파트 끄기(1–4)보다 앞섭니다</td></tr>
     <tr><td><kbd>?</kbd></td><td>이 창 열기 (<kbd>Esc</kbd>로 닫기)</td></tr>
     <tr><td><kbd>Space</kbd></td><td>(리듬 따라 치기에서) 시작 · 박자에 맞춰 치기. 받아쓰기에서는 다시 듣기</td></tr>
   </table>
@@ -1070,7 +1072,7 @@ sel.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.data
 
 /* ---------- piano roll ---------- */
 const cv=el('roll'),cx=cv.getContext('2d');const view={start:0,len:8};let drag=null,noClick=false;
-const ne={on:false,layer:null,sel:-1,h:NoteEdit.hist(),len:1,drag:null,dc:{}}; // 음 고치기 상태(아래 '음 고치기' 절)
+const ne={on:false,layer:null,sel:-1,cur:null,h:NoteEdit.hist(),len:1,drag:null,dc:{}}; // 음 고치기 상태(아래 '음 고치기' 절)
 function setView(s){view.start=Math.max(0,Math.min(Math.max(0,BARS-view.len),s));if(!S.playing)draw()}
 el('vPrev').onclick=()=>setView(view.start-view.len);el('vNext').onclick=()=>setView(view.start+view.len);
 el('vLen').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;viewPref=+b.dataset.n;view.len=Math.min(viewPref,BARS);document.querySelectorAll('#vLen button').forEach(x=>x.setAttribute('aria-pressed',x===b));setView(view.start);if(S.playing)draw()});
@@ -1099,8 +1101,10 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  cx.fillStyle=mu;cx.font='11px "Noto Sans KR",sans-serif';cx.textBaseline='middle';cx.fillText('킥',4,dy[36]);cx.fillText('스네어',4,dy[38]);cx.fillText('햇',4,dy[42]);
  cx.strokeStyle=line;cx.beginPath();cx.moveTo(0,H-drumH-6);cx.lineTo(W,H-drumH-6);cx.stroke();
  if(S.loop){cx.fillStyle=css('--bg');cx.globalAlpha=.62;const l=Math.max(0,Math.min(W,x(S.a))),r=Math.max(0,Math.min(W,x(S.b)));cx.fillRect(0,0,l,H);cx.fillRect(r,0,W-r,H);cx.globalAlpha=1;cx.strokeStyle=css('--loop');cx.lineWidth=2;cx.beginPath();if(x(S.a)>=0&&x(S.a)<=W){cx.moveTo(x(S.a),0);cx.lineTo(x(S.a),H)}if(x(S.b)>=0&&x(S.b)<=W){cx.moveTo(x(S.b),0);cx.lineTo(x(S.b),H)}cx.stroke()}
+ if(ne.on&&ne.layer){const cb=neCurBeat();if(cb>=v0&&cb<=v0+vb){cx.save();cx.strokeStyle=cE;cx.lineWidth=2;cx.setLineDash([5,4]);cx.beginPath();cx.moveTo(x(cb),top-4);cx.lineTo(x(cb),top+melH);cx.stroke();cx.restore()}}
  if(b>=v0&&b<=v0+vb){cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke()}
  const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordAt(bar,b-bar*4);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;el('scrub').setAttribute('aria-valuetext',`마디 ${bar+1} 박 ${beat+1}, ${chordName(bar)}`);updScrub(b);updStrip(bar);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
+ scStaffDraw();
  if(S.playing){if(mode==='real'&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
 const barAt=e=>{const r=cv.getBoundingClientRect();return Math.max(0,Math.min(BARS-1,view.start+Math.floor((e.clientX-r.left)/r.width*view.len)))};
 cv.addEventListener('pointerdown',e=>{if(e.button||ne.on)return;drag={x:e.clientX,a:barAt(e),b:barAt(e),moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
@@ -1117,7 +1121,7 @@ const neOrig=l=>{if(!song.autoParts)song.autoParts={};if(!song.autoParts[l])song
 const neDiff=l=>ne.dc[l]||(ne.dc[l]=NoteEdit.diff(neOrig(l),song.parts[l]||[]));
 function neClean(x){if(!x||typeof x!=='object')return null;const o={};for(const l of NE_L){const e=x[l];if(e&&Array.isArray(e.notes)&&e.notes.every(n=>Array.isArray(n)&&n.length>=3&&n.slice(0,3).every(isFinite)))o[l]={n:Math.max(0,+e.n||0),notes:e.notes}}return Object.keys(o).length?o:null}
 const neN=x=>{x=neClean(x);return x?Object.values(x).reduce((a,e)=>a+e.n,0):0};
-function neReset(){ne.on=false;ne.sel=-1;ne.drag=null;ne.dc={};ne.h=NoteEdit.hist();const ls=neLayers();ne.layer=ls[0]||null;el('neLayer').innerHTML=ls.map(l=>`<button type="button" aria-pressed="${l===ne.layer}" data-l="${l}">${neName(l)}</button>`).join('');neUi('')}
+function neReset(){ne.on=false;ne.sel=-1;ne.cur=null;ne.drag=null;ne.dc={};ne.h=NoteEdit.hist();const ls=neLayers();ne.layer=ls[0]||null;el('neLayer').innerHTML=ls.map(l=>`<button type="button" aria-pressed="${l===ne.layer}" data-l="${l}">${neName(l)}</button>`).join('');neUi('')}
 function neUi(msg){const ls=neLayers(),on=ne.on&&!!ne.layer;ne.on=on;el('neOn').setAttribute('aria-pressed',on);el('neOn').disabled=!ls.length;el('neOn').title=ls.length?'채보 음을 손으로 고칩니다':'이 곡에는 고칠 멜로디 층이 없습니다(연습곡 1이나 올린 곡에서 쓸 수 있습니다)';el('neOn').title=ls.length?'':'이 곡에는 고칠 수 있는 음 층(보컬 멜로디·채보 음)이 없습니다';
  el('neLayer').hidden=!ls.length;document.querySelectorAll('#neLayer button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===ne.layer));
  const n=ne.layer&&song.autoParts&&song.autoParts[ne.layer]?neDiff(ne.layer).count:0;el('neCount').textContent=`고친 음 ${n}개`;el('neCount').parentNode.hidden=!ls.length;el('neRevert').hidden=!ls.length;el('neRevert').disabled=n===0;
@@ -1129,13 +1133,13 @@ function neCommit(msg,l){l=l||ne.layer;ne.dc={};if(song.id==='user'){const d=neD
 /* 고친 음 미리 듣기: 정지 중일 때만 고른 음을 0.35초 울린다(재생 중엔 곡과 겹치므로 생략) */
 function neHear(l){try{const n=ne.sel>=0&&song.parts[l][ne.sel];if(!n||S.playing)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();tone(l,ctx.currentTime+.02,.35,n[2],100)}catch(_){}}
 function neEnsureAudible(l){if(mute[l]){mute[l]=false;syncMS();applyAllGains();updExp();return true}return false}
-function neToggle(on){if(on&&!ne.layer)return;ne.on=on;ne.sel=-1;ne.drag=null;if(on){neOrig(ne.layer);const u=neEnsureAudible(ne.layer);neUi(`음 고치기를 켰습니다(${neName(ne.layer)}). 빈 칸을 누르면 음을 넣고, 음을 누르면 고릅니다.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`)}else neUi('음 고치기를 껐습니다.');draw()}
-function neSetLayer(l){if(!neLayers().includes(l)||l===ne.layer)return;ne.layer=l;ne.sel=-1;neOrig(l);const u=ne.on&&neEnsureAudible(l);neUi(`고칠 층: ${neName(l)}.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`);draw()}
+function neToggle(on){if(on&&!ne.layer)return;ne.on=on;ne.sel=-1;ne.cur=null;ne.drag=null;if(on){neOrig(ne.layer);const u=neEnsureAudible(ne.layer);neUi(`음 고치기를 켰습니다(${neName(ne.layer)}). 빈 칸을 누르면 음을 넣고, 음을 누르면 고릅니다.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`)}else neUi('음 고치기를 껐습니다.');draw()}
+function neSetLayer(l){if(!neLayers().includes(l)||l===ne.layer)return;ne.layer=l;ne.sel=-1;ne.cur=null;neOrig(l);const u=ne.on&&neEnsureAudible(l);neUi(`고칠 층: ${neName(l)}.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`);draw()}
 const neVel=(ns,b)=>ns.length?ns.reduce((a,n)=>Math.abs(n[0]-b)<Math.abs(a[0]-b)?n:a)[3]:96;
 function neAdd(b,p){const ns=neNotes();p=Math.max(lo,Math.min(hi,Math.round(p)));NoteEdit.hpush(ne.h,ne.layer,ns);const r=NoteEdit.addNote(ns,{s:b,d:ne.len,p,v:neVel(ns,b)},neOpt());song.parts[ne.layer]=r.notes;ne.sel=r.idx;neCommit('음을 넣었습니다.')}
-function neDel(){if(ne.sel<0){neUi('지울 음을 먼저 누르세요.');return}const ns=neNotes();NoteEdit.hpush(ne.h,ne.layer,ns);song.parts[ne.layer]=NoteEdit.deleteNote(ns,ne.sel).notes;ne.sel=-1;neCommit('음을 지웠습니다.')}
+function neDel(){if(ne.sel<0){neUi('지울 음을 먼저 누르세요.');return}const ns=neNotes();NoteEdit.hpush(ne.h,ne.layer,ns);ne.cur=ns[ne.sel][0];song.parts[ne.layer]=NoteEdit.deleteNote(ns,ne.sel).notes;ne.sel=-1;neCommit('음을 지웠습니다.')}
 function neNudge(ds,dp){if(ne.sel<0)return;const ns=neNotes();NoteEdit.hpush(ne.h,ne.layer,ns);const r=NoteEdit.moveNote(ns,ne.sel,ds,dp,{...neOpt(),snap:false});song.parts[ne.layer]=r.notes;ne.sel=r.idx;neCommit('옮겼습니다.')}
-function neUndo(redo){const e=(redo?NoteEdit.hredo:NoteEdit.hundo)(ne.h,l=>song.parts[l]||[]);if(!e){neUi(redo?'다시할 것이 없습니다.':'되돌릴 것이 없습니다.');return}song.parts[e.l]=e.notes;ne.layer=e.l;ne.sel=-1;neCommit(redo?'다시 했습니다.':'되돌렸습니다.',e.l)}
+function neUndo(redo){const e=(redo?NoteEdit.hredo:NoteEdit.hundo)(ne.h,l=>song.parts[l]||[]);if(!e){neUi(redo?'다시할 것이 없습니다.':'되돌릴 것이 없습니다.');return}song.parts[e.l]=e.notes;ne.layer=e.l;ne.sel=-1;ne.cur=null;neCommit(redo?'다시 했습니다.':'되돌렸습니다.',e.l)}
 function neRevert(){if(!ne.layer)return;const l=ne.layer;if(!neDiff(l).count)return;NoteEdit.hpush(ne.h,l,song.parts[l]||[]);song.parts[l]=NoteEdit.clone(neOrig(l));ne.sel=-1;neCommit(`${neName(l)}을 자동 결과로 되돌렸습니다(「되돌리기」로 취소할 수 있습니다).`)}
 function neStep(dir){const ns=neNotes();if(!ns.length){neUi('고를 음이 없습니다.');return}let i=ne.sel;if(i<0){const b=nowBeat();if(dir>0){i=ns.findIndex(n=>n[0]>=b-1e-6);if(i<0)i=ns.length-1}else{i=-1;ns.forEach((n,k)=>{if(n[0]<=b+1e-6)i=k});if(i<0)i=0}}else i=Math.max(0,Math.min(ns.length-1,i+dir));
  ne.sel=i;const bar=Math.floor(ns[i][0]/4);if(bar<view.start||bar>=view.start+view.len)setView(Math.floor(bar/view.len)*view.len);neUi(neSelTxt());draw()}
@@ -1143,7 +1147,7 @@ function neStep(dir){const ns=neNotes();if(!ns.length){neUi('고를 음이 없�
 function nePos(e){const r=cv.getBoundingClientRect(),W=cv.width,H=cv.height,top=34,melH=H-top-70-8,X=(e.clientX-r.left)/r.width*W,Y=(e.clientY-r.top)/r.height*H;return {b:view.start*4+X/W*view.len*4,p:hi-(Y-top)/melH*(hi-lo),inMel:Y>=top-6&&Y<=top+melH+6,bpx:W/(view.len*4)}}
 cv.addEventListener('pointerdown',e=>{if(!ne.on||e.button)return;e.preventDefault();cv.parentNode.focus({preventScroll:true});const P=nePos(e);if(!P.inMel)return;const ns=neNotes(),tc=e.pointerType==='touch',tb=(tc?14:6)/P.bpx,p=Math.round(P.p),i=NoteEdit.hit(ns,P.b,p,{tolP:tc?1:0,tolB:tb});try{cv.setPointerCapture(e.pointerId)}catch(_){}
  if(i>=0){const edge=NoteEdit.isEdge(ns[i],P.b,Math.min((tc?18:9)/P.bpx,ns[i][1]*.4));ne.sel=i;ne.drag={m:edge?'size':'move',x:e.clientX,y:e.clientY,b:P.b,p,base:NoteEdit.clone(ns),i,moved:false};neUi(neSelTxt())}
- else{ne.sel=-1;ne.drag={m:'add',x:e.clientX,y:e.clientY,P,moved:false};neUi('')}draw()});
+ else{ne.sel=-1;ne.cur=NoteEdit.snapDn(P.b);ne.drag={m:'add',x:e.clientX,y:e.clientY,P,moved:false};neUi('')}draw()});
 cv.addEventListener('pointermove',e=>{const d=ne.drag;if(!ne.on||!d||d.m==='add')return;if(!d.moved&&Math.hypot(e.clientX-d.x,e.clientY-d.y)<5)return;d.moved=true;const P=nePos(e),o=neOpt(),n0=d.base[d.i];let r;
  if(d.m==='move'){const dp=Math.max(lo-n0[2],Math.min(hi-n0[2],Math.round(P.p)-d.p));r=NoteEdit.moveNote(d.base,d.i,P.b-d.b,dp,o)}else r=NoteEdit.resizeNote(d.base,d.i,n0[0]+n0[1]+(P.b-d.b),o);
  if(!d.pushed){NoteEdit.hpush(ne.h,ne.layer,d.base);d.pushed=true}song.parts[ne.layer]=r.notes;ne.sel=r.idx;if(!S.playing)draw()});
@@ -1155,10 +1159,31 @@ el('neLayer').addEventListener('click',e=>{const b=e.target.closest('button');if
 el('neUndo').onclick=()=>neUndo(false);el('neRedo').onclick=()=>neUndo(true);el('neDel').onclick=neDel;el('neRevert').onclick=neRevert;el('nePrev').onclick=()=>neStep(-1);el('neNext').onclick=()=>neStep(1);
 el('neLen').onchange=()=>{ne.len=+el('neLen').value||1};
 el('neAdd').onclick=()=>{const ns=neNotes(),b=Math.max(0,Math.min(TOTAL-.25,nowBeat())),near=ne.sel>=0?ns[ne.sel]:ns.length?ns.reduce((a,n)=>Math.abs(n[0]-b)<Math.abs(a[0]-b)?n:a):null;const bar=Math.floor(b/4);if(bar<view.start||bar>=view.start+view.len)setView(Math.floor(bar/view.len)*view.len);neAdd(b,near?near[2]:Math.round((lo+hi)/2))};
-/* 키보드: 켜 둔 동안 롤(.rollwrap)에 초점이 있고 음을 골랐을 때만 ↑↓←→·Delete 를 쓴다(그 밖에서는 전역 ←/→ 마디 이동·Space 재생 그대로). Ctrl+Z 는 켜 둔 동안 어디서나(입력칸 제외) */
-document.addEventListener('keydown',e=>{if(!ne.on||typing(e.target)||el('keysheet').open||el('tab-score').hidden)return; /* 다른 탭에서는 보이지 않는 되돌리기 금지 */const k=e.key,mod=e.ctrlKey||e.metaKey;
+/* ---------- 오선보로 보기(채보 탭): 보이는 마디의 멜로디 층 + 코드 기호. staff.js·musicxml.js 는 처음 펼칠 때만 불러온다. 내용이 같으면 다시 그리지 않는다(draw 가 재생 중 매 프레임 부른다) ---------- */
+const SC={sig:null};
+function scLayer(){return ne.on&&ne.layer?ne.layer:melSrc(song)}
+function scChords(a,n){const o=[];for(let i=a;i<a+n;i++){if(i>=BARS){o.push(null);continue}const sp=song.split&&song.split[i];o.push(sp?(sp.a===sp.b?[[0,fmtChord(parseChord(sp.a))]]:[[0,fmtChord(parseChord(sp.a))],[8,fmtChord(parseChord(sp.b))]]):[[0,chordName(i)]])}return o}
+function scStaffDraw(force){const pan=el('scStaffPanel');if(!pan.open||!window.Staff||!window.MusicXML)return;const l=scLayer(),ns=l?song.parts[l]:null,w=Math.max(220,Math.round((el('scStaffBox').clientWidth||340)-16)),a=view.start,n=Math.min(view.len,BARS-a),ck=song.chords.join()+JSON.stringify(song.split||0),sg=[song.id,l,ns,a,n,w,transpose,KEY,ck];
+ if(!force&&SC.sig&&SC.sig.every((x,i)=>x===sg[i]))return;SC.sig=sg;
+ const v0=a*4,v1=(a+n)*4,pcs=((KEY+transpose)%12+12)%12,win=[];for(const m of MusicXML.mono(ns||[],false)){const s=Math.max(m[0],v0),e=Math.min(m[0]+m[1],v1);if(e-s>=.125)win.push([s-v0,e-s,Math.max(0,Math.min(127,m[2]+transpose))])}
+ el('scStaff').innerHTML=Staff.svg(Staff.layout(win,{key:pcs,bars:n,chords:scChords(a,n),clef:win.length?undefined:'treble'}),{width:w,label:`오선보: ${a+1}–${a+n}마디, 음 ${win.length}개, 코드 기호 포함`})}
+el('scStaffPanel').addEventListener('toggle',async()=>{if(!el('scStaffPanel').open)return;try{await loadLib('staff');await loadLib('musicxml')}catch(e){el('scStaff').innerHTML='<p class="msg">오선보 모듈을 불러오지 못했습니다.</p>';return}scStaffDraw(true)});
+/* 키보드: 음 고치기를 켜 두고 롤(.rollwrap)에 초점이 있을 때만 쓴다(그 밖에서는 전역 Space·←/→·[ ]·L·M·1–4 그대로). 이 핸들러는 캡처 단계라 롤에 초점이 있을 때 숫자 1–6 은 파트 끄기(전역 1–4)보다 앞서 길이 선택이 된다(충돌 해소: 롤 밖에서는 전역 단축키).
+   ↑↓←→·Shift·Delete 는 음을 골랐을 때만. 스텝 입력: 1–6 길이, A–G 음 넣기(고른 음 뒤 / 커서 / 재생 위치), Ctrl/Cmd+↑↓ 옥타브, Backspace 지우기. Ctrl+Z 는 켜 둔 동안 어디서나(입력칸 제외) */
+const neLenSet=b=>{ne.len=b;const s=el('neLen');s.value=[...s.options].reduce((a,o)=>Math.abs(+o.value-b)<Math.abs(+a.value-b)?o:a).value};
+const editable=t=>!!(t&&t.isContentEditable);
+function neCurBeat(){return NoteEdit.stepCursor(neNotes(),ne.sel,ne.cur,nowBeat())}
+function neLetter(a){const ns=neNotes(),tot=TOTAL,c=NoteEdit.stepCursor(ns,ne.sel,ne.cur,nowBeat());if(c>=tot-1e-6){neUi('악보 끝입니다. 더 넣을 자리가 없습니다.');return}
+ const ref=NoteEdit.stepRef(ns,ne.sel,c),p=NoteEdit.letterPitch(a.pc,ref,lo,hi),bar=Math.floor(c/4);if(p==null)return;if(bar<view.start||bar>=view.start+view.len)setView(Math.floor(bar/view.len)*view.len);
+ NoteEdit.hpush(ne.h,ne.layer,ns);const r=NoteEdit.addNote(ns,{s:c,d:ne.len,p,v:neVel(ns,c)},neOpt());song.parts[ne.layer]=r.notes;ne.sel=r.idx;const w=r.notes[r.idx];ne.cur=w?w[0]+w[1]:c;neCommit(`${a.l} 음을 넣었습니다(${NoteEdit.STEP_NAME[ne.len]||ne.len+'박'}).`)}
+document.addEventListener('keydown',e=>{if(!ne.on||typing(e.target)||editable(e.target)||el('keysheet').open||el('tab-score').hidden)return; /* 다른 탭에서는 보이지 않는 되돌리기 금지 */const k=e.key,mod=e.ctrlKey||e.metaKey;
  if(mod&&!e.altKey&&/^[zy]$/i.test(k)){e.preventDefault();e.stopPropagation();neUndo(/y/i.test(k)||e.shiftKey);return}
- if(mod||e.altKey||!(e.target.closest&&e.target.closest('.rollwrap'))||ne.sel<0)return;
+ if(e.altKey||!(e.target.closest&&e.target.closest('.rollwrap')))return;
+ const a=NoteEdit.stepKey({key:k,ctrl:e.ctrlKey,meta:e.metaKey,shift:e.shiftKey,alt:e.altKey});
+ if(a&&a.t==='dur'){e.preventDefault();e.stopPropagation();neLenSet(a.beats);neUi(`길이: ${NoteEdit.STEP_NAME[a.beats]}. A–G 를 누르면 이 길이로 들어갑니다.`);return}
+ if(a&&a.t==='letter'){e.preventDefault();e.stopPropagation();neLetter(a);return}
+ if(a&&a.t==='oct'){if(ne.sel<0)return;e.preventDefault();e.stopPropagation();neNudge(0,a.d*12);return}
+ if(mod||ne.sel<0)return;
  const m={ArrowUp:[0,1],ArrowDown:[0,-1],ArrowLeft:[-.25,0],ArrowRight:[.25,0]}[k];
  if(m){e.preventDefault();e.stopPropagation();neNudge(e.shiftKey?m[0]*4:m[0],e.shiftKey?m[1]*12:m[1])}
  else if(k==='Delete'||k==='Backspace'){e.preventDefault();e.stopPropagation();neDel()}

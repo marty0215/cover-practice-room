@@ -37,5 +37,21 @@ function diff(orig,cur,tol){tol=tol||.02;const used=new Set(),by=new Map();orig.
 const r5=x=>Math.round(x*1e5)/1e5;
 const toSec=(ns,bpm,off)=>{const spb=60/bpm;return ns.map(n=>[r5(n[0]*spb+off),r5(n[1]*spb),n[2],n[3]])};
 const fromSec=(arr,bpm,off,total)=>{const spb=60/bpm,o=[];for(const n of arr){if(!Array.isArray(n)||n.length<3||!n.slice(0,3).every(isFinite))continue;const s=q((n[0]-off)/spb);if(s<0||s>=(total||1e9))continue;o.push([s,Math.max(MINL,q(n[1]/spb)),clampP(n[2]),Math.max(1,Math.min(127,Math.round(isFinite(n[3])?n[3]:96)))])}return sortN(o)};
-const api={G,MINL,snap,snapDn,clampP,addNote,moveNote,resizeNote,deleteNote,hit,isEdge,hist,hpush,hundo,hredo,diff,toSec,fromSec,clone};
+/* ---------- 스텝 입력(키보드로 음 넣기): 순수 부분만. 화면 연결은 index.html ----------
+   키(음 고치기 켠 동안, 롤에 초점): 1–6 길이(16분·8분·4분·2분·점2분·온음표), A–G 음 넣기(제자리음, 선택한 음/커서 뒤), ↑↓ 반음, Ctrl/Cmd+↑↓ 옥타브, Backspace·Delete 지우기. ←→·Shift+방향키는 기존 그대로 */
+const STEP_DUR={1:.25,2:.5,3:1,4:2,5:3,6:4},STEP_NAME={.25:'16분음표',.5:'8분음표',1:'4분음표(1박)',2:'2분음표(2박)',3:'점2분음표(3박)',4:'온음표(4박)'},LET_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+/* 키 이벤트({key,ctrl,meta,shift,alt}) → 동작 {t:'dur',beats}|{t:'letter',l,pc}|{t:'semi',d}|{t:'oct',d}|{t:'del'} 또는 null(이 키는 스텝 입력이 아님) */
+function stepKey(e){if(!e||e.alt)return null;const k=e.key,mod=!!(e.ctrl||e.meta);
+ if(mod)return k==='ArrowUp'?{t:'oct',d:1}:k==='ArrowDown'?{t:'oct',d:-1}:null;
+ if(k==='Backspace'||k==='Delete')return {t:'del'};if(e.shift)return null;
+ if(/^[1-6]$/.test(k))return {t:'dur',beats:STEP_DUR[k]};
+ if(/^[a-g]$/i.test(k))return {t:'letter',l:k.toUpperCase(),pc:LET_PC[k.toLowerCase()]};
+ if(k==='ArrowUp'||k==='ArrowDown')return {t:'semi',d:k==='ArrowUp'?1:-1};return null}
+/* 음 이름 글자의 음높이: 기준음(ref)에 가장 가까운 옥타브, 같으면 아래. lo..hi 안에서 */
+function letterPitch(pc,ref,lo,hi){lo=lo==null?21:lo;hi=hi==null?108:hi;if(!isFinite(ref))ref=(lo+hi)/2;let best=null;for(let p=lo;p<=hi;p++)if(p%12===pc&&(best===null||Math.abs(p-ref)<Math.abs(best-ref)))best=p;return best}
+/* 다음 음이 들어갈 박: 고른 음이 있으면 그 음 끝, 아니면 커서(cur), 그것도 없으면 지금 박(now)을 16분 칸으로 내림 */
+function stepCursor(ns,sel,cur,now){if(sel>=0&&ns[sel])return q(ns[sel][0]+ns[sel][1]);if(cur!=null&&isFinite(cur))return snapDn(cur);return snapDn(now||0)}
+/* 기준 음높이: 고른 음, 없으면 커서 앞에서 가장 가까운 음, 없으면 null */
+function stepRef(ns,sel,cursor){if(sel>=0&&ns[sel])return ns[sel][2];let b=null;for(const n of ns)if(n[0]<cursor-1e-9&&(b===null||n[0]>=b[0]))b=n;return b?b[2]:null}
+const api={STEP_DUR,STEP_NAME,stepKey,letterPitch,stepCursor,stepRef,G,MINL,snap,snapDn,clampP,addNote,moveNote,resizeNote,deleteNote,hit,isEdge,hist,hpush,hundo,hredo,diff,toSec,fromSec,clone};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.NoteEdit=api})(typeof window!=='undefined'?window:globalThis);
