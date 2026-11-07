@@ -321,6 +321,10 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 .tbar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--text-muted)}
 .tbar i{position:absolute;left:50%;top:-4px;bottom:-4px;width:6px;margin-left:-3px;border-radius:3px;background:var(--text-muted)}
 .tbar i.ok{background:var(--ok)}.tbar i.bad{background:var(--warn)}
+.takes{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}
+.takes li{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;border:1px solid var(--border);border-radius:10px;padding:.3rem .6rem;background:var(--surface)}
+.takes li .mono{flex:1 1 12rem;min-width:0}
+.rvol{gap:.4rem .8rem}.rvol label{display:flex;align-items:center;gap:.4rem;font-size:.85rem}.rvol input[type=range]{width:7rem;height:var(--hit);margin:0;accent-color:var(--accent)}
 /* 단축키 시트 */
 dialog{background:var(--surface);color:var(--text);border:1px solid var(--control-border);border-radius:14px;padding:1.1rem 1.2rem;max-width:min(520px,calc(100vw - 32px));width:100%}
 dialog::backdrop{background:rgba(0,0,0,.55)}
@@ -412,6 +416,11 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
         <div class="pop"><b>단계 연습 설정</b>
           <div class="stepcfg"><label for="trFrom">시작 속도 (%)</label><input type="number" id="trFrom" min="25" max="110" inputmode="numeric"><label for="trTo">목표 속도 (%)</label><input type="number" id="trTo" min="25" max="110" inputmode="numeric"><label for="trStep">한 단계 (%p)</label><input type="number" id="trStep" min="1" max="25" inputmode="numeric"><label for="trReps">단계당 반복 횟수</label><input type="number" id="trReps" min="1" max="16" inputmode="numeric"></div>
           <p class="note" style="margin:0" id="trNote"></p></div></details></div><span class="muted small">코드 띠를 길게 눌러 끌거나(터치), 끌어서(마우스) 구간을 정합니다. 띠 양 끝의 손잡이로 길이를 고치고, 빈 곳을 누르거나 「반복 해제」로 풉니다.</span></div>
+    <div class="opt" id="recOpt"><span class="lb">녹음해서 들어보기</span>
+      <div class="row"><label class="chk"><input type="checkbox" id="recOn"><span>녹음 켜기</span></label><label class="chk" title="스피커로 듣고 부를 때만 켜세요. 켜면 목소리가 깎이거나 반주가 섞일 수 있습니다"><input type="checkbox" id="recEc"><span>에코 제거 켜기</span></label><span class="muted small">켜 두고 재생하면 카운트인 뒤부터 마이크로 내 노래를 녹음하고, 정지하면 끝납니다.</span></div>
+      <div class="row rvol"><label>내 녹음 볼륨 <input type="range" id="recVol" min="0" max="150" value="100" aria-label="내 녹음 볼륨"></label><label>반주 볼륨 (녹음 들을 때) <input type="range" id="recBack" min="0" max="100" value="70" aria-label="반주 볼륨 (녹음 들을 때)"></label></div>
+      <ul class="takes" id="takes" aria-label="녹음 목록"></ul>
+      <p class="note" id="recMsg" role="status" style="margin:0">녹음은 이 브라우저의 메모리에만 두고 어디로도 보내지 않습니다(최대 5개). 페이지를 닫거나 새로 고치면 사라지니 남기려면 「받기」를 누르세요. 이어폰을 쓰면 반주가 같이 녹음되지 않습니다.</p></div>
     <div class="opt" id="styleRow" hidden><span class="lb">반주 스타일 (내 곡)</span><div class="seg" id="styleSel" role="group" aria-label="반주 스타일"><button aria-pressed="false" data-st="ballad">발라드</button><button aria-pressed="true" data-st="pop">팝</button><button aria-pressed="false" data-st="rock">록</button><button aria-pressed="false" data-st="acoustic">어쿠스틱</button></div><span class="muted small">베이스·건반·드럼 패턴만 바뀝니다. 기타는 넣지 않습니다.</span></div>
   </div>
   <p class="note">단축키는 <button class="btn sm" type="button" id="helpBtn2">? 단축키 보기</button></p>
@@ -687,15 +696,15 @@ function tick(){const horizon=ctx.currentTime+.18;let guard=0;
   for(const p of PARTS){const n=song.parts[p];let i=S.idx[p];while(i<n.length&&n[i][0]<lim){const [s,d,pitch,vel]=n[i];const t=S.anchorT+(s-S.anchorB)*S.spb;if(t>=ctx.currentTime-.02){p==='drums'?drum(t,pitch,vel):tone(p,t,Math.max(.05,d*S.spb),pitch,vel)}i++}S.idx[p]=i}
   if(el('click').checked){while(S.click<lim){clickAt(S.anchorT+(S.click-S.anchorB)*S.spb,S.click%4===0);S.click++}}else S.click=Math.ceil(lim);
   if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;stepUp();seekIdx(S.a);if(S.withAudio){const wrapAt=S.anchorT;setTimeout(()=>{if(S.playing)real.currentTime=S.a*spb0()},Math.max(0,(wrapAt-ctx.currentTime)*1000))}continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
-function play(){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
- S.anchorT=now+ci*S.spb;S.anchorB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
+function play(o){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
+ S.anchorT=now+ci*S.spb;S.anchorB=start;S.startB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
  real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
  if(mode==='synth'){seekIdx(start);S.timer=setInterval(tick,30)}
- draw()}
-function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');fuStop();draw()}
+ recBegin();applyBack();draw()}
+function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');fuStop();recStop();draw()}
 real.addEventListener('ended',()=>{if(S.playing&&mode==='real'){stop();S.anchorB=0;draw()}});
-el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';if(masterGain)masterGain.gain.setTargetAtTime(masterLevel(),ctx.currentTime,.02);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel()};
+el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';applyBack()};
 el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(mode==='synth'){real.volume=masterLevel()*origLevel();if(S.playing&&!S.withAudio&&origLevel()>0&&song.audio){S.withAudio=true;real.currentTime=nowBeat()*spb0();real.play().catch(()=>{})}}};
 el('play').onclick=()=>S.playing?stop():play();
 function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;if(window.trUi)trUi();document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
@@ -1176,6 +1185,45 @@ function fuStop(){if(!fu.tr)return;const had=fu.tot.n;fu.tr.stop();fu.tr=null;fu
 el('fuOn').onchange=()=>el('fuOn').checked?fuStart():fuStop();
 el('fuFold').onchange=()=>{if(!S.playing)draw()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fuStop()});addEventListener('pagehide',fuStop);
+/* ---------- 녹음해서 들어보기: 마이크를 MediaRecorder 로 받아 메모리(blob URL)에만 둔다. 서버로 보내지 않는다. 듣기는 반주와 같은 시작 박에서 함께 틀고 지연(pr-miclat)을 뺀다 ---------- */
+const rec={st:null,mr:null,tk:[],n:0,tm:0,pb:null,busy:false};
+const RMIME=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'],RMAX=5;
+const recM=t=>{el('recMsg').textContent=t};
+function applyBack(){const k=rec.pb?el('recBack').value/100:1;if(masterGain)masterGain.gain.setTargetAtTime(masterLevel()*k,ctx.currentTime,.02);real.volume=(mode==='real'?masterLevel():masterLevel()*origLevel())*k}
+async function recArm(){if(rec.st||rec.busy)return;
+ if(!navigator.mediaDevices||!window.MediaRecorder){el('recOn').checked=false;recM('이 브라우저는 녹음(MediaRecorder)을 지원하지 않습니다.');return}
+ rec.busy=true;let st;
+ try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:el('recEc').checked,noiseSuppression:false,autoGainControl:false}})}catch(e){rec.busy=false;el('recOn').checked=false;const n=e&&e.name;
+  recM((n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 켜 주세요.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 연결을 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}
+ rec.busy=false;if(!el('recOn').checked||document.hidden){st.getTracks().forEach(t=>t.stop());el('recOn').checked=false;return}
+ rec.st=st;recM(rec.tk.length>=RMAX?`녹음이 ${RMAX}개입니다. 하나를 지우면 다시 녹음할 수 있습니다.`:'녹음 대기 중입니다. 재생하면 카운트인 뒤부터 녹음합니다.')}
+function recDisarm(){recStop();const was=!!rec.st;if(rec.st){rec.st.getTracks().forEach(t=>t.stop());rec.st=null}el('recOn').checked=false;if(was)recM('녹음을 껐습니다. 마이크도 닫았습니다.')}
+/* 카운트인이 끝나는 시각(S.anchorT)에 녹음을 시작한다. lead = 실제 시작 − anchorT(초), 듣기 때 이만큼 더해 맞춘다 */
+function recBegin(){clearTimeout(rec.tm);rec.tm=0;if(!rec.st||rec.pb)return;if(rec.tk.length>=RMAX){recM(`녹음이 ${RMAX}개라 이번에는 녹음하지 않습니다. 하나를 지워 주세요.`);return}
+ rec.tm=setTimeout(()=>{rec.tm=0;if(!S.playing||!rec.st)return;const mt=RMIME.find(t=>MediaRecorder.isTypeSupported(t));let mr;
+  try{mr=mt?new MediaRecorder(rec.st,{mimeType:mt}):new MediaRecorder(rec.st)}catch(e){recM('녹음을 시작하지 못했습니다: '+e.message);return}
+  const ch=[],meta={lead:ctx.currentTime-S.anchorT,startB:S.startB,rate:rate(),tr:transpose,lp:{on:S.loop,a:S.a,b:S.b},t0:performance.now()};
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data)};
+  mr.onstop=()=>{const type=mr.mimeType||mt||'audio/webm',blob=new Blob(ch,{type});if(!blob.size){recM('녹음이 비어 있습니다.');return}
+   rec.tk.push({id:++rec.n,blob,url:URL.createObjectURL(blob),ext:/mp4/.test(type)?'mp4':/ogg/.test(type)?'ogg':'webm',dur:(performance.now()-meta.t0)/1000,...meta});recRender();recM(rec.tk.length>=RMAX?`녹음 ${rec.n}을 담았습니다. 이제 ${RMAX}개라 더 녹음하려면 하나를 지워 주세요.`:`녹음 ${rec.n}을 담았습니다. 아래에서 반주와 함께 들어 보세요.`)};
+  try{mr.start();rec.mr=mr;recM('녹음 중입니다. 정지를 누르면 끝납니다.')}catch(e){recM('녹음을 시작하지 못했습니다: '+e.message)}},Math.max(0,(S.anchorT-ctx.currentTime)*1000))}
+function recStop(){clearTimeout(rec.tm);rec.tm=0;if(rec.mr){const m=rec.mr;rec.mr=null;if(m.state==='recording')try{m.stop()}catch(e){}}
+ if(rec.pb){const p=rec.pb;rec.pb=null;try{p.src.stop()}catch(e){}p.g.disconnect();applyBack();recRender()}}
+async function recPlay(id){const t=rec.tk.find(x=>x.id===id);if(!t||(sing&&sing.busy))return;const again=rec.pb&&rec.pb.id===id;if(S.playing)stop();if(again)return;
+ ensureCtx();let buf;try{if(ctx.state==='suspended')await ctx.resume();buf=await ctx.decodeAudioData(await t.blob.arrayBuffer())}catch(e){recM('이 녹음을 재생하지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}
+ if(!rec.tk.includes(t))return;
+ el('tempo').value=Math.round(t.rate*100);el('tempo').oninput();if(t.tr!==transpose){el('transpose').value=t.tr;el('transpose').oninput()}
+ if(t.lp.on)setLoopBars(Math.floor(t.lp.a/4+1e-6)+1,Math.round(t.lp.b/4));else{S.loop=false;el('loopOn').checked=false;draw()}
+ S.anchorB=t.startB;const g=ctx.createGain(),src=ctx.createBufferSource();g.gain.value=el('recVol').value/100;src.buffer=buf;src.connect(g).connect(ctx.destination);rec.pb={id,src,g};
+ play({noCount:true});if(!S.playing){rec.pb=null;g.disconnect();return}
+ const d=t.lead-(sing.lat||0);d>=0?src.start(S.anchorT+d):src.start(S.anchorT,-d);recRender();recM(`녹음 ${id}을 반주와 함께 듣는 중입니다. 지연 ${Math.round((sing.lat||0)*1000)} ms를 뺐습니다.`)}
+const mmss=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function recRender(){el('takes').innerHTML=rec.tk.map(t=>`<li><b>녹음 ${t.id}</b><span class="mono small muted">${mmss(t.dur)} · ${Math.floor(t.startB/4+1e-6)+1}마디부터 · 속도 ${Math.round(t.rate*100)}%${t.tr?` · 키 ${t.tr>0?'+':''}${t.tr}`:''}</span><button class="btn sm" type="button" data-a="play" data-i="${t.id}" aria-label="녹음 ${t.id} ${rec.pb&&rec.pb.id===t.id?'정지':'반주와 듣기'}">${rec.pb&&rec.pb.id===t.id?'■ 정지':'▶ 반주와 듣기'}</button><a class="btn sm" href="${t.url}" download="take-${t.id}.${t.ext}" aria-label="녹음 ${t.id} 받기 (${t.ext})">받기</a><button class="btn sm" type="button" data-a="del" data-i="${t.id}" aria-label="녹음 ${t.id} 지우기">지우기</button></li>`).join('')}
+el('takes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const id=+b.dataset.i;if(b.dataset.a==='play')recPlay(id);else{const t=rec.tk.find(x=>x.id===id);if(!t)return;if(rec.pb&&rec.pb.id===id)stop();rec.tk=rec.tk.filter(x=>x!==t);URL.revokeObjectURL(t.url);recRender();recM(`녹음 ${id}을 지웠습니다.`)}});
+el('recOn').onchange=()=>el('recOn').checked?recArm():recDisarm();
+el('recEc').onchange=()=>{if(!rec.st)return;if(rec.mr){recM('녹음 중에는 바꿀 수 없습니다. 정지한 뒤 다시 바꿔 주세요.');return}recDisarm();el('recOn').checked=true;recArm()};
+el('recVol').oninput=()=>{if(rec.pb)rec.pb.g.gain.value=el('recVol').value/100};el('recBack').oninput=()=>{if(rec.pb)applyBack()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&rec.st){if(rec.mr)stop();recDisarm()}});addEventListener('pagehide',()=>{if(rec.st){if(rec.mr)stop();recDisarm()}});
 function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
