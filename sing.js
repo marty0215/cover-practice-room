@@ -176,17 +176,21 @@ function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){c
   for(let i=0;i<6;i++){const bars=level>1?2:(R()<.5?1:2),o={level,bars,seed:sd(R)},sl=makeRhythmSlots(o),
     items=mode==='dict'?sl.filter(x=>x!=='~').map(x=>'rh:'+x):[...new Set(rhythmOnsets(slotsToRhythm(sl),60).map(e=>'rt:'+e.cat))];c.push({o,items})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/o.items.length),R);return {kind,mode,level,bars:x.o.bars,rseed:x.o.seed,items:x.items,seed:sd(R)}}
+ if(kind==='pitch'){const po=only&&only.filter(i=>i.startsWith('pm:')),rg=[lo,hi];let q; /* 음정 부르기: 약점 id 가 있으면 그 항목만, 없으면 같은 음 1/3·음정 위/아래 2/3(약점 가중) */
+  if(po&&po.length){const item=pickWeighted(po,po.map(W),R),[,iv,d]=item.split(':');q=d==='same'?pmQuestion({mode:'same',range:rg,seed:sd(R)}):pmQuestion({mode:'iv',range:rg,seed:sd(R),iv,dir:d})}
+  else{const m=R()<.34?'same':'iv';q=pmQuestion({mode:m,range:rg,seed:sd(R),wk})}
+  return {kind,pq:q,items:[q.id],item:q.id,seed:sd(R)}}
  const pre=kind==='mel'?'md':'sg',c=[];for(let i=0;i<6;i++){const ex=makeExercise({key,bars:2,lo:pre==='md'?60:lo,hi:pre==='md'?72:hi,seed:sd(R),level:1});if(ex.length>=3)c.push({ex,items:exItems(ex,key,pre)})}
  if(!c.length)return {kind,ex:[],items:[],seed:1};const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/o.items.length),R);return {kind,ex:x.ex,items:x.items,seed:sd(R)}}
 /* 오늘의 연습 계획. minutes 를 음정 27·코드 27·멜로디 받아쓰기 18·리듬 10·시창 18% 로 나눈다(리듬 1분을 위해 나머지를 비례해 줄임). only(약점 항목 id 들)가 있으면 그 종류의 블록만 균등 분배.
    focus = 그 블록에서 가장 약한 항목(음정 블록은 약한 음정 3개) */
-function makeRoutine(st,{minutes=10,seed=1,only=null}={}){const wk=weakness(st),R=rng(seed),ids=only&&only.length?only:null;
- let kinds=['ear','prog','mel','rhy','sight'],sh={ear:.27,prog:.27,mel:.18,rhy:.1,sight:.18}; // pm(음정 부르기)는 오늘의 연습 블록이 아니라 전용 연습(약점·진도 통계만 공유)
- if(ids){kinds=kinds.filter(k=>ids.some(i=>kindOf(i)===k));sh={};for(const k of kinds)sh[k]=1/kinds.length}
- const pools={ear:IV_ITEMS.concat(extraEar(ids)),prog:[],mel:[],rhy:[],sight:[]};
+function makeRoutine(st,{minutes=10,seed=1,only=null,pm=false}={}){const wk=weakness(st),R=rng(seed),ids=only&&only.length?only:null;
+ let kinds=['ear','prog','mel','rhy','sight'],sh={ear:.27,prog:.27,mel:.18,rhy:.1,sight:.18}; // pm(음정 부르기, 마이크)은 pm=true 일 때만 맨 뒤에 덧붙임(고정 90초·최대 4번, 기존 블록 시간·R 순서 불변). only 에 pm: id 가 있으면 항상 포함
+ if(ids){kinds=kinds.concat('pitch').filter(k=>ids.some(i=>kindOf(i)===k));sh={};for(const k of kinds)sh[k]=1/kinds.length}else if(pm){kinds.push('pitch');sh.pitch=0}
+ const pools={ear:IV_ITEMS.concat(extraEar(ids)),prog:[],mel:[],rhy:[],sight:[],pitch:[]};
  for(const id of Object.keys(wk)){const k=kindOf(id);if(k&&k!=='ear'&&pools[k]&&!id.startsWith('sg:v:')&&!/:(late|early)$/.test(id))pools[k].push(id)}
- return {minutes,seed,only:ids,blocks:kinds.map(k=>{const secs=Math.round(minutes*60*sh[k]),ok=ids?ids.filter(i=>kindOf(i)===k):null;
-  return {kind:k,label:KIND_LAB[k],secs,maxQ:Math.max(2,Math.round(secs/SPQ[k])),focus:weakest(wk,k==='ear'?pools.ear:pools[k],3,R).filter(i=>wk[i]||k==='ear'),only:ok}})}}
+ return {minutes,seed,only:ids,blocks:kinds.map(k=>{const pt=k==='pitch',secs=pt?90:Math.round(minutes*60*sh[k]),ok=ids?ids.filter(i=>kindOf(i)===k):null;
+  return {kind:k,label:KIND_LAB[k],secs,maxQ:pt?4:Math.max(2,Math.round(secs/SPQ[k])),focus:weakest(wk,k==='ear'?pools.ear:pools[k],3,R).filter(i=>wk[i]||k==='ear'),only:ok}})}}
 /* 한 블록의 출제기. next() → 문제(없으면 null), answer(q,ok) → 틀리면 다른 문제 2–4개 뒤에 같은 문제를 다시(최대 2번 재출제). log 는 결과 기록 */
 function makeSession(block,st,{seed=1,key=0,range=[52,67]}={}){const R=rng(seed),wk=weakness(st),log=[],pend=[];let asked=0;
  return {log,get asked(){return asked},get pending(){return pend.length},
