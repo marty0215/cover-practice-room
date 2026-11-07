@@ -315,7 +315,7 @@ function pmDegOf(key,midi){const o=Math.floor((midi-key)/12),pc=((midi-key)%12+1
 /* 기준음 midi(음계 안 음) → {deg,tdeg,target,semis} 또는 null(음계 밖·모르는 종류) */
 function pmHarmTarget(key,ref,hk){const d=pmDegOf(key,ref),k=HK_D[hk];if(d==null||k==null)return null;const t=scMidi(key,d+k);return {deg:((d%7)+7)%7,tdeg:(((d+k)%7)+7)%7,target:t,semis:t-ref}}
 /* 반주 3화음: 뿌리 칸 r0 → {rootDeg,midis(뿌리 위치로 쌓고 맨 위가 lo 이하가 되게 옥타브 내림),pcs,name,q} */
-function pmChordOf(key,r0,lo){let m=[0,2,4].map(k=>scMidi(key,r0+k));while(m[2]>lo)m=m.map(x=>x-12);const dg=((r0%7)+7)%7;return {rootDeg:dg,midis:m,pcs:m.map(x=>((x%12)+12)%12),name:NAMES[((m[0]%12)+12)%12]+QL[dg],q:QL[dg]}}
+function pmChordOf(key,r0,lo){let m=[0,2,4].map(k=>scMidi(key,r0+k));while(m[2]>lo)m=m.map(x=>x-12);while(m[0]<36)m=m.map(x=>x+12);/* 낮은 내 음역이면 뿌리가 20–30Hz(서브소닉)까지 내려가므로 C2(MIDI 36) 아래는 한 옥타브씩 올린다 */const dg=((r0%7)+7)%7;return {rootDeg:dg,midis:m,pcs:m.map(x=>((x%12)+12)%12),name:NAMES[((m[0]%12)+12)%12]+QL[dg],q:QL[dg]}}
 function pmHarmQuestion({range,R,key,hk,wk}){const lo=range[0],hi=Math.max(range[0],range[1]);
  if(!HK_D[hk]){const W=wk?HKS.map(h=>weightFor(wk,'pm:'+PM_HAR+':'+h)):null;hk=pickWeighted(HKS,W,R)}
  const c=[];for(let m=lo;m<=hi;m++){const t=pmHarmTarget(key,m,hk);if(t&&t.target>=lo&&t.target<=hi)c.push([m,t])}
