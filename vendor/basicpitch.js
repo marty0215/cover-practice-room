@@ -1,4 +1,4 @@
-/* Basic Pitch TS 1.0.1 (Apache-2.0, Spotify AB) - ESM->classic script; MIDI file export removed. */
+/* Basic Pitch TS 1.0.1 (Apache-2.0, Spotify AB) - ESM->classic script; MIDI file export removed. Modified 2026-11-07 for this site: tensor disposal (tf.tidy), Float32Array row views instead of nested arrays, single-pass onset inference; outputs unchanged. */
 window.BasicPitchLib={};
 (function(){
 const tf=window.tf;
