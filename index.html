@@ -1733,15 +1733,16 @@ function updLat(){el('sLat').textContent=`지연 보정 ${Math.round(sing.lat*10
 function setLat(ms){sing.lat=ms/1000;try{localStorage.setItem('pr-miclat',String(ms))}catch(e){}updLat();singDraw()}
 function calClick(t){const o=ctx.createOscillator();o.frequency.value=1800;const g=ctx.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.06)}
 async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
- const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st;
- try{st=await Mic.acquire('cal',{ec:false})}catch(e){singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
+ const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st,cut=false;sing.abort=()=>{cut=true}; /* 「그만」·탭 이동으로 측정 중단 */
+ try{st=await Mic.acquire('cal',{ec:false})}catch(e){sing.abort=null;singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
+ if(cut){sing.abort=null;Mic.release('cal');singSetBusy(false);msg.textContent='중단했습니다. 보정값은 그대로입니다.';return}
  let src,an0,iv=0,cl=[];const sm=[];
  try{const an=an0=ctx.createAnalyser();an.fftSize=512;src=Mic.source(ctx);src.connect(an);const buf=new Float32Array(512);
  iv=setInterval(()=>{an.getFloatTimeDomainData(buf);let r=0;for(let i=0;i<512;i++)r+=buf[i]*buf[i];sm.push([ctx.currentTime,Math.sqrt(r/512)])},8);
  const t0=ctx.currentTime+.8;cl=[0,1,2,3].map(i=>t0+i*.7);cl.forEach(calClick);msg.textContent='클릭 소리 4번을 재는 중입니다…(이어폰을 빼고 스피커로)';
- await sleep(Math.max(0,(cl[3]+.7-ctx.currentTime)*1000))}
+ while(!cut&&ctx.currentTime<cl[3]+.7)await sleep(100);if(cut){cl=[];msg.textContent='중단했습니다. 보정값은 그대로입니다.'}}
  catch(e){msg.textContent='지연 재기에 실패했습니다: '+e.message+'. 보정값은 그대로입니다.';cl=[]}
- finally{clearInterval(iv);try{src&&an0&&src.disconnect(an0)}catch(_){}Mic.release('cal');singSetBusy(false)}
+ finally{sing.abort=null;clearInterval(iv);try{src&&an0&&src.disconnect(an0)}catch(_){}Mic.release('cal');singSetBusy(false)}
  if(!cl.length)return;const ms=SingLab.estimateLatency(sm,cl);
  if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
  else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다. 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`}}
