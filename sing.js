@@ -134,6 +134,25 @@ function inversionQuiz({seed=1,name=null,weight=null}={}){const R=rng(seed);for(
  /* 철자: 메이저는 근음 이름의 장조(Db·Eb·F#·Ab·Bb), 마이너는 C 장조 기준(C#m·D#m·F#m·G#m·Bbm) */
  const label=chordLabel({root,q:minor?'m':'',bass:inv?pcs[inv]:null},minor?0:root);
  return {type:'inversion',root,minor,inv,bassPc:pcs[inv],answer:INV_KO[inv],choices:INV_KO.slice(),notes,label,info:`${label} (${minor?'마이너':'메이저'} 3화음, ${INV_KO[inv]})`,item:'inv:'+inv}}
+/* 악보 읽기: 온음표 한 개를 자리표 위에 보이고 음 이름(과학적 표기, C4=가운데 도)을 고른다. 자연음만(덧줄 세기에 집중).
+   step = 옥타브*7+글자(C=0). 높은음자리표 오선 E4(30)–F5(38), 낮은음자리표 G2(18)–A3(26). 덧줄 수 = floor(오선 끝에서 벗어난 단계/2).
+   1단계 오선 안+덧줄 1개까지, 2단계 덧줄 3개까지, 3단계 덧줄 4–6개(오선 안 문제 없음). 보기 4개: 정답·오선 쪽으로 한 단계(덧줄을 잘못 센 흔한 오답)·반대로 한 단계·한 옥타브 차이 */
+const RD_CL={g:{bot:30,ko:'높은음자리표',clef:'treble'},f:{bot:18,ko:'낮은음자리표',clef:'bass'}},RD_ORD=['첫째','둘째','셋째','넷째','다섯째'],RD_Z={in:'오선 안',up:'오선 위 덧줄',dn:'오선 아래 덧줄'};
+const rdName=s=>'CDEFGAB'[s%7]+Math.floor(s/7),rdMidi=s=>(Math.floor(s/7)+1)*12+[0,2,4,5,7,9,11][s%7];
+function rdRange(zone,lv){if(zone==='in')return [0,8];return [lv===3?8:1,lv===1?3:lv===2?7:12]} /* up·dn: 오선 끝에서 벗어난 단계 d */
+function rdHint(clef,step){const c=RD_CL[clef],top=c.bot+8,nm=rdName(step);
+ if(step>=c.bot&&step<=top){const o=step-c.bot;return o%2?`${c.ko} ${RD_ORD[(o-1)/2]} 칸 = ${nm}`:`${c.ko} ${RD_ORD[o/2]} 줄${o===0?'(맨 아래)':o===8?'(맨 위)':''} = ${nm}`}
+ const up=step>top,d=up?step-top:c.bot-step,k=Math.floor(d/2),ln=[];for(let i=1;i<=k;i++)ln.push(rdName(up?top+2*i:c.bot-2*i));const side=up?'오선 위':'오선 아래';
+ if(d%2===0)return `${c.ko} ${side} 덧줄 ${k}번째 = ${nm} (덧줄을 하나씩 세기: ${ln.join(', ')})`;
+ return d===1?`${c.ko} ${up?'맨 윗줄 바로 위':'맨 아랫줄 바로 아래'} 칸 = ${nm}`:`${c.ko} ${side} 덧줄 ${k}번째와 ${k+1}번째 사이 칸 = ${nm} (덧줄을 하나씩 세기: ${ln.join(', ')})`}
+function readingQuiz({level=1,seed=1,name=null,weight=null}={}){const lv=level<2?1:level<3?2:3,R=rng(seed);for(let i=0;i<4;i++)R();
+ const items=[];for(const cl of ['g','f'])for(const z of lv===3?['up','dn']:['in','up','dn'])items.push(cl+'-'+z);
+ const nm=name&&/^[gf]-(in|up|dn)$/.test(name)?name:pickWeighted(items,weight?items.map(x=>weight('rd:'+x)):null,R),clef=nm[0],zone=nm.slice(2),c=RD_CL[clef],top=c.bot+8;
+ const [lo,hi]=rdRange(zone,lv),d=lo+Math.floor(R()*(hi-lo+1)),step=zone==='in'?c.bot+d:zone==='up'?top+d:c.bot-d;
+ const mid=c.bot+4,tw=step<mid?1:step>mid?-1:1,oc=R()<.5?7:-7,ch=[step,step+tw,step-tw,step+oc>=7&&step+oc<=62?step+oc:step-oc],at=ch.map(rdName);
+ for(let i=at.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[at[i],at[j]]=[at[j],at[i]]}
+ const led=zone==='in'?0:Math.floor(d/2),hint=rdHint(clef,step);
+ return {type:'reading',level:lv,clef:c.clef,zone,step,ledger:led,midi:rdMidi(step),notes:[rdMidi(step)],answer:rdName(step),choices:at,label:c.ko,hint,info:hint,item:'rd:'+nm}}
 /* 탭 템포: 탭 시각(초) 배열 → {bpm,n}. 마지막 탭 기준 pause(2 s) 넘게 끊긴 앞은 버리고, 최근 max(9)탭의 간격 중앙값에서 25% 넘게 벗어난 간격은 제외한 평균으로 BPM. 간격 2개 미만이면 null */
 function tapBpm(times,{pause=2,max=9,tol=.25}={}){const t=(Array.isArray(times)?times:[]).filter(x=>typeof x==='number'&&isFinite(x));if(t.length<3)return null;let st=t.length-1;while(st>0&&t[st]-t[st-1]<=pause&&t[st]-t[st-1]>0)st--;const w=t.slice(Math.max(st,t.length-max));if(w.length<3)return null;
  const iv=[];for(let i=1;i<w.length;i++)iv.push(w[i]-w[i-1]);const sr=iv.slice().sort((a,b)=>a-b),h=sr.length>>1,med=sr.length%2?sr[h]:(sr[h-1]+sr[h])/2;if(!(med>0))return null;
@@ -142,7 +161,7 @@ function tapBpm(times,{pause=2,max=9,tol=.25}={}){const t=(Array.isArray(times)?
 function tapRatio(tap,an){if(!(tap>0&&an>0))return 1;const r=tap/an;return Math.abs(r-2)<=.16?2:Math.abs(r-.5)<=.04?.5:1}
 function earQuiz({type='interval',key=0,level=1,seed=Date.now(),lo=55,hi=72,dir='asc',name=null,weight=null}={}){const R=rng(seed);
  if(type==='tonic')return tonicQuiz({level,seed});
- if(type==='cadence')return cadenceQuiz({level,seed,name,weight});if(type==='func')return funcQuiz({key,seed,name,weight});if(type==='inversion')return inversionQuiz({seed,name,weight});
+ if(type==='reading')return readingQuiz({level,seed,name,weight});if(type==='cadence')return cadenceQuiz({level,seed,name,weight});if(type==='func')return funcQuiz({key,seed,name,weight});if(type==='inversion')return inversionQuiz({seed,name,weight});
  if(type==='triad'){const all=[['메이저',[0,4,7]],['마이너',[0,3,7]],['디미니시',[0,3,6]],['오그먼트',[0,4,8]]],qs=all.slice(0,level<2?2:4);
   const fixed=name&&all.find(q=>q[0]===name),q=fixed||pickWeighted(qs,weight?qs.map(x=>weight('tr:'+x[0])):null,R),root=lo+Math.floor(R()*(hi-lo-8));
   return {type,answer:q[0],choices:qs.some(x=>x[0]===q[0])?qs.map(x=>x[0]):qs.map(x=>x[0]).concat(q[0]),notes:q[1].map(i=>root+i),label:pcName(root,key,{chord:1,minor:q[1][1]===3}),item:'tr:'+q[0]}}
@@ -196,10 +215,11 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
-   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · tk:<으뜸음 찾기 난이도 1|2> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · cd:<auth|plag|half|decp> (카덴스 듣기) · fn:<T|S|D> (화음 기능) · inv:<0|1|2> (전위 듣기) · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · sd:<vocal|score|bass> (곡 받아쓰기, 창마다 정답률 0..1; 루틴에는 안 씀) · all:<옛 항목>(옛 pr-stats 이관분) */
+   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · tk:<으뜸음 찾기 난이도 1|2> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · cd:<auth|plag|half|decp> (카덴스 듣기) · fn:<T|S|D> (화음 기능) · inv:<0|1|2> (전위 듣기) · rd:<g|f>-<in|up|dn> (악보 읽기: 자리표×오선 안/위 덧줄/아래 덧줄) · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · sd:<vocal|score|bass> (곡 받아쓰기, 창마다 정답률 0..1; 루틴에는 안 씀) · all:<옛 항목>(옛 pr-stats 이관분) */
 const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','미♭','미','파','파#','솔','솔#','라','시♭','시']; /* 반음 계이름은 오선보 철자와 같게 ♯1·♭3·♯4·♯5·♭7 (레#·라# 는 증2도·증6도 철자라 단3도·단7도 위 음에 쓰지 않음) */
-const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),TK_ITEMS=['tk:1','tk:2'],DG_ITEMS=SOLF.map((_,i)=>'dg:'+i),CD_ITEMS=CD_ALL.map(x=>'cd:'+x),FN_ITEMS=FN_ALL.map(x=>'fn:'+x),INVR_ITEMS=[0,1,2].map(x=>'inv:'+x);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
-const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',tk:'ear',cd:'ear',fn:'ear',inv:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
+const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),TK_ITEMS=['tk:1','tk:2'],DG_ITEMS=SOLF.map((_,i)=>'dg:'+i),CD_ITEMS=CD_ALL.map(x=>'cd:'+x),FN_ITEMS=FN_ALL.map(x=>'fn:'+x),INVR_ITEMS=[0,1,2].map(x=>'inv:'+x),RD_ITEMS=['g','f'].flatMap(c=>['in','up','dn'].map(z=>'rd:'+c+'-'+z));for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
+const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',tk:'ear',cd:'ear',fn:'ear',inv:'ear',rd:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
+const rdLab=z=>/^[gf]-(in|up|dn)$/.test(z)?(z[0]==='g'?'높은음자리표':'낮은음자리표')+' '+RD_Z[z.slice(2)]:null;
 const SPQ={ear:15,prog:45,mel:40,rhy:30,sight:40,pitch:30}; // 문제당 예상 초 (블록 최대 문제 수 = 시간/이 값)
 const kindOf=id=>KIND_OF[String(id).split(':')[0]]||null;
 const clamp01=x=>Math.max(0,Math.min(1,+x||0));
@@ -232,14 +252,14 @@ const relPc=(p,key)=>((p-key)%12+12)%12;
 /* 멜로디 한 줄의 통계 id 들. md 는 둘째 음부터 음 자리·진행(−12..12), sg 는 모든 음의 음 자리 */
 function exItems(ex,key,pre){const out=[];ex.forEach((n,i)=>{if(pre==='md'){if(i>0){out.push('md:d'+relPc(n[2],key),'md:s'+Math.max(-12,Math.min(12,n[2]-ex[i-1][2])))}}else out.push('sg:d'+relPc(n[2],key))});return out}
 /* only 에 3화음·7화음·도수 항목이 있을 때만 그 항목을 청음 후보에 더한다 */
-const extraEar=only=>[['tr:',TR_ITEMS],['sv:',SV_ITEMS],['dg:',DG_ITEMS],['tk:',TK_ITEMS],['cd:',CD_ITEMS],['fn:',FN_ITEMS],['inv:',INVR_ITEMS]].flatMap(([pf,a])=>only&&only.some(i=>i.startsWith(pf))?a:[]);
+const extraEar=only=>[['tr:',TR_ITEMS],['sv:',SV_ITEMS],['dg:',DG_ITEMS],['tk:',TK_ITEMS],['cd:',CD_ITEMS],['fn:',FN_ITEMS],['inv:',INVR_ITEMS],['rd:',RD_ITEMS]].flatMap(([pf,a])=>only&&only.some(i=>i.startsWith(pf))?a:[]);
 const sd=R=>Math.floor(R()*4294967294)+1;
 function weakest(wk,pool,n,R){const seen=pool.filter(id=>wk[id]&&wk[id].n>=1).sort((x,y)=>wk[y].rate-wk[x].rate||wk[y].n-wk[x].n||(x<y?-1:1)).slice(0,n);
  const rest=pool.filter(id=>!seen.includes(id));while(seen.length<n&&rest.length)seen.push(rest.splice(Math.floor(R()*rest.length),1)[0]);return seen}
 /* 블록 종류별 문제 한 개 생성(JSON 으로 저장 가능). ear: 음정·화음, prog: 코드 진행(후보 8개 중 약점 가중 추첨), mel/sight: 2마디 멜로디(후보 6개) */
 function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){const W=id=>weightFor(wk,id,{only,focus});
  if(kind==='ear'){let pool=IV_ITEMS.concat(extraEar(only));if(only&&only.length){const o=pool.filter(i=>only.includes(i));if(o.length)pool=o}
-  const item=pickWeighted(pool,pool.map(W),R),p=item.split(':');return item.startsWith('tr:')?{kind,type:'triad',name:p[1],item,seed:sd(R)}:item.startsWith('sv:')?{kind,type:'seventh',name:p[1],item,seed:sd(R)}:item.startsWith('tk:')?{kind,type:'tonic',level:+p[1],item,seed:sd(R)}:item.startsWith('cd:')?{kind,type:'cadence',name:p[1],item,seed:sd(R)}:item.startsWith('fn:')?{kind,type:'func',name:p[1],item,seed:sd(R)}:item.startsWith('inv:')?{kind,type:'inversion',name:p[1],item,seed:sd(R)}:item.startsWith('dg:')?{kind,type:'degree',name:SOLF[+p[1]],item,seed:sd(R)}:{kind,type:'interval',name:p[1],dir:p[2],item,seed:sd(R)}}
+  const item=pickWeighted(pool,pool.map(W),R),p=item.split(':');return item.startsWith('tr:')?{kind,type:'triad',name:p[1],item,seed:sd(R)}:item.startsWith('sv:')?{kind,type:'seventh',name:p[1],item,seed:sd(R)}:item.startsWith('tk:')?{kind,type:'tonic',level:+p[1],item,seed:sd(R)}:item.startsWith('cd:')?{kind,type:'cadence',name:p[1],item,seed:sd(R)}:item.startsWith('fn:')?{kind,type:'func',name:p[1],item,seed:sd(R)}:item.startsWith('inv:')?{kind,type:'inversion',name:p[1],item,seed:sd(R)}:item.startsWith('rd:')?{kind,type:'reading',name:p[1],level:2,item,seed:sd(R)}:item.startsWith('dg:')?{kind,type:'degree',name:SOLF[+p[1]],item,seed:sd(R)}:{kind,type:'interval',name:p[1],dir:p[2],item,seed:sd(R)}}
  if(kind==='prog'){const c=[];for(let i=0;i<8;i++){const q=makeProgression({key,level:2,seed:sd(R)});c.push({degs:q.degs,items:q.degs.map((d,k)=>'pg:'+DEG_L[d]+':'+k)})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/4),R);return {kind,degs:x.degs,items:x.items,seed:sd(R)}}
  if(kind==='rhy'){const hasRh=!!(only&&only.some(i=>i.startsWith('rh:'))),hasRt=!!(only&&only.some(i=>i.startsWith('rt:'))),m0=R()<.5?'dict':'tap',mode=hasRt&&!hasRh?'tap':hasRh&&!hasRt?'dict':m0, /* 약점 항목이 탭 종류(rt:)면 따라 치기, 칸 종류(rh:)면 받아쓰기로 낸다 */
@@ -285,6 +305,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  if(p[0]==='cd'){const l=CD_T[p[1]]&&CD_T[p[1]].ko;if(!l)return String(id);return often?`카덴스 듣기에서 「${l}」${jong(l)?'을':'를'} 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`카덴스 듣기에서 「${l}」 정답률이 낮습니다${pct}.`}
  if(p[0]==='fn'){const l=FN_KO[p[1]];if(!l)return String(id);return often?`화음 기능 듣기에서 「${l}」 화음을 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`화음 기능 듣기에서 「${l}」 화음의 정답률이 낮습니다${pct}.`}
  if(p[0]==='inv'){const l=INV_KO[+p[1]];if(!l)return String(id);return often?`전위 듣기에서 「${l}」${jong(l)?'을':'를'} 자주 「${top}」${jong(top)===1?'으로':'로'} 고릅니다.`:`전위 듣기에서 「${l}」 정답률이 낮습니다${pct}.`}
+ if(p[0]==='rd'){const l=rdLab(p[1]);if(!l)return String(id);return often?`악보 읽기(${l})에서 자주 「${top}」${jong(top)===1?'으로':'로'} 읽습니다.`:`악보 읽기(${l}) 정답률이 낮습니다${pct}.`}
  if(p[0]==='dg'){const n=SOLF[+p[1]];if(!n)return String(id);return often?`음계 도수 듣기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 고릅니다.`:`음계 도수 듣기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
  if(p[0]==='pg')return often?`${+p[2]+1}번째 코드가 「${p[1]}」일 때 자주 「${top}」라고 적습니다.`:`${+p[2]+1}번째 칸의 「${p[1]}」 정답률이 낮습니다${pct}.`;
  if(p[0]==='md'&&p[1][0]==='d'){const n=SOLF[+p[1].slice(1)];return often?`받아쓰기에서 「${n}」${jong(n)?'을':'를'} 자주 「${top}」라고 적습니다.`:`받아쓰기에서 「${n}」 음의 정답률이 낮습니다${pct}.`}
@@ -298,7 +319,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  return String(id)}
 /* 항목 id 의 짧은 이름 (집중 항목 표시용) */
 function itemLabel(id){const p=String(id).split(':');
- if(p[0]==='iv')return ivLab(p[1],p[2]);if(p[0]==='tr')return p[1]+' 3화음';if(p[0]==='sv')return p[1]+' 7화음';if(p[0]==='tk')return TK_LAB[p[1]]?`으뜸음 찾기 ${p[1]}단계`:String(id);if(p[0]==='cd')return CD_T[p[1]]?`카덴스 ${CD_T[p[1]].ko}`:String(id);if(p[0]==='fn')return FN_KO[p[1]]?`화음 기능 ${FN_KO[p[1]]}`:String(id);if(p[0]==='inv')return INV_KO[+p[1]]?`전위 ${INV_KO[+p[1]]}`:String(id);if(p[0]==='dg')return SOLF[+p[1]]?`도수 「${SOLF[+p[1]]}」`:String(id);if(p[0]==='pg')return `${+p[2]+1}번째 칸 ${p[1]}`;
+ if(p[0]==='iv')return ivLab(p[1],p[2]);if(p[0]==='tr')return p[1]+' 3화음';if(p[0]==='sv')return p[1]+' 7화음';if(p[0]==='tk')return TK_LAB[p[1]]?`으뜸음 찾기 ${p[1]}단계`:String(id);if(p[0]==='cd')return CD_T[p[1]]?`카덴스 ${CD_T[p[1]].ko}`:String(id);if(p[0]==='fn')return FN_KO[p[1]]?`화음 기능 ${FN_KO[p[1]]}`:String(id);if(p[0]==='inv')return INV_KO[+p[1]]?`전위 ${INV_KO[+p[1]]}`:String(id);if(p[0]==='rd')return rdLab(p[1])?`악보 읽기 ${rdLab(p[1])}`:String(id);if(p[0]==='dg')return SOLF[+p[1]]?`도수 「${SOLF[+p[1]]}」`:String(id);if(p[0]==='pg')return `${+p[2]+1}번째 칸 ${p[1]}`;
  if(p[0]==='md')return p[1][0]==='d'?`받아쓰기 「${SOLF[+p[1].slice(1)]}」`:`받아쓰기 ${stepKo(+p[1].slice(1))}`;
  if(p[0]==='sg')return p[1]==='v'?(p[2]==='hi'?'시창 높게 부름':'시창 낮게 부름'):`시창 「${SOLF[+p[1].slice(1)]}」`;
  if(p[0]==='pm')return pmLab(p[1],p[2]);
@@ -533,5 +554,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
