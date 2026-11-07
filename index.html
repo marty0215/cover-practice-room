@@ -1346,10 +1346,12 @@ const EXP_FN=p=>({bass:'bass',keys:'keys',guitar:'guitar',drums:'drums',score:so
 function compGain(W,S){const n=W[0].length,win=256,nf=Math.ceil(n/win),gf=new Float32Array(nf);let prev=1;
  for(let f=0;f<nf;f++){let num=0,den=0;const a=f*win,e=Math.min(n,a+win);for(let c=0;c<W.length;c++){const w=W[c],s=S[c];for(let i=a;i<e;i++){num+=w[i]*s[i];den+=s[i]*s[i]}}const eps=1e-7;prev=(num+eps*prev)/(den+eps);gf[f]=prev}
  const g=new Float32Array(n);for(let i=0;i<n;i++){const x=(i-win/2+.5)/win,f0=Math.max(0,Math.min(nf-1,Math.floor(x))),f1=Math.min(nf-1,f0+1),t=Math.max(0,Math.min(1,x-f0));g[i]=gf[f0]*(1-t)+gf[f1]*t}return g}
-var EXP={cancel:false};
-const tick0=()=>new Promise((r,j)=>setTimeout(()=>EXP.cancel?j(new Error('사용자가 취소했습니다')):r(),0));
+var EXP={cancel:false,sig:null};
+/* 내보내는 동안 곡·키·템포·음량·뮤트가 바뀌면 믹스와 스템이 서로 다른 설정으로 렌더되므로(README 도 어긋남) 단계 사이에서 중단한다 */
+const expSig=()=>({s:song,p:song.parts,k:JSON.stringify([transpose,el('tempo').value,el('master').value,mute,solo,vol,drumOn,SAMP.on])}),expChk=()=>{const a=EXP.sig,b=a&&expSig();if(a&&(a.s!==b.s||a.p!==b.p||a.k!==b.k))throw new Error('내보내는 동안 곡·키·템포·음량·파트 설정이 바뀌어 중단했습니다. 설정을 바꾸지 말고 다시 받으세요')};
+const tick0=()=>new Promise((r,j)=>setTimeout(()=>{if(EXP.cancel)return j(new Error('사용자가 취소했습니다'));try{expChk();r()}catch(e){j(e)}},0));
 /* kind: 'wav' | 'zip'. 같은 이득 G(라우드니스 맞춤)를 믹스와 모든 스템에 곱한다. 파트는 하나씩 차례로 렌더(메모리) */
-async function exportRender(kind,say){const ps=expParts();if(!ps.length)throw new Error('켠 파트가 없습니다');
+async function exportRender(kind,say){const ps=expParts();if(!ps.length)throw new Error('켠 파트가 없습니다');EXP.sig=expSig();
  const mono=el('expCh').value==='mono',ch=mono?1:2,lv=el('expLoud').value,tgt=lv==='raw'?null:+lv,spb=spb0()/rate(),len=Math.ceil((TOTAL*spb+1.5)*EXP_SR),sec=len/EXP_SR;
  if(sec>600&&!confirm(`곡 길이가 ${(sec/60).toFixed(1)}분입니다. 10분을 넘으면 렌더에 오래 걸리고 메모리를 많이 씁니다. 계속할까요?`))throw new Error('길이 때문에 취소했습니다');
  let used=false;if(SAMP.on){say('음색 불러오는 중…');used=await loadSamples(ps)}
@@ -1359,7 +1361,7 @@ async function exportRender(kind,say){const ps=expParts();if(!ps.length)throw ne
  const raw={lufs:lufsOf(W,EXP_SR),tp:truePeakOf(W)};let pl=planGain(tgt,raw),G=Math.pow(10,pl.db/20),Wm=W,env=null;const limAsk=el('expLim').checked&&tgt!=null,limOn=limAsk&&pl.limited;
  if(limOn){say('리미터 적용 중…');await tick0();const q=planLimit(W,EXP_SR,tgt,raw,EXP_TP-.1);env=q.g;Wm=q.Y;G=Math.pow(10,q.db/20);pl={db:q.db,lufs:q.lufs,tp:q.tp,limited:false,lim:Object.assign({it:q.it},q.st)}}
  const info={sec,ch,raw,plan:pl,limAsk,limOn,samples:SAMP.on&&used,nParts:ps.length,lag};
- const mixBytes=encWav(Wm,EXP_SR,env?1:G);
+ expChk();const mixBytes=encWav(Wm,EXP_SR,env?1:G);
  if(kind==='wav'){info.bytes=mixBytes;return info}
  const keep=ps.length*ch*len*4<=3e8,cache=[],S=Array.from({length:ch},()=>new Float32Array(len));
  for(let k=0;k<ps.length;k++){say(`스템 렌더 ${k+1}/${ps.length}(1차: 이득 계산용)…`);await tick0();const d=await renderCore([ps[k]],ch,false,len);for(let c=0;c<ch;c++){const s=S[c],x=d[c];for(let i=0;i<len;i++)s[i]+=x[i]}if(keep)cache.push(d)}
@@ -1368,13 +1370,13 @@ async function exportRender(kind,say){const ps=expParts();if(!ps.length)throw ne
  for(let k=0;k<ps.length;k++){say(`스템 저장 ${k+1}/${ps.length}…`);await tick0();const d=keep?cache[k]:await renderCore([ps[k]],ch,false,len),o=[];
   for(let c=0;c<ch;c++){const y=new Float32Array(len),x=d[c],r=res[c];for(let i=0;i<len;i++){const v=x[i]*g[i]*G*(env?env[i]:1);y[i]=v;r[i]-=v}o.push(y)}
   const nm=`${String(k+1).padStart(2,'0')}_${EXP_FN(ps[k])}.wav`;names.push(nm);files.push({name:nm,data:encWav(o,EXP_SR,1)});if(keep)cache[k]=null}
- let rE=0;for(const x of res)for(let i=0;i<len;i++)rE+=x[i]*x[i];info.resid=10*Math.log10(rE/Math.max(wE,1e-30));
+ expChk(); let rE=0;for(const x of res)for(let i=0;i<len;i++)rE+=x[i]*x[i];info.resid=10*Math.log10(rE/Math.max(wE,1e-30));
  const bpm=Math.round(song.bpm*rate()),lines=[`${song.title} — 커버 반주 스템`,'',`BPM: ${bpm} (원곡 ${song.bpm}, 템포 ${el('tempo').value}%)`,`키: ${tn(KEY)} (이조 ${transpose>0?'+':''}${transpose} 반음)`,`마디: ${BARS}마디 (4/4), 길이 ${sec.toFixed(1)}초(끝 1.5초 여운 포함)`,
   `형식: 44.1 kHz 16-bit WAV ${mono?'모노':'스테레오'}`,`파트(${ps.length}): ${ps.map((p,k)=>`${names[k]}`).join(', ')}`,
   mono?'패닝: 없음(모노)':'패닝(고정): 베이스·킥·스네어·멜로디 가이드 가운데, 하이햇 오른쪽 조금, 건반 왼쪽 조금, 기타 오른쪽 조금',
   `라우드니스(믹스): ${fmtDb(pl.lufs,'LUFS')}, 참 피크 ${fmtDb(pl.tp,'dBTP')}${tgt==null?' (원본 그대로)':` (목표 ${tgt} LUFS, 참 피크 상한 ${EXP_TP} dBTP${pl.limited?' — 상한 때문에 목표에 못 미침':''})`}`,
   pl.lim?`정적 이득 ${pl.db.toFixed(2)} dB 와 룩어헤드 참 피크 리미터(어택 약 5 ms, 릴리스 80 ms, 상한 ${EXP_TP-.1} dBTP)의 이득 곡선을 믹스와 모든 스템에 똑같이 적용했습니다. 이득 감소 최대 ${pl.lim.max.toFixed(1)} dB, 평균 ${pl.lim.mean.toFixed(1)} dB, 걸린 시간 ${pl.lim.pct.toFixed(0)}%. 다이내믹이 원본 렌더와 다릅니다.`:`정적 이득 ${pl.db.toFixed(2)} dB 를 믹스와 모든 스템에 똑같이 적용했습니다(리미터 없음).`,
-  `00_mix.wav 는 전체 믹스, 나머지는 파트별 스템입니다. 모두 같은 길이·같은 시작점이라 DAW 에서 0초에 나란히 놓으면 믹스와 거의 같게 합쳐집니다(합과 믹스의 잔차 ${info.resid.toFixed(1)} dB, 믹스 대비).`,
+  `00_mix.wav 는 전체 믹스, 나머지는 파트별 스템입니다. 모두 같은 길이·같은 시작점이라 DAW 에서 0초에 나란히 놓으면 믹스와 거의 같게 합쳐집니다(합과 믹스의 잔차 ${isFinite(info.resid)?info.resid.toFixed(1)+' dB':'— (무음)'}, 믹스 대비).`,
   '','신호 기반 생성물이며 청취 검증은 하지 않았습니다. 브라우저 합성/샘플 반주만 담았고 올린 원곡 소리는 들어 있지 않습니다.',`음색 샘플 저작자·라이선스: 연습실 사이트의 samples/CREDITS.md 와 도움말「출처」를 보세요.`,'',`만든 곳: 커버 연습실 · ${new Date().toISOString().slice(0,10)}`];
  files.push({name:'README.txt',data:new TextEncoder().encode(lines.join('\r\n')+'\r\n')});
  info.zip=zipStore(files);info.names=names;info.size=files.reduce((a,f)=>a+f.data.length,0);return info}
@@ -1386,7 +1388,7 @@ async function doExport(kind){const bs=[el('expWav'),el('expZip')];bs.forEach(b=
  try{const r=await exportRender(kind,say),p=r.plan,mono=r.ch===1;
   if(kind==='wav')dl(r.bytes,'audio/wav',expName('wav'));else dl(r.zip,'application/zip',expName('zip').replace(/\.zip$/,'_stems.zip'));
   say(`${kind==='wav'?`WAV ${(r.bytes.length/1048576).toFixed(1)} MB`:`스템 ZIP ${(r.size/1048576).toFixed(1)} MB · 믹스+스템 ${r.nParts}개 + README`} · ${r.sec.toFixed(1)}초 · ${mono?'모노':'스테레오'} · ${r.samples?'샘플 음색':'합성 음색'} 반주만 저장`);
-  el('expMeter').textContent=`측정(믹스): 원본 ${fmtDb(r.raw.lufs,'LUFS')} · 참 피크 ${fmtDb(r.raw.tp,'dBTP')}${r.raw.tp>0?' (0 dBTP 초과: 원본 그대로면 잘림)':''}. 저장본: ${fmtDb(p.lufs,'LUFS')} · ${fmtDb(p.tp,'dBTP')} · 이득 ${p.db>=0?'+':''}${p.db.toFixed(1)} dB${p.limited?` — 참 피크 상한 ${EXP_TP} dBTP 때문에 목표보다 낮게 맞췄습니다(리미터로 올릴 수 있음)`:''}${mono?' · 모노는 양쪽 스피커 기준으로 계산':''}${r.resid!=null?` · 스템 합 잔차 ${r.resid.toFixed(0)} dB`:''}`;
+  el('expMeter').textContent=`측정(믹스): 원본 ${fmtDb(r.raw.lufs,'LUFS')} · 참 피크 ${fmtDb(r.raw.tp,'dBTP')}${r.raw.tp>0?' (0 dBTP 초과: 원본 그대로면 잘림)':''}. 저장본: ${fmtDb(p.lufs,'LUFS')} · ${fmtDb(p.tp,'dBTP')} · 이득 ${p.db>=0?'+':''}${p.db.toFixed(1)} dB${p.limited?` — 참 피크 상한 ${EXP_TP} dBTP 때문에 목표보다 낮게 맞췄습니다(리미터로 올릴 수 있음)`:''}${mono?' · 모노는 양쪽 스피커 기준으로 계산':''}${r.resid!=null?` · 스템 합 잔차 ${isFinite(r.resid)?r.resid.toFixed(0)+' dB':'— (무음)'}`:''}`;
   if(r.limOn){const l=p.lim;el('expMeter').textContent+=` · 리미터: 이득 감소 최대 ${l.max.toFixed(1)} dB · 평균 ${l.mean.toFixed(1)} dB(걸린 구간 ${l.meanAct.toFixed(1)} dB) · ${l.pct.toFixed(0)}% 시간 작동 · 보정 ${l.it}회${l.mean>3?' — 과하게 눌림: 목표를 낮추는 편이 좋습니다':''}`}else if(r.limAsk)el('expMeter').textContent+=' · 리미터: 참 피크 상한에 걸리지 않아 쓰지 않았습니다';
   window.__lastExport={raw:r.raw,plan:p,limOn:r.limOn,resid:r.resid,sec:r.sec,ch:r.ch}}
  catch(e){clearInterval(tm);el('expMsg').textContent=EXP.cancel?'내보내기를 취소했습니다. 저장된 파일은 없습니다.':'내보내기 실패: '+e.message}finally{clearInterval(tm);cb.hidden=true;bs.forEach(b=>b.disabled=false)}}
@@ -1823,7 +1825,7 @@ function rtLock(on){el('tab-sing').classList.toggle('rt-on',on);document.querySe
 function rtStart(only){if(RT.on||sing.busy||!window.SingLab)return;if(S.playing)stop();setSub('today',false);clearInterval(sing.liv);
  RT.plan=SingLab.makeRoutine(STAT2,{minutes:only?5:10,seed:seed(),only:only||null});RT.log=[];RT.on=true;RT.last=null;rtLock(true);
  el('rtIdle').hidden=true;el('rtSum').innerHTML='';el('rtRun').hidden=false;clearInterval(RT.tm);RT.tm=setInterval(rtTick,500);rtBlock(0)}
-function rtBlock(i){if(!RT.on)return;if(i>=RT.plan.blocks.length)return rtFinish('');RT.bi=i;const b=RT.plan.blocks[i];
+function rtBlock(i){if(!RT.on)return;rhyAbort();/* 앞 블록이 리듬이면 소리·타이머를 끊는다 */if(i>=RT.plan.blocks.length)return rtFinish('');RT.bi=i;const b=RT.plan.blocks[i];
  RT.sess=SingLab.makeSession(b,STAT2,{seed:seed(),key:singKeyPc(),range:sing.range});RT.t0=performance.now();RT.over=false;rtPanels(RT_PANELS[b.kind]);rtNextQ()}
 function rtNextQ(){if(!RT.on)return;const q=RT.over?null:RT.sess.next();if(!q)return rtBlock(RT.bi+1);RT.q=q;RT.answered=false;rtShowQ(q);rtUi()}
 function rtNext(){rtNextQ()}
@@ -1842,7 +1844,7 @@ function rtUi(){if(!RT.on)return;const b=RT.plan.blocks[RT.bi],n=RT.plan.blocks.
  const f=b.focus&&b.focus.length&&b.kind==='ear'?` · 집중: ${b.focus.map(SingLab.itemLabel).join(', ')}`:'';
  el('rtQ').textContent=`문제 ${RT.q?RT.q.idx:0}/${b.maxQ}${RT.q&&RT.q.retry?' · 틀렸던 문제가 다시 나왔습니다':''}${f}${RT.over?' · 시간이 다 됐습니다. 이 문제를 마치면 다음 블록으로 넘어갑니다.':''}`}
 function rtTick(){if(!RT.on)return;const b=RT.plan.blocks[RT.bi];if(!RT.over&&(performance.now()-RT.t0)/1000>=b.secs){RT.over=true}rtUi()}
-function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing.abort)sing.abort();rtLock(false);rtPanels(null);el('rtRun').hidden=true;el('rtIdle').hidden=false;
+function rtFinish(why){if(!RT.on)return;RT.on=false;clearInterval(RT.tm);if(sing.abort)sing.abort();rhyAbort();rtLock(false);rtPanels(null);el('rtRun').hidden=true;el('rtIdle').hidden=false;
  const sm=SingLab.summary(STAT2,RT.log,{n:3});RT.last=sm;statRender();
  const pc=a=>a==null?'—':Math.round(a*100)+'%',rows=sm.blocks.map(b=>`<tr><td>${b.label}</td><td class="n">${b.n}</td><td class="n">${b.ok}</td><td class="n">${pc(b.acc)}</td></tr>`).join('');
  el('rtSum').innerHTML=`<h3 class="small" style="margin-top:1rem">연습 결과${why?` · ${why}`:''}</h3>${sm.blocks.length?`<div style="overflow-x:auto"><table class="stt" id="rtTbl"><tr><th scope="col">블록</th><th scope="col">답한 문제</th><th scope="col">정답</th><th scope="col">정답률</th></tr>${rows}</table></div>`:'<p class="note">답한 문제가 없습니다.</p>'}

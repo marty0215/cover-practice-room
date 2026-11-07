@@ -171,7 +171,8 @@ function genQuestion(kind,{key=0,wk={},R,focus=null,only=null,lo=52,hi=67}={}){c
   const item=pickWeighted(pool,pool.map(W),R),p=item.split(':');return item.startsWith('tr:')?{kind,type:'triad',name:p[1],item,seed:sd(R)}:item.startsWith('sv:')?{kind,type:'seventh',name:p[1],item,seed:sd(R)}:item.startsWith('dg:')?{kind,type:'degree',name:SOLF[+p[1]],item,seed:sd(R)}:{kind,type:'interval',name:p[1],dir:p[2],item,seed:sd(R)}}
  if(kind==='prog'){const c=[];for(let i=0;i<8;i++){const q=makeProgression({key,level:2,seed:sd(R)});c.push({degs:q.degs,items:q.degs.map((d,k)=>'pg:'+DEG_L[d]+':'+k)})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/4),R);return {kind,degs:x.degs,items:x.items,seed:sd(R)}}
- if(kind==='rhy'){const mode=R()<.5?'dict':'tap',l2=only&&only.some(i=>i.startsWith('rh:')&&RCELLS[i.slice(3)]&&RCELLS[i.slice(3)].lv===2),level=l2||R()<.4?2:1,c=[];
+ if(kind==='rhy'){const hasRh=!!(only&&only.some(i=>i.startsWith('rh:'))),hasRt=!!(only&&only.some(i=>i.startsWith('rt:'))),m0=R()<.5?'dict':'tap',mode=hasRt&&!hasRh?'tap':hasRh&&!hasRt?'dict':m0, /* 약점 항목이 탭 종류(rt:)면 따라 치기, 칸 종류(rh:)면 받아쓰기로 낸다 */
+   l2=!!(only&&only.some(i=>i.startsWith('rh:')&&RCELLS[i.slice(3)]&&RCELLS[i.slice(3)].lv===2||/^rt:(dot|syn|s16)/.test(i))),level=l2||R()<.4?2:1,c=[];
   for(let i=0;i<6;i++){const bars=level>1?2:(R()<.5?1:2),o={level,bars,seed:sd(R)},sl=makeRhythmSlots(o),
     items=mode==='dict'?sl.filter(x=>x!=='~').map(x=>'rh:'+x):[...new Set(rhythmOnsets(slotsToRhythm(sl),60).map(e=>'rt:'+e.cat))];c.push({o,items})}
   const x=pickWeighted(c,c.map(o=>o.items.reduce((a,id)=>a+W(id),0)/o.items.length),R);return {kind,mode,level,bars:x.o.bars,rseed:x.o.seed,items:x.items,seed:sd(R)}}
