@@ -560,7 +560,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <section aria-labelledby="hSec"><h3 class="sh" id="hSec">구간 <span class="muted small" style="font-weight:400">누르면 그 구간으로 이동해 반복합니다</span></h3><div class="secs" id="sections"></div><div class="progmore" id="secMore" hidden><button class="btn sm" type="button" id="secMoreBtn">나머지 구간 모두 보기</button><span class="muted small" id="secMoreInfo"></span></div></section>
   <section class="panel" id="arrPanel" aria-labelledby="hArr"><h3 class="sh" id="hArr">편곡 점검</h3>
     <div class="arrsum" id="arrSum" role="list" aria-label="점검 요약"></div>
-    <p class="muted small" id="arrHelp">f–i 는 이 프로젝트의 화성·음역 학습 노트(편곡 검사 도구)에서 일부를 옮긴 것입니다. 비화성음 상한(베이스 5%·건반/기타 25%·멜로디 40%), 베이스 권장 음역(E1–A2) 같은 기준값은 규칙이 아니라 출발점입니다. 병행 5도·8도는 참고용 개수일 뿐이며 팝에서는 옥타브 겹침이 의도일 수 있습니다. 모두 음표 데이터 검사이며 직접 들은 평가가 아닙니다.</p>
+    <p class="muted small" id="arrHelp">f–i 는 이 프로젝트의 화성·음역 학습 노트(편곡 검사 도구)에서 일부를 옮긴 것입니다. 비화성음 상한(베이스는 1·3박 음 5%·건반/기타 25%·멜로디 40%; 베이스 약박 경과음은 세지 않음), 베이스 권장 음역(E1–A2) 같은 기준값은 규칙이 아니라 출발점입니다. 병행 5도·8도는 참고용 개수일 뿐이며 팝에서는 옥타브 겹침이 의도일 수 있습니다. 모두 음표 데이터 검사이며 직접 들은 평가가 아닙니다.</p>
     <details class="arrlist" id="arrList"><summary id="arrSumm">마디별 주의 목록</summary><p class="muted small" id="arrNote"></p><div class="arrbars" id="arrBars" tabindex="0" role="region" aria-label="주의가 있는 마디 목록 (누르면 그 마디로 이동해 1마디 반복)"></div></details>
     <div class="tips" style="margin-top:1rem" id="arrTips"></div>
     <details class="arrlist" id="arrBasics"><summary>기본기 점검표</summary>
@@ -1224,11 +1224,11 @@ function arrExt(sg,pf,mel,src){
  cache=new Map(),pcs=s=>{let v=cache.get(s);if(!v){v=pf(s);cache.set(s,v)}return v},
  chAt=(b,t)=>{if(sg.silent&&sg.silent[b])return null;const sp=sg.split&&sg.split[b];return pcs(sp?(t-b*4>=2?sp.b:sp.a):sg.chords[b])},
  isOut=(n,b,t)=>{const c=chAt(b,t);return c?!c.has(((n[2]%12)+12)%12):null},
- roles=[['bass','베이스',bass,.05,2],...comp.map(p=>[p,p==='keys'?'건반':'기타',P[p],.25,3]),['mel','멜로디',mel,.4,3]],
+ roles=[['bass','베이스',bass,.05,1],...comp.map(p=>[p,p==='keys'?'건반':'기타',P[p],.25,3]),['mel','멜로디',mel,.4,3]],
  voices=[['mel',mel],...comp.map(p=>[p,P[p]]),['bass',bass]].filter(v=>v[1].length),
  sum2={f:{ok:0,warn:0},g:{ok:0,warn:0},h:{ok:0,warn:0}},bars=[],pb=Array(B).fill(0);
  for(let b=0;b<B;b++){const o={};
-  const fp=[];for(const [id,nm,ns,cap,mn] of roles){const x=inB(ns,b);if(x.length<mn)continue;let out=0,k=0;for(const n of x){const r=isOut(n,b,n[0]);if(r===null)continue;k++;if(r)out++}if(k<mn)continue;fp.push({p:id,nm,n:k,out,share:r2(out/k),cap,flag:out/k>cap})}
+  const fp=[];for(const [id,nm,ns,cap,mn] of roles){/* 베이스는 강박(1·3박) 온셋만: 약박 경과음은 정상, 강박 코드 밖 음은 코드와 어긋난 베이스 */const x=inB(ns,b).filter(n=>id!=='bass'||Math.abs((n[0]-b*4+.05)%2-.05)<.05);if(x.length<mn)continue;let out=0,k=0;for(const n of x){const r=isOut(n,b,n[0]);if(r===null)continue;k++;if(r)out++}if(k<mn)continue;fp.push({p:id,nm,n:k,out,share:r2(out/k),cap,flag:out/k>cap})}
   o.f=fp.length?{parts:fp,flag:fp.some(q=>q.flag)}:null;
   if(voices.length<2||(sg.silent&&sg.silent[b]))o.cl=null;else{let n=0;for(let i=0;i<voices.length;i++)for(let j=i+1;j<voices.length;j++)for(const x of touch(voices[i][1],b))for(const y of touch(voices[j][1],b)){const t=Math.max(x[0],y[0]);if(t<b*4-E||t>=b*4+4-E||ovl(x,y)<=.25)continue;const d=Math.abs(x[2]-y[2]);if(d>14||(d%12!==1&&d%12!==11))continue;if(isOut(x,b,t)||isOut(y,b,t))n++}o.cl={n,flag:n>0}}
   const bb=inB(bass,b);if(!bb.length)o.h=null;else{const lo=Math.min(...bb.map(n=>n[2])),hi=Math.max(...bb.map(n=>n[2]));let mud=0;for(const k of touch(comp.flatMap(p=>P[p]),b))for(const x of touch(bass,b)){const t=Math.max(k[0],x[0]);if(t<b*4-E||t>=b*4+4-E||ovl(k,x)<=.05)continue;const d=k[2]-x[2];if(d>=0&&d<7&&k[2]<55){mud++;break}}
