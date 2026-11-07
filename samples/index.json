@@ -1,0 +1,397 @@
+{
+ "version": 1,
+ "sampleRate": 44100,
+ "instruments": {
+  "piano": {
+   "release": 0.15,
+   "layers": [
+    "soft",
+    "med"
+   ],
+   "stereo": true,
+   "notes": [
+    {
+     "midi": 21,
+     "files": {
+      "soft": "piano/A0_soft.mp3",
+      "med": "piano/A0_med.mp3"
+     }
+    },
+    {
+     "midi": 24,
+     "files": {
+      "soft": "piano/C1_soft.mp3",
+      "med": "piano/C1_med.mp3"
+     }
+    },
+    {
+     "midi": 27,
+     "files": {
+      "soft": "piano/Ds1_soft.mp3",
+      "med": "piano/Ds1_med.mp3"
+     }
+    },
+    {
+     "midi": 30,
+     "files": {
+      "soft": "piano/Fs1_soft.mp3",
+      "med": "piano/Fs1_med.mp3"
+     }
+    },
+    {
+     "midi": 33,
+     "files": {
+      "soft": "piano/A1_soft.mp3",
+      "med": "piano/A1_med.mp3"
+     }
+    },
+    {
+     "midi": 36,
+     "files": {
+      "soft": "piano/C2_soft.mp3",
+      "med": "piano/C2_med.mp3"
+     }
+    },
+    {
+     "midi": 39,
+     "files": {
+      "soft": "piano/Ds2_soft.mp3",
+      "med": "piano/Ds2_med.mp3"
+     }
+    },
+    {
+     "midi": 42,
+     "files": {
+      "soft": "piano/Fs2_soft.mp3",
+      "med": "piano/Fs2_med.mp3"
+     }
+    },
+    {
+     "midi": 45,
+     "files": {
+      "soft": "piano/A2_soft.mp3",
+      "med": "piano/A2_med.mp3"
+     }
+    },
+    {
+     "midi": 48,
+     "files": {
+      "soft": "piano/C3_soft.mp3",
+      "med": "piano/C3_med.mp3"
+     }
+    },
+    {
+     "midi": 51,
+     "files": {
+      "soft": "piano/Ds3_soft.mp3",
+      "med": "piano/Ds3_med.mp3"
+     }
+    },
+    {
+     "midi": 54,
+     "files": {
+      "soft": "piano/Fs3_soft.mp3",
+      "med": "piano/Fs3_med.mp3"
+     }
+    },
+    {
+     "midi": 57,
+     "files": {
+      "soft": "piano/A3_soft.mp3",
+      "med": "piano/A3_med.mp3"
+     }
+    },
+    {
+     "midi": 60,
+     "files": {
+      "soft": "piano/C4_soft.mp3",
+      "med": "piano/C4_med.mp3"
+     }
+    },
+    {
+     "midi": 63,
+     "files": {
+      "soft": "piano/Ds4_soft.mp3",
+      "med": "piano/Ds4_med.mp3"
+     }
+    },
+    {
+     "midi": 66,
+     "files": {
+      "soft": "piano/Fs4_soft.mp3",
+      "med": "piano/Fs4_med.mp3"
+     }
+    },
+    {
+     "midi": 69,
+     "files": {
+      "soft": "piano/A4_soft.mp3",
+      "med": "piano/A4_med.mp3"
+     }
+    },
+    {
+     "midi": 72,
+     "files": {
+      "soft": "piano/C5_soft.mp3",
+      "med": "piano/C5_med.mp3"
+     }
+    },
+    {
+     "midi": 75,
+     "files": {
+      "soft": "piano/Ds5_soft.mp3",
+      "med": "piano/Ds5_med.mp3"
+     }
+    },
+    {
+     "midi": 78,
+     "files": {
+      "soft": "piano/Fs5_soft.mp3",
+      "med": "piano/Fs5_med.mp3"
+     }
+    },
+    {
+     "midi": 81,
+     "files": {
+      "soft": "piano/A5_soft.mp3",
+      "med": "piano/A5_med.mp3"
+     }
+    },
+    {
+     "midi": 84,
+     "files": {
+      "soft": "piano/C6_soft.mp3",
+      "med": "piano/C6_med.mp3"
+     }
+    },
+    {
+     "midi": 87,
+     "files": {
+      "soft": "piano/Ds6_soft.mp3",
+      "med": "piano/Ds6_med.mp3"
+     }
+    },
+    {
+     "midi": 90,
+     "files": {
+      "soft": "piano/Fs6_soft.mp3",
+      "med": "piano/Fs6_med.mp3"
+     }
+    },
+    {
+     "midi": 93,
+     "files": {
+      "soft": "piano/A6_soft.mp3",
+      "med": "piano/A6_med.mp3"
+     }
+    },
+    {
+     "midi": 96,
+     "files": {
+      "soft": "piano/C7_soft.mp3",
+      "med": "piano/C7_med.mp3"
+     }
+    },
+    {
+     "midi": 99,
+     "files": {
+      "soft": "piano/Ds7_soft.mp3",
+      "med": "piano/Ds7_med.mp3"
+     }
+    },
+    {
+     "midi": 102,
+     "files": {
+      "soft": "piano/Fs7_soft.mp3",
+      "med": "piano/Fs7_med.mp3"
+     }
+    },
+    {
+     "midi": 105,
+     "files": {
+      "soft": "piano/A7_soft.mp3",
+      "med": "piano/A7_med.mp3"
+     }
+    },
+    {
+     "midi": 108,
+     "files": {
+      "soft": "piano/C8_soft.mp3",
+      "med": "piano/C8_med.mp3"
+     }
+    }
+   ]
+  },
+  "bass": {
+   "release": 0.08,
+   "layers": [
+    "one"
+   ],
+   "stereo": false,
+   "notes": [
+    {
+     "midi": 28,
+     "files": {
+      "one": "bass/E1.mp3"
+     }
+    },
+    {
+     "midi": 31,
+     "files": {
+      "one": "bass/G1.mp3"
+     }
+    },
+    {
+     "midi": 34,
+     "files": {
+      "one": "bass/As1.mp3"
+     }
+    },
+    {
+     "midi": 37,
+     "files": {
+      "one": "bass/Cs2.mp3"
+     }
+    },
+    {
+     "midi": 39,
+     "files": {
+      "one": "bass/Ds2.mp3"
+     }
+    }
+   ]
+  },
+  "guitar": {
+   "release": 0.12,
+   "layers": [
+    "one"
+   ],
+   "stereo": false,
+   "notes": [
+    {
+     "midi": 40,
+     "files": {
+      "one": "guitar/e2.mp3"
+     }
+    },
+    {
+     "midi": 45,
+     "files": {
+      "one": "guitar/a2.mp3"
+     }
+    },
+    {
+     "midi": 48,
+     "files": {
+      "one": "guitar/c3.mp3"
+     }
+    },
+    {
+     "midi": 51,
+     "files": {
+      "one": "guitar/eb3.mp3"
+     }
+    },
+    {
+     "midi": 54,
+     "files": {
+      "one": "guitar/gb3.mp3"
+     }
+    },
+    {
+     "midi": 57,
+     "files": {
+      "one": "guitar/a3.mp3"
+     }
+    },
+    {
+     "midi": 60,
+     "files": {
+      "one": "guitar/c4.mp3"
+     }
+    },
+    {
+     "midi": 63,
+     "files": {
+      "one": "guitar/eb4.mp3"
+     }
+    },
+    {
+     "midi": 66,
+     "files": {
+      "one": "guitar/gb4.mp3"
+     }
+    },
+    {
+     "midi": 69,
+     "files": {
+      "one": "guitar/a4.mp3"
+     }
+    },
+    {
+     "midi": 72,
+     "files": {
+      "one": "guitar/c5.mp3"
+     }
+    },
+    {
+     "midi": 75,
+     "files": {
+      "one": "guitar/eb5.mp3"
+     }
+    }
+   ]
+  },
+  "drums": {
+   "layers": [
+    "soft",
+    "hard"
+   ],
+   "stereo": false,
+   "voices": {
+    "snare": {
+     "midi": 38,
+     "layers": {
+      "soft": "drums/snare_soft.mp3",
+      "hard": "drums/snare_hard.mp3"
+     }
+    },
+    "hat_c": {
+     "midi": 42,
+     "layers": {
+      "soft": "drums/hat_c_soft.mp3",
+      "hard": "drums/hat_c_hard.mp3"
+     }
+    },
+    "hat_o": {
+     "midi": 46,
+     "layers": {
+      "soft": "drums/hat_o_soft.mp3",
+      "hard": "drums/hat_o_hard.mp3"
+     }
+    },
+    "ride": {
+     "midi": 51,
+     "layers": {
+      "soft": "drums/ride_soft.mp3",
+      "hard": "drums/ride_hard.mp3"
+     }
+    },
+    "crash": {
+     "midi": 49,
+     "layers": {
+      "soft": "drums/crash_soft.mp3",
+      "hard": "drums/crash_hard.mp3"
+     }
+    },
+    "kick": {
+     "midi": 36,
+     "layers": {
+      "soft": "drums/kick_soft.mp3",
+      "hard": "drums/kick_hard.mp3"
+     }
+    }
+   }
+  }
+ }
+}

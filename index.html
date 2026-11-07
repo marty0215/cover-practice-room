@@ -127,6 +127,7 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .tabpanel>.in>.head{margin-bottom:.9rem}
 
 /* 믹서 */
+.timbre{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;margin-top:.6rem}.timbre select{margin-left:.3rem}
 .mixer{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
 #stems{display:contents}
 #stems.off .ch{pointer-events:none}#stems.off .ch input,#stems.off .ch .ms{opacity:.45}
@@ -409,6 +410,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <div class="ch" style="--c:var(--score)"><span class="name" id="origLabel">음원</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="origVol" min="0" max="100" value="0" aria-label="음원 볼륨 (합성과 함께)"><span class="val" id="origVal">0%</span></div>
     <div id="stems"></div>
   </div>
+  <div class="timbre" id="timbreRow"><label class="tgl">음색 <select id="timbre" aria-label="합성 반주 음색"><option value="sample">샘플</option><option value="synth">합성</option></select></label><label class="tgl" title="베이스 150 Hz · 건반 250 Hz 아래를 4 dB 낮춥니다"><input type="checkbox" id="lowcut"><span>저음 −4 dB</span></label><span class="muted small" id="timbreMsg" role="status"></span></div>
   <p class="note" id="modeNote"></p>
   <div class="opts">
     <div class="opt"><span class="lb">소리</span><div class="seg" id="modesel" role="group" aria-label="소리"><button aria-pressed="true" data-m="real">실제 렌더</button><button aria-pressed="false" data-m="synth">브라우저 합성</button></div></div>
@@ -562,7 +564,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <div class="msg" id="waitMsg" role="status"></div></div>
 </div></section>
 
-<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다.<span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
+<footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다.음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다. <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
 
 <div class="tp" id="transport" role="region" aria-label="재생 컨트롤"><div class="tp-in">
   <div class="tp-r1">
@@ -580,7 +582,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
     <label class="tgl" id="clickL" title="메트로놈 (M)"><input type="checkbox" id="click"><span>메트로놈</span></label>
     <details class="menu" id="expMenu"><summary class="btn" title="내보내기">내보내기</summary>
       <div class="pop" id="export"><b>내보내기</b><p class="small muted" id="expInfo"></p>
-        <div class="row"><button class="btn primary sm" id="expMidi" type="button">MIDI 받기</button><button class="btn sm" id="expWav" type="button">WAV 받기 (합성)</button><a class="btn sm" id="expMp3" href="audio/onedream_s59.mp3" download>데모 실제 렌더 MP3</a></div>
+        <div class="row"><button class="btn primary sm" id="expMidi" type="button">MIDI 받기</button><button class="btn sm" id="expWav" type="button">WAV 받기</button><a class="btn sm" id="expMp3" href="audio/onedream_s59.mp3" download>데모 실제 렌더 MP3</a></div>
         <p class="note" id="expMsg" role="status" style="margin:0"></p></div></details>
     <details class="menu" id="moreMenu" hidden><summary class="btn" title="카운트인·메트로놈·내보내기">더보기</summary><div class="pop" id="morePop"></div></details>
   </div>
@@ -710,14 +712,51 @@ document.getElementById('micChip').onclick=()=>Mic.releaseAll();
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(Mic.st&&!Mic._live())Mic._end('ended')});
 async function micTracker(o,onFrame,onEnd){await Mic.acquire(o,{ec:false,onEnd});let tr;try{tr=await SingLab.tracker(ctx,onFrame,{analyser:Mic.tap(ctx)})}catch(e){Mic.release(o);throw e}
  return {track:tr.track,stop(){tr.stop();Mic.release(o)}}}
-function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(master)}gains.sing=ctx.createGain();gains.sing.gain.value=2.2;gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(partDest(ctx,p,master))}gains.sing=ctx.createGain();gains.sing.gain.value=2.2;gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
 const hz=m=>440*Math.pow(2,(m-69)/12);
-function tone(part,t,dur,pitch,vel){const v=vel/127,out=gains[part],f=hz(pitch+(part==='sing'?0:transpose));
+/* ---------- 샘플 음색: 첫 재생(또는 내보내기) 때 파트별로 불러와 디코드. 준비되기 전엔 합성음으로 대신한다. 악보(score)·시창 소리는 늘 합성 ---------- */
+const SAMP={on:true,low:true,bufs:{},st:{},n:0,live:[],track:true,hat:null,msg:'',trim:{bass:1.5,keys:1.3,guitar:.14,drums:1.1}};
+try{SAMP.on=localStorage.getItem('pr-timbre')!=='synth';SAMP.low=localStorage.getItem('pr-lowcut')!=='0'}catch(e){}
+const SINST={bass:'bass',keys:'piano',guitar:'guitar',drums:'drums'},SREL={piano:.15,bass:.08,guitar:.12},SVEL={piano:{soft:50,med:90},bass:{one:100},guitar:{one:90},drums:{soft:50,hard:105}},DMAP={36:'kick',38:'snare',42:'hat_c',46:'hat_o',49:'crash',51:'ride'};
+const BUS=new WeakMap(),SHELF=new WeakMap();let sampIdxP=null,decCtx=null;
+function sampMsg(t){SAMP.msg=t;const e=document.getElementById('timbreMsg');if(e)e.textContent=t}
+function sampIdx(){return sampIdxP||(sampIdxP=fetch('samples/index.json').then(r=>{if(!r.ok)throw new Error('index '+r.status);return r.json()}).catch(e=>{sampIdxP=null;throw e}))}
+async function sampDecode(url){const r=await fetch(url);if(!r.ok)throw new Error(url+' '+r.status);const ab=await r.arrayBuffer();const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!decCtx)decCtx=new OC(2,1,44100);
+ return await new Promise((ok,no)=>{const q=decCtx.decodeAudioData(ab,ok,no);if(q&&q.catch)q.catch(no)})}
+function loadInst(name){if(SAMP.st[name])return SAMP.st[name];
+ return SAMP.st[name]=(async()=>{const I=(await sampIdx()).instruments[name];if(!I)throw new Error('no '+name);
+  if(name==='drums'){const out={release:0,voices:{}};await Promise.all(Object.entries(I.voices).map(async([k,v])=>{const b={};await Promise.all(Object.entries(v.layers).map(async([l,f])=>{b[l]=await sampDecode('samples/'+f)}));out.voices[k]={midi:v.midi,b}}));return SAMP.bufs[name]=out}
+  const out={release:I.release,notes:[]};await Promise.all(I.notes.map(async n=>{const b={};await Promise.all(Object.entries(n.files).map(async([l,f])=>{b[l]=await sampDecode('samples/'+f)}));out.notes.push({midi:n.midi,b})}));out.notes.sort((a,b)=>a.midi-b.midi);return SAMP.bufs[name]=out})().catch(e=>{SAMP.st[name]=null;throw e})}
+/* 필요한 파트의 음색을 불러온다. 실패해도 던지지 않고(합성으로 대신) 결과를 돌려준다 */
+async function loadSamples(parts){if(!SAMP.on)return true;const need=[...new Set(parts.map(p=>SINST[p]).filter(Boolean))].filter(n=>!SAMP.bufs[n]);if(!need.length)return true;
+ sampMsg('음색 불러오는 중…');let ok=true;await Promise.all(need.map(n=>loadInst(n).catch(e=>{ok=false;console.warn('sample load',n,e&&e.message)})));
+ sampMsg(ok?'샘플 음색 준비됨':'음색을 불러오지 못해 합성음으로 재생합니다');return ok}
+function nearestRoot(list,m){let b=list[0],bd=1e9;for(const n of list){const d=Math.abs(n.midi-m);if(d<bd){b=n;bd=d}}return b}
+function sampBus(part){let m=BUS.get(ctx);if(!m){m={};BUS.set(ctx,m)}if(m[part])return m[part];
+ if(part==='guitar'){const pre=ctx.createGain();pre.gain.value=2.6;const ws=ctx.createWaveShaper(),c=new Float32Array(2048);for(let i=0;i<2048;i++){const x=i/1023.5-1;c[i]=Math.tanh(2.2*x)/Math.tanh(2.2)}ws.curve=c;ws.oversample='4x';
+  const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;const post=ctx.createGain();post.gain.value=.6;pre.connect(ws);ws.connect(lp);lp.connect(post);post.connect(gains.guitar);m[part]=pre}
+ else m[part]=gains[part];return m[part]}
+function sampStart(buf,t,gain,hold,rel,out){const src=ctx.createBufferSource();src.buffer=buf;const g=ctx.createGain();g.gain.setValueAtTime(gain,t);src.connect(g).connect(out);SAMP.n++;window.__sampleSrc=SAMP.n;
+ if(hold!=null){g.gain.setValueAtTime(gain,t+hold);g.gain.setTargetAtTime(0,t+hold,rel/4)}return {src,g}}
+function sampKeep(o){if(!SAMP.track)return;SAMP.live.push(o);o.src.onended=()=>{const i=SAMP.live.indexOf(o);if(i>=0)SAMP.live.splice(i,1)}}
+function sampTone(part,t,dur,pitch,vel){const nm=SINST[part],I=SAMP.bufs[nm];if(!I||!I.notes.length)return false;
+ const m=pitch+transpose,n=nearestRoot(I.notes,m);let lay='one';if(nm==='piano')lay=vel<72?'soft':'med';const buf=n.b[lay]||Object.values(n.b)[0],ref=SVEL[nm][lay]||90;
+ const gain=Math.min(1.4,Math.max(.25,Math.pow(vel/ref,1.15)))*SAMP.trim[part],rel=I.release,o=sampStart(buf,t,gain,dur,rel,sampBus(part));
+ o.src.playbackRate.value=Math.pow(2,(m-n.midi)/12);o.src.start(t);o.src.stop(t+dur+rel*1.8+.05);sampKeep(o);return true}
+function sampDrum(t,pitch,vel){const I=SAMP.bufs.drums,nm=DMAP[pitch],v=I&&nm&&I.voices[nm];if(!v)return false;
+ const lay=vel<80?'soft':'hard',ref=SVEL.drums[lay],gain=Math.min(1.25,Math.max(.3,vel/ref))*SAMP.trim.drums;
+ if(nm==='hat_c'&&SAMP.hat){try{SAMP.hat.gain.setTargetAtTime(0,t,.015)}catch(_){}SAMP.hat=null}
+ const o=sampStart(v.b[lay],t,gain,null,0,gains.drums);o.src.start(t);if(nm==='hat_o')SAMP.hat=o.g;sampKeep(o);return true}
+function sampStopAll(){const now=ctx?ctx.currentTime:0;for(const o of SAMP.live){try{o.g.gain.setTargetAtTime(0,now,.01);o.src.stop(now+.06)}catch(_){}}SAMP.live=[];SAMP.hat=null}
+/* 저음 −4 dB: 베이스 150 Hz, 건반 250 Hz 로우 셸프(합성·샘플 모두). 기본 켜짐 */
+function partDest(c,p,dest){if(p!=='bass'&&p!=='keys')return dest;const f=c.createBiquadFilter();f.type='lowshelf';f.frequency.value=p==='bass'?150:250;f.gain.value=SAMP.low?-4:0;f.connect(dest);const m=SHELF.get(c)||{};m[p]=f;SHELF.set(c,m);return f}
+function applyLow(){const m=ctx&&SHELF.get(ctx);if(m)for(const p in m)m[p].gain.setTargetAtTime(SAMP.low?-4:0,ctx.currentTime,.02)}
+function tone(part,t,dur,pitch,vel){if(SAMP.on&&SINST[part]&&sampTone(part,t,dur,pitch,vel))return;const v=vel/127,out=gains[part],f=hz(pitch+(part==='sing'?0:transpose));
  if(part==='bass'){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(220,t+.25);const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55*v,t+.006);g.gain.setTargetAtTime(.3*v,t+.05,.15);g.gain.setTargetAtTime(0,t+dur,.03);o.connect(lp).connect(g).connect(out);o.start(t);o.stop(t+dur+.3)}
  else if(part==='score'){const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.14*v,t+.01);g.gain.setTargetAtTime(.08*v,t+.08,.2);g.gain.setTargetAtTime(0,t+dur,.05);o.connect(g).connect(out);o.start(t);o.stop(t+dur+.4)}
  else if(part==='keys'||part==='sing'){const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.16*v,t+.012);g.gain.setTargetAtTime(.09*v,t+.1,.35);g.gain.setTargetAtTime(0,t+dur,.08);for(const [type,det,amp] of [['triangle',0,1],['sine',-6,.5],['sine',1205,.12]]){const o=ctx.createOscillator();o.type=type;o.frequency.value=f;o.detune.value=det;const a=ctx.createGain();a.gain.value=amp;o.connect(a).connect(g);o.start(t);o.stop(t+dur+.6)}g.connect(out)}
  else if(part==='guitar'){const o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=f;const o2=ctx.createOscillator();o2.type='square';o2.frequency.value=f;o2.detune.value=4;const a2=ctx.createGain();a2.gain.value=.25;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.Q.value=2;lp.frequency.setValueAtTime(3200,t);lp.frequency.exponentialRampToValueAtTime(700,t+.3);const g=ctx.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22*v,t+.003);g.gain.exponentialRampToValueAtTime(.002,t+Math.max(.25,dur));o.connect(lp);o2.connect(a2).connect(lp);lp.connect(g).connect(out);o.start(t);o2.start(t);o.stop(t+dur+.4);o2.stop(t+dur+.4)}}
-function drum(t,pitch,vel){if(!drumOn[pitch])return;const v=vel/127,out=gains.drums;
+function drum(t,pitch,vel){if(!drumOn[pitch])return;if(SAMP.on&&sampDrum(t,pitch,vel))return;const v=vel/127,out=gains.drums;
  if(pitch===36){const o=ctx.createOscillator();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(42,t+.11);const g=ctx.createGain();g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.32);o.connect(g).connect(out);o.start(t);o.stop(t+.35)}
  else if(pitch===38){const n=ctx.createBufferSource();n.buffer=noise;const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1900;bp.Q.value=.7;const g=ctx.createGain();g.gain.setValueAtTime(.5*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);n.connect(bp).connect(g).connect(out);n.start(t);n.stop(t+.2);const o=ctx.createOscillator();o.type='triangle';o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(150,t+.08);const g2=ctx.createGain();g2.gain.setValueAtTime(.35*v,t);g2.gain.exponentialRampToValueAtTime(.001,t+.1);o.connect(g2).connect(out);o.start(t);o.stop(t+.12)}
  else{const n=ctx.createBufferSource();n.buffer=noise;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7500;const g=ctx.createGain();g.gain.setValueAtTime(.22*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.06);n.connect(hp).connect(g).connect(out);n.start(t);n.stop(t+.07)}}
@@ -734,13 +773,13 @@ function tick(){const horizon=ctx.currentTime+.18;let guard=0;
   for(const p of PARTS){const n=song.parts[p];let i=S.idx[p];while(i<n.length&&n[i][0]<lim){const [s,d,pitch,vel]=n[i];const t=S.anchorT+(s-S.anchorB)*S.spb;if(t>=ctx.currentTime-.02){p==='drums'?drum(t,pitch,vel):tone(p,t,Math.max(.05,d*S.spb),pitch,vel)}i++}S.idx[p]=i}
   if(el('click').checked){while(S.click<lim){clickAt(S.anchorT+(S.click-S.anchorB)*S.spb,S.click%4===0);S.click++}}else S.click=Math.ceil(lim);
   if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;stepUp();seekIdx(S.a);if(S.withAudio){const wrapAt=S.anchorT;setTimeout(()=>{if(S.playing)real.currentTime=S.a*spb0()},Math.max(0,(wrapAt-ctx.currentTime)*1000))}continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
-function play(o){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
+function play(o){if(sing&&sing.busy)return;if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();SAMP.hat=null;if(mode!=='real')loadSamples(PARTS);S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
  S.anchorT=now+ci*S.spb;S.anchorB=start;S.startB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
  real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();
  if(S.withAudio){real.currentTime=start*spb0();S.pending=setTimeout(()=>{S.pending=null;real.play().catch(()=>{if(mode==='real')stop()})},ci*S.spb*1000)}
  if(mode==='synth'){seekIdx(start);S.timer=setInterval(tick,30)}
  recBegin();applyBack();draw()}
-function stop(){const b=nowBeat();S.playing=false;for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');fuStop();recStop();draw()}
+function stop(){const b=nowBeat();S.playing=false;sampStopAll();for(const o of S.cl)try{o.stop(0)}catch(_){}S.cl=[];clearInterval(S.timer);clearTimeout(S.pending);S.pending=null;real.pause();S.anchorB=Math.min(TOTAL,Math.max(0,b));el('play').textContent='▶';el('play').setAttribute('aria-label','재생');fuStop();recStop();draw()}
 real.addEventListener('ended',()=>{if(S.playing&&mode==='real'){stop();S.anchorB=0;draw()}});
 el('master').oninput=()=>{el('masterVal').textContent=el('master').value+'%';applyBack()};
 el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(mode==='synth'){real.volume=masterLevel()*origLevel();if(S.playing&&!S.withAudio&&origLevel()>0&&song.audio){S.withAudio=true;real.currentTime=nowBeat()*spb0();real.play().catch(()=>{})}}};
@@ -791,7 +830,7 @@ document.addEventListener('keyup',e=>{if(e.code==='Space'&&!typing(e.target)&&!e
 
 /* mode + stems */
 el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
-function applyMode(){const r=mode==='real';el('stems').classList.toggle('off',r);el('transpose').disabled=r;el('keyDn').disabled=r;el('keyUp').disabled=r;el('click').disabled=r;el('origVol').disabled=r||!song.audio;const nm=song.id==='user'?'원곡 파일':'실제 렌더';document.querySelector('#modesel [data-m=real]').textContent=song.id==='user'?'원곡만 재생':'실제 렌더';el('modeNote').textContent=r?`${nm}은 한 파일이라 파트 끄기·키 변경·메트로놈은 브라우저 합성에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.`:`브라우저 합성은 채보 데이터를 즉석에서 소리로 만든 것이라 음색은 임시입니다. 파트·키·메트로놈을 자유롭게 바꿀 수 있고, "${nm} 볼륨"을 올리면 ${nm}이 함께 재생됩니다(키 변경은 ${nm}에 적용되지 않습니다).`}
+function applyMode(){const r=mode==='real';el('stems').classList.toggle('off',r);el('transpose').disabled=r;el('keyDn').disabled=r;el('keyUp').disabled=r;el('click').disabled=r;el('origVol').disabled=r||!song.audio;const nm=song.id==='user'?'원곡 파일':'실제 렌더';document.querySelector('#modesel [data-m=real]').textContent=song.id==='user'?'원곡만 재생':'실제 렌더';el('modeNote').textContent=r?`${nm}은 한 파일이라 파트 끄기·키 변경·메트로놈은 브라우저 합성에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.`:`브라우저 합성 반주는 채보 데이터를 즉석에서 소리로 만든 것입니다(음색은 아래에서 샘플 또는 합성으로 고릅니다). 파트·키·메트로놈을 자유롭게 바꿀 수 있고, "${nm} 볼륨"을 올리면 ${nm}이 함께 재생됩니다(키 변경은 ${nm}에 적용되지 않습니다).`}
 function buildStems(){const w=el('stems');w.innerHTML='';for(const p of PARTS){const d=document.createElement('div');d.className='ch';d.style.setProperty('--c',`var(--${p})`);const nm=PARTDEF[p].name.replace(/ \(.*$/,'');
  d.innerHTML=`<span class="name">${nm}</span><span class="ms"><button class="mute" type="button" aria-pressed="${!!mute[p]}" data-p="${p}" title="${nm} 끄기">M</button><button class="solo" type="button" aria-pressed="${!!solo[p]}" data-p="${p}" title="${nm}만 듣기">S</button></span><input type="range" min="0" max="100" value="${Math.round((vol[p]??1)*100)}" aria-label="${nm} 볼륨" data-v="${p}"><span class="val" data-val="${p}">${Math.round((vol[p]??1)*100)}%</span>`+(p==='drums'?`<div class="sub"><label class="chk"><input type="checkbox" ${drumOn[36]?'checked':''} data-d="36"> 킥</label><label class="chk"><input type="checkbox" ${drumOn[38]?'checked':''} data-d="38"> 스네어</label><label class="chk"><input type="checkbox" ${drumOn[42]?'checked':''} data-d="42"> 하이햇</label></div>`:`<div class="sub hint">${PARTDEF[p].hint||''}</div>`);w.appendChild(d)}}
 function syncMS(){document.querySelectorAll('#stems .mute').forEach(b=>b.setAttribute('aria-pressed',!!mute[b.dataset.p]));document.querySelectorAll('#stems .solo').forEach(b=>b.setAttribute('aria-pressed',!!solo[b.dataset.p]))}
@@ -800,6 +839,9 @@ function toggleSolo(p){if(!PARTS.includes(p))return;solo[p]=!solo[p];syncMS();ap
 el('stems').addEventListener('click',e=>{const b=e.target.closest('.mute,.solo');if(!b)return;b.classList.contains('mute')?toggleMute(b.dataset.p):toggleSolo(b.dataset.p)});
 el('stems').addEventListener('input',e=>{if(e.target.dataset.v){const p=e.target.dataset.v;vol[p]=e.target.value/100;applyGain(p);const v=document.querySelector(`[data-val=${p}]`);if(v)v.textContent=e.target.value+'%'}});
 el('stems').addEventListener('change',e=>{if(e.target.dataset.d)drumOn[e.target.dataset.d]=e.target.checked});
+el('timbre').value=SAMP.on?'sample':'synth';el('lowcut').checked=SAMP.low;
+el('timbre').onchange=()=>{SAMP.on=el('timbre').value==='sample';try{localStorage.setItem('pr-timbre',SAMP.on?'sample':'synth')}catch(e){}if(SAMP.on){if(mode!=='real')loadSamples(PARTS)}else sampMsg('')};
+el('lowcut').onchange=()=>{SAMP.low=el('lowcut').checked;try{localStorage.setItem('pr-lowcut',SAMP.low?'1':'0')}catch(e){}applyLow()};
 function applyGain(p){if(gains[p])gains[p].gain.setTargetAtTime(eff(p),ctx.currentTime,.02)}
 const applyAllGains=()=>{for(const p of ORDER)applyGain(p)};
 
@@ -1076,7 +1118,7 @@ const EXP_PROG={bass:33,keys:0,guitar:30,score:0},EXP_CH={bass:0,keys:1,guitar:2
 const expParts=()=>PARTS.filter(p=>audible(p));
 const expNotes=p=>song.parts[p].filter(n=>p!=='drums'||drumOn[n[2]]);
 const expName=ext=>`${song.title.replace(/[\\/:*?"<>|]+/g,'_').trim()||'cover'}_${tn(KEY)}${transpose?`(${transpose>0?'+':''}${transpose})`:''}_${Math.round(song.bpm*rate())}bpm.${ext}`;
-function updExp(){const ps=expParts();el('expInfo').textContent=`지금 설정 그대로 내보냅니다 · 키 ${transpose>0?'+':''}${transpose} (${tn(KEY)}) · ${Math.round(song.bpm*rate())} BPM(템포 ${el('tempo').value}%) · 파트: ${ps.length?ps.map(p=>PARTDEF[p].name.replace(/ \(.*$/,'')).join(', '):'없음(켠 파트가 없습니다)'}. WAV는 브라우저 합성 반주만 담고, ${song.id==='user'?'올린 원곡':'실제 렌더 음원'}은 섞지 않습니다.`}
+function updExp(){const ps=expParts();el('expInfo').textContent=`지금 설정 그대로 내보냅니다 · 키 ${transpose>0?'+':''}${transpose} (${tn(KEY)}) · ${Math.round(song.bpm*rate())} BPM(템포 ${el('tempo').value}%) · 파트: ${ps.length?ps.map(p=>PARTDEF[p].name.replace(/ \(.*$/,'')).join(', '):'없음(켠 파트가 없습니다)'}. WAV는 브라우저 반주(위 음색 설정대로)만 담고, ${song.id==='user'?'올린 원곡':'실제 렌더 음원'}은 섞지 않습니다.`}
 const u32=n=>[n>>>24&255,n>>>16&255,n>>>8&255,n&255],u16=n=>[n>>8&255,n&255];
 function vlq(n){const o=[n&127];while(n>>=7)o.unshift(n&127|128);return o}
 function mtrk(ev){ev.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);let last=0;const out=[];for(const [t,,by] of ev){out.push(...vlq(t-last),...by);last=t}out.push(0,255,47,0);return [77,84,114,107,...u32(out.length),...out]}
@@ -1091,16 +1133,16 @@ function buildMidi(){const PPQ=480,tk=b=>Math.round(b*PPQ),us=Math.round(6e7/(so
 function encWav(f,sr){const n=f.length,b=new DataView(new ArrayBuffer(44+n*2)),w=(o,t)=>{for(let i=0;i<t.length;i++)b.setUint8(o+i,t.charCodeAt(i))};w(0,'RIFF');b.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');b.setUint32(16,16,true);b.setUint16(20,1,true);b.setUint16(22,1,true);b.setUint32(24,sr,true);b.setUint32(28,sr*2,true);b.setUint16(32,2,true);b.setUint16(34,16,true);w(36,'data');b.setUint32(40,n*2,true);
  for(let i=0;i<n;i++){const x=Math.max(-1,Math.min(1,f[i]));b.setInt16(44+i*2,x<0?x*32768:x*32767,true)}return new Uint8Array(b.buffer)}
 /* WAV: OfflineAudioContext에서 실시간 재생과 같은 합성 함수(tone/drum)를 그대로 써서 렌더. 44.1 kHz 16-bit 모노 */
-async function renderWav(){const sr=44100,spb=spb0()/rate(),ps=expParts();if(!ps.length)throw new Error('켠 파트가 없습니다');const oc=new OfflineAudioContext(1,Math.ceil((TOTAL*spb+1.5)*sr),sr),sv={ctx,gains,noise};
- try{ctx=oc;gains={};const comp=oc.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;const mg=oc.createGain();mg.gain.value=masterLevel();comp.connect(mg).connect(oc.destination);
-  for(const p of ORDER){gains[p]=oc.createGain();gains[p].gain.value=eff(p);gains[p].connect(comp)}
+async function renderWav(){const sr=44100,spb=spb0()/rate(),ps=expParts();if(!ps.length)throw new Error('켠 파트가 없습니다');let used=false;if(SAMP.on){used=await loadSamples(ps)}const oc=new OfflineAudioContext(1,Math.ceil((TOTAL*spb+1.5)*sr),sr),sv={ctx,gains,noise,tr:SAMP.track,hat:SAMP.hat};
+ try{ctx=oc;gains={};SAMP.track=false;SAMP.hat=null;const comp=oc.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;const mg=oc.createGain();mg.gain.value=masterLevel();comp.connect(mg).connect(oc.destination);
+  for(const p of ORDER){gains[p]=oc.createGain();gains[p].gain.value=eff(p);gains[p].connect(partDest(oc,p,comp))}
   noise=oc.createBuffer(1,sr,sr);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
   for(const p of ps)for(const [st,du,pitch,v] of song.parts[p])p==='drums'?drum(st*spb,pitch,v):tone(p,st*spb,Math.max(.05,du*spb),pitch,v)}
- finally{ctx=sv.ctx;gains=sv.gains;noise=sv.noise}
- const buf=await oc.startRendering(),f=buf.getChannelData(0);return {bytes:encWav(f,sr),peak:f.reduce((m,x)=>Math.max(m,Math.abs(x)),0),sec:f.length/sr}}
+ finally{ctx=sv.ctx;gains=sv.gains;noise=sv.noise;SAMP.track=sv.tr;SAMP.hat=sv.hat}
+ const buf=await oc.startRendering(),f=buf.getChannelData(0);return {bytes:encWav(f,sr),peak:f.reduce((m,x)=>Math.max(m,Math.abs(x)),0),sec:f.length/sr,samples:SAMP.on&&used}}
 function dl(bytes,type,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([bytes],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 el('expMidi').onclick=()=>{try{if(!expParts().length)throw new Error('켠 파트가 없습니다');const b=buildMidi();dl(b,'audio/midi',expName('mid'));el('expMsg').textContent=`MIDI ${Math.round(b.length/1024*10)/10} KB 저장 · 파트 ${expParts().length}개 트랙 + 템포 트랙`}catch(e){el('expMsg').textContent='MIDI 내보내기 실패: '+e.message}};
-el('expWav').onclick=async()=>{const bt=el('expWav');bt.disabled=true;el('expMsg').textContent='합성 렌더 중…(곡 길이에 따라 몇 초 걸립니다)';try{const r=await renderWav();dl(r.bytes,'audio/wav',expName('wav'));el('expMsg').textContent=`WAV ${(r.bytes.length/1048576).toFixed(1)} MB · ${r.sec.toFixed(1)}초 · 최대 진폭 ${r.peak.toFixed(2)} 저장(합성 반주만)`}catch(e){el('expMsg').textContent='WAV 내보내기 실패: '+e.message}finally{bt.disabled=false}};
+el('expWav').onclick=async()=>{const bt=el('expWav');bt.disabled=true;el('expMsg').textContent='렌더 중…(음색을 불러오고 곡 길이에 따라 몇 초 걸립니다)';try{const r=await renderWav();dl(r.bytes,'audio/wav',expName('wav'));el('expMsg').textContent=`WAV ${(r.bytes.length/1048576).toFixed(1)} MB · ${r.sec.toFixed(1)}초 · 최대 진폭 ${r.peak.toFixed(2)} 저장(${r.samples?'샘플 음색':'합성 음색'} 반주만)`}catch(e){el('expMsg').textContent='WAV 내보내기 실패: '+e.message}finally{bt.disabled=false}};
 for(const ev of ['click','input','change'])document.addEventListener(ev,()=>setTimeout(updExp,0));
 
 /* waitlist (prototype, stores nothing) */

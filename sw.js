@@ -1,6 +1,6 @@
-/* 커버 연습실 서비스 워커: 코드(index.html·sing.js·manifest 등 같은 출처 비미디어)는 네트워크 우선(HTTP 캐시 우회, 실패하면 캐시), 큰 정적 자원(audio/·vendor/·icons/)은 캐시 우선, 외부 CDN·글꼴은 stale-while-revalidate.
-   코드가 네트워크 우선이라 sing.js 를 고쳐도 낡은 파일이 남지 않는다. 캐시 우선 자원(audio·vendor·icons)을 바꿀 때만 V 를 올리면 옛 캐시는 정리된다 */
-const V='pr-v2',SHELL=['./','index.html','sing.js','vendor/basicpitch.js','vendor/model/model.json','vendor/model/weights.json','audio/onedream_s59.mp3','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/apple-touch-icon.png'];
+/* 커버 연습실 서비스 워커: 코드(index.html·sing.js·manifest 등 같은 출처 비미디어)는 네트워크 우선(HTTP 캐시 우회, 실패하면 캐시), 큰 정적 자원(audio/·vendor/·icons/·samples/)은 캐시 우선, 외부 CDN·글꼴은 stale-while-revalidate.
+   코드가 네트워크 우선이라 sing.js 를 고쳐도 낡은 파일이 남지 않는다. 캐시 우선 자원(audio·vendor·icons·samples)을 바꿀 때만 V 를 올리면 옛 캐시는 정리된다 */
+const V='pr-v3',SHELL=['./','index.html','sing.js','vendor/basicpitch.js','vendor/model/model.json','vendor/model/weights.json','audio/onedream_s59.mp3','samples/index.json','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/apple-touch-icon.png'];
 const CDN=['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js'];
 const EXT=u=>u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'||u.hostname==='cdn.jsdelivr.net';
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(V);await Promise.all(SHELL.map(u=>fetch(new Request(u,{cache:'reload'})).then(r=>{if(!r.ok)throw new Error(u);return c.put(u,r)})));
@@ -17,7 +17,7 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;c
   if(u.origin===location.origin){
     if(r.mode==='navigate'||u.pathname.endsWith('/index.html')||u.pathname.endsWith('/')){e.respondWith((async()=>{const c=await caches.open(V);
       try{const n=await fetch(r,{cache:'no-cache'});if(n.ok)c.put('index.html',n.clone());return n}catch(_){return(await c.match('index.html'))||(await c.match('./'))||Response.error()}})());return}
-    if(!/\/(audio|vendor|icons)\//.test(u.pathname)){e.respondWith((async()=>{const c=await caches.open(V);
+    if(!/\/(audio|vendor|icons|samples)\//.test(u.pathname)){e.respondWith((async()=>{const c=await caches.open(V);
       try{const n=await fetch(new Request(r.url,{cache:'no-cache'}));if(n.ok&&n.status===200)c.put(r.url,n.clone());return r.headers.has('range')?ranged(r,n):n}catch(_){const h=await c.match(r.url);return h?(r.headers.has('range')?ranged(r,h):h):Response.error()}})());return}
     e.respondWith((async()=>{const c=await caches.open(V);let h=await c.match(r.url);
       if(!h){try{h=await fetch(r.headers.has('range')?new Request(r.url):r);if(h.ok&&h.status===200)c.put(r.url,h.clone())}catch(_){return Response.error()}}
