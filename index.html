@@ -628,11 +628,11 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     </details>
   </div>
   <div class="panel sp" data-sp="quiz" id="earPanel">
-    <div class="head"><h2>청음 퀴즈 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정·3화음·7화음 성질, 키 안의 음계 도수, 또는 코드 진행(장조)의 으뜸음을 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p></div>
+    <div class="head"><h2>청음 퀴즈 · 듣고 맞히기</h2><p class="muted small">소리를 듣고 음정·3화음·7화음 성질, 키 안의 음계 도수, 코드 진행(장조)의 으뜸음, 종지(카덴스) 종류, 화음 기능(T·S·D), 3화음의 전위를 고르세요. 정답률은 이 브라우저에만 기록됩니다.</p><details class="help"><summary>도움말</summary><p>카덴스 듣기: I–IV(또는 ii) 뒤의 마지막 두 화음으로 정격(V–I)·변격(IV–I)·반종지(…–V)·거짓(V–vi) 종지를 고릅니다(1단계는 정격·반종지만). 화음 기능: I–IV–V–I 로 조성을 들은 뒤 한 화음이 토닉(I·vi)·서브도미넌트(IV·ii)·도미넌트(V·V7) 중 무엇인지 고릅니다. 전위 듣기: 3화음을 한 음씩, 이어 함께 듣고 가장 낮은 음이 근음·3음·5음 중 무엇인지(기본형·1전위·2전위) 고릅니다.</p></details></div>
     <div class="row" style="gap:.8rem 1.2rem">
-      <div class="opt"><span class="lb">문제 종류</span><div class="seg" id="eType" role="group" aria-label="문제 종류"><button type="button" aria-pressed="true" data-v="interval">음정</button><button type="button" aria-pressed="false" data-v="triad">3화음</button><button type="button" aria-pressed="false" data-v="seventh">7화음</button><button type="button" aria-pressed="false" data-v="degree">음계 도수</button><button type="button" aria-pressed="false" data-v="tonic">으뜸음 찾기</button></div></div>
+      <div class="opt"><span class="lb">문제 종류</span><div class="seg" id="eType" role="group" aria-label="문제 종류"><button type="button" aria-pressed="true" data-v="interval">음정</button><button type="button" aria-pressed="false" data-v="triad">3화음</button><button type="button" aria-pressed="false" data-v="seventh">7화음</button><button type="button" aria-pressed="false" data-v="degree">음계 도수</button><button type="button" aria-pressed="false" data-v="tonic">으뜸음 찾기</button><button type="button" aria-pressed="false" data-v="cadence">카덴스 듣기</button><button type="button" aria-pressed="false" data-v="func">화음 기능</button><button type="button" aria-pressed="false" data-v="inversion">전위 듣기</button></div></div>
       <div class="opt" id="eDirOpt"><span class="lb">방향</span><div class="seg" id="eDir" role="group" aria-label="음정 방향"><button type="button" aria-pressed="true" data-v="asc">상행</button><button type="button" aria-pressed="false" data-v="desc">하행</button><button type="button" aria-pressed="false" data-v="har">동시</button><button type="button" aria-pressed="false" data-v="mix">섞기</button></div></div>
-      <div class="opt"><span class="lb">난이도</span><div class="seg" id="eLevel" role="group" aria-label="청음 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
+      <div class="opt" id="eLevelOpt"><span class="lb">난이도</span><div class="seg" id="eLevel" role="group" aria-label="청음 난이도"><button type="button" aria-pressed="true" data-v="1">1</button><button type="button" aria-pressed="false" data-v="2">2</button></div></div>
     </div>
     <div class="row" style="margin-top:.8rem"><button class="btn primary" type="button" id="ePlay">▶ 들어보기</button><button class="btn" type="button" id="eNext">새 문제</button><label class="chk" title="기록에서 오답률이 높은 항목을 더 자주 냅니다"><input type="checkbox" id="eWeak"><span>약점 위주</span></label></div>
     <div class="choices" id="eChoices" role="group" aria-label="보기"></div>
@@ -1872,7 +1872,7 @@ el('pmDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 el('pmIv').onchange=()=>{if(sing.busy)return;pm.iv=el('pmIv').value;pmNew()};el('pmWeak').onchange=()=>{pm.weak=el('pmWeak').checked;if(!sing.busy)pmNew()};
 
 /* 진도 기록: pr-stats {drill:{n,h:[최근 결과 0..1]}} (localStorage, 실패해도 동작) */
-const DRILLS=[['interval','음정'],['triad','3화음'],['seventh','7화음'],['degree','음계 도수'],['tonic','으뜸음 찾기'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sd','곡 받아쓰기'],['rhythm','리듬 받아쓰기'],['rtap','리듬 따라 치기 점수'],['sight','시창 점수'],['pitch','음정 부르기 점수']];
+const DRILLS=[['interval','음정'],['triad','3화음'],['seventh','7화음'],['degree','음계 도수'],['tonic','으뜸음 찾기'],['cadence','카덴스 듣기'],['func','화음 기능'],['inversion','전위 듣기'],['prog','코드 진행 받아쓰기'],['mel','멜로디 받아쓰기'],['sd','곡 받아쓰기'],['rhythm','리듬 받아쓰기'],['rtap','리듬 따라 치기 점수'],['sight','시창 점수'],['pitch','음정 부르기 점수']];
 let STAT={};try{STAT=JSON.parse(localStorage.getItem('pr-stats'))||{}}catch(e){STAT={}}
 if(!STAT||typeof STAT!=='object'||Array.isArray(STAT))STAT={};for(const k of Object.keys(STAT)){const r=STAT[k];if(!r||!Array.isArray(r.h))delete STAT[k];else{r.h=r.h.filter(x=>typeof x==='number'&&isFinite(x));r.n=Math.max(r.h.length,+r.n|0)}} /* 깨진 저장값은 버린다 */
 const esc=t=>String(t).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -1910,23 +1910,26 @@ el('bkMerge').onclick=()=>bkApply(true);el('bkRepl').onclick=()=>bkApply(false);
 /* 청음: 음정 / 3화음. 정답률은 localStorage(실패해도 동작) */
 const ear={type:'interval',level:1,dir:'asc',weak:false,q:null,done:false};
 let earA={};try{earA=JSON.parse(localStorage.getItem('pr-ear'))||{}}catch(e){}
-const earKey=()=>ear.type+ear.level,earName=t=>({interval:'음정',triad:'3화음',seventh:'7화음',degree:'음계 도수',tonic:'으뜸음 찾기'})[t]||'3화음';
+const earKey=()=>ear.type+ear.level,earName=t=>({interval:'음정',triad:'3화음',seventh:'7화음',degree:'음계 도수',tonic:'으뜸음 찾기',cadence:'카덴스 듣기',func:'화음 기능',inversion:'전위 듣기'})[t]||'3화음';
 function earShowAcc(){const a=earA[earKey()]||{n:0,ok:0};el('eAcc').textContent=`${earName(ear.type)} 난이도 ${ear.level} 정답률: ${a.n?`${a.ok}/${a.n} (${Math.round(100*a.ok/a.n)}%)`:'아직 기록 없음'} · 이 브라우저에만 저장됩니다.`}
 const wFn=()=>{const wk=SingLab.weakness(STAT2);return id=>SingLab.weightFor(wk,id)};
 function earNew(){earSet(SingLab.earQuiz({type:ear.type,key:singKeyPc(),level:ear.level,seed:seed(),dir:ear.dir,weight:ear.weak&&STAT2?wFn():null}))}
-function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;el('eDirOpt').hidden=ear.type!=='interval';
+function earSet(q){clearTimeout(ear.tm);ear.q=q;ear.done=false;el('eDirOpt').hidden=ear.type!=='interval';el('eLevelOpt').hidden=ear.type==='func'||ear.type==='inversion';
  el('eChoices').innerHTML=ear.q.choices.map(c=>`<button class="btn" type="button" data-c="${c}">${c}</button>`).join('');el('eFb').textContent='';el('eNext').disabled=true;earShowAcc()}
 function earPlay(){if(!ear.q)earNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();const n=ear.q.notes,t=ctx.currentTime+.1;
  if(ear.q.type==='interval'){const d=ear.q.dir||'asc';if(d==='har')for(const p of n)tone('sing',t,1.4,p,90);else{const o=d==='desc'?[n[1],n[0]]:n;tone('sing',t,.55,o[0],90);tone('sing',t+.65,.55,o[1],90)}}
  else if(ear.q.type==='degree'){ear.q.cad.forEach((c,i)=>{for(const p of c.notes)tone('sing',t+i*.9,.8,p,72);tone('sing',t+i*.9,.8,c.bass,100)});tone('sing',t+4*.9+.3,1.2,n[0],96)}
  else if(ear.q.type==='tonic'){ear.q.cad.forEach((c,i)=>{for(const p of c.notes)tone('sing',t+i*.9,.8,p,72);tone('sing',t+i*.9,.8,c.bass,100)})}
+ else if(ear.q.type==='cadence'){ear.q.cad.forEach((c,i)=>{const st=t+i*.9+(i>=2?.15:0),d=i===3?1.7:.8;for(const p of c.notes)tone('sing',st,d,p,72);tone('sing',st,d,c.bass,100)})}
+ else if(ear.q.type==='func'){ear.q.cad.forEach((c,i)=>{for(const p of c.notes)tone('sing',t+i*.9,.8,p,72);tone('sing',t+i*.9,.8,c.bass,100)});const t2=t+4*.9+.5,g=ear.q.target;for(const p of g.notes)tone('sing',t2,1.5,p,80);tone('sing',t2,1.5,g.bass,100)}
  else{n.forEach((p,i)=>tone('sing',t+i*.5,.45,p,90));for(const p of n)tone('sing',t+n.length*.5+.4,1.3,p,90)}}
 el('ePlay').onclick=earPlay;el('eNext').onclick=()=>{if(RT.on)return rtNext();earNew();earPlay()};
 el('eChoices').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||ear.done||!ear.q)return;ear.done=true;const ok=b.dataset.c===ear.q.answer,a=earA[earKey()]||(earA[earKey()]={n:0,ok:0});a.n++;if(ok)a.ok++;statRec(ear.type,ok?1:0);fine(ear.q.item,ok?1:0,ok?null:b.dataset.c);try{localStorage.setItem('pr-ear',JSON.stringify(earA))}catch(_){}
  if(RT.on)rtAnswer(ok,[ear.q.item]);
  document.querySelectorAll('#eChoices button').forEach(x=>{if(x.dataset.c===ear.q.answer){x.classList.add('ok');x.textContent='✓ '+x.dataset.c}else if(x===b){x.classList.add('bad');x.textContent='✗ '+x.dataset.c}});
  if(ear.q.type==='tonic'){ensureCtx();if(ctx.state==='suspended')ctx.resume();const t0=ctx.currentTime+.5,c=ear.q.tonic;for(const p of c.notes)tone('sing',t0,1.6,p,80);tone('sing',t0,1.6,c.bass,100)} /* 정답 공개: 으뜸화음 I 을 들려준다 */
- el('eFb').textContent=ear.q.type==='tonic'?(ok?`정답입니다. 으뜸음은 ${ear.q.answer}(${ear.q.label}). 으뜸화음을 들려드립니다.`:`아쉽습니다. 으뜸음은 ${ear.q.answer}(${ear.q.label})입니다. 으뜸화음을 들려드립니다.`):ear.q.type==='degree'?(ok?`정답입니다. ${ear.q.label}에서 「${ear.q.answer}」.`:`아쉽습니다. ${ear.q.label}에서 정답은 「${ear.q.answer}」입니다.`):ok?`정답입니다. ${ear.q.label}에서 시작한 ${ear.q.answer}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다(${ear.q.label}에서 시작).`;el('eNext').disabled=false;earShowAcc()});
+ document.querySelectorAll('#eChoices button').forEach(x=>{const r=ear.q.reveal&&ear.q.reveal[x.dataset.c];if(r)x.textContent+=' '+r});
+ el('eFb').textContent=ear.q.info?(ok?`정답입니다. ${ear.q.info}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다. ${ear.q.info}.`):ear.q.type==='tonic'?(ok?`정답입니다. 으뜸음은 ${ear.q.answer}(${ear.q.label}). 으뜸화음을 들려드립니다.`:`아쉽습니다. 으뜸음은 ${ear.q.answer}(${ear.q.label})입니다. 으뜸화음을 들려드립니다.`):ear.q.type==='degree'?(ok?`정답입니다. ${ear.q.label}에서 「${ear.q.answer}」.`:`아쉽습니다. ${ear.q.label}에서 정답은 「${ear.q.answer}」입니다.`):ok?`정답입니다. ${ear.q.label}에서 시작한 ${ear.q.answer}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다(${ear.q.label}에서 시작).`;el('eNext').disabled=false;earShowAcc()});
 el('eType').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.type=b.dataset.v;segPress('eType',b);earNew()});
 el('eLevel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.level=+b.dataset.v;segPress('eLevel',b);earNew()});
 el('eDir').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||RT.on)return;ear.dir=b.dataset.v;segPress('eDir',b);earNew()});
