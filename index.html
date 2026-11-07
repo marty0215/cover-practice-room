@@ -143,6 +143,10 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .lh.a::before{left:2px}.lh.b::before{right:2px}
 .lh:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .strip{-webkit-touch-callout:none}
+.secstrip{display:flex;gap:3px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:thin}
+.secb{flex:1 1 0;min-width:48px;min-height:44px;border:1px solid var(--control-border);border-top:5px solid var(--c);background:var(--surface);color:var(--text);border-radius:6px;display:grid;align-content:center;justify-items:start;padding:2px .45rem;line-height:1.2;cursor:pointer;font-family:inherit}
+.secb:hover{background:var(--surface-2)}.secb b{font-size:1rem}.secb span{font-size:.72rem;color:var(--text-muted)}
+.secb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .strip.lp .sc.inl{box-shadow:0 0 0 2px var(--loop)}
 .tab{border:0;background:transparent;min-height:var(--hit);padding:0 .9rem;font-weight:500;color:var(--text-muted);border-bottom:3px solid transparent;white-space:nowrap;flex:none}
 .tab:hover{color:var(--text)}
@@ -534,6 +538,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
         <div class="pop"><b>단계 연습 설정</b>
           <div class="stepcfg"><label for="trFrom">시작 속도 (%)</label><input type="number" id="trFrom" min="25" max="110" inputmode="numeric"><label for="trTo">목표 속도 (%)</label><input type="number" id="trTo" min="25" max="110" inputmode="numeric"><label for="trStep">한 단계 (%p)</label><input type="number" id="trStep" min="1" max="25" inputmode="numeric"><label for="trReps">단계당 반복 횟수</label><input type="number" id="trReps" min="1" max="16" inputmode="numeric"></div>
           <p class="note" style="margin:0" id="trNote"></p></div></details></div></div>
+    <div id="secPanel" hidden><div class="secstrip" id="secStrip" role="group" aria-label="곡 구간 추정. 누르면 그 구간 반복"></div><p class="note" id="secNote">반복 구조 추정(A·B는 같은 소리끼리 묶은 이름, 절·후렴 판정 아님). 누르면 그 구간을 반복합니다.</p></div>
     <details class="help"><summary>도움말</summary><p>코드 띠를 길게 눌러 끌거나(터치), 끌어서(마우스) 구간을 정합니다. 띠 양 끝의 손잡이로 길이를 고치고, 빈 곳을 누르거나 「반복 해제」로 풉니다.</p></details>
   </section>
   <section class="sec wide" id="recOpt" aria-labelledby="hRec"><h3 class="sh" id="hRec">녹음해서 들어보기</h3>
@@ -850,6 +855,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 <script src="sing.js"></script>
 <script src="noteedit.js"></script>
 <script src="bands.js"></script>
+<script src="sections.js"></script>
 <script>
 /* 업로드 분석에만 필요한 스크립트(TF.js·Basic Pitch·보컬 추정)는 필요할 때 한 번만 불러온다. 실패하면 다음 시도에서 다시 불러온다 */
 const LIBS={tf:{src:'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js',ok:()=>!!window.tf,ms:60000},bp:{src:'vendor/basicpitch.js',ok:()=>!!window.BasicPitchLib,ms:20000},vocal:{src:'vocal.js',ok:()=>!!window.VocalLine,ms:20000},vreduce:{src:'vreduce.js',ok:()=>!!window.VocalReduce,ms:20000},staff:{src:'staff.js',ok:()=>!!window.Staff,ms:20000},musicxml:{src:'musicxml.js',ok:()=>!!window.MusicXML,ms:20000}};
@@ -907,7 +913,7 @@ function prep(){PARTS=ORDER.filter(p=>song.parts[p]&&song.parts[p].length);for(c
  mel=PARTS.filter(p=>p!=='drums');lo=127;hi=0;for(const p of mel)for(const n of song.parts[p]){lo=Math.min(lo,n[2]);hi=Math.max(hi,n[2])}lo-=1;hi+=1}
 const tvLabel=()=>`${transpose>0?'+':''}${transpose} · ${tn(KEY)}`;
 let modeAuto=false;
-function loadSong(id){if(S.playing)stop();if(typeof sdStop==='function'&&typeof sd!=='undefined')sdStop();progLim=16;secLim=8;const prevS=song;song=SONGS[id];song.id=id;BARS=song.bars;TOTAL=BARS*4;prep();edBar=-1;renderBands();
+function loadSong(id){if(S.playing)stop();if(typeof sdStop==='function'&&typeof sd!=='undefined')sdStop();progLim=16;secLim=8;const prevS=song;song=SONGS[id];song.id=id;BARS=song.bars;TOTAL=BARS*4;prep();edBar=-1;renderBands();renderSecStrip();
  S.anchorB=0;S.a=0;S.b=TOTAL;S.loop=false;el('loopOn').checked=false;selBar=0;view.start=0;view.len=Math.min(viewPref,BARS);
  if(mute.score===undefined)mute.score=true;if(mute.vocal===undefined)mute.vocal=true;
  if(song.muteDef&&(!prevS||prevS.id!==id))Object.assign(mute,song.muteDef);else if(prevS&&prevS.muteDef&&!song.muteDef)mute.score=true; /* 곡별 기본 켬/끔: 채보 곡은 채보 음 끔, 연습곡은 멜로디 가이드 켬 */
@@ -1496,6 +1502,7 @@ function buildSong(notesSec,bpm,offset,duration,name,o){o=o||{};const style=STYL
  const silent=autoSilent.map((x,b)=>edits[b]?false:x),split=autoSplit.map((x,b)=>edits[b]?null:x);
  const sg={title:name.replace(/\.[^.]+$/,'').slice(0,28),bpm,bars,chords,conf,auto,autoConf,autoSilent,autoSplit,split,silent,edits,style,parts:{score,bass:[],keys:[],drums:[]},audio:userUrl,desc:`${name} · ${bpm} BPM 추정 · ${bars}마디 · 채보 ${score.length}음${vocal.length?` · 보컬 멜로디(추정) ${vocal.length}음`:''} · 베이스·건반·드럼은 코드에서 만든 초안`};
  if(vocal.length||autoVocal.length)sg.parts.vocal=vocal;sg.autoParts={score:autoScore,vocal:autoVocal};try{sg.bandRows=o.bands&&window.Bands?Bands.perBar(o.bands,bpm,offset,bars):null}catch(e){sg.bandRows=null}
+ try{sg.sections=window.Sections?(Sections.valid(o.secSaved,bars,bpm,offset)||Sections.estimate(o.chroma,sg.bandRows,bars,bpm,offset)):null}catch(e){sg.sections=null} /* 곡 구간(반복 구조) 추정: 저장된 값이 지금 박 격자와 같으면 그대로, 아니면(박자 다시 맞춤·옛 저장분) 크로마·소리 대역에서 다시 계산 */
  regenBars(sg,[...Array(bars).keys()],style);sg.inventory=userInv(sg);return sg}
 el('start').onclick=async()=>{if(!picked||running)return;running=true;const libP=loadLib('tf').then(()=>loadLib('bp')) /* basicpitch.js 는 tf 전역을 쓰므로 tf 뒤에 */,vocP=loadLib('vocal');libP.catch(()=>{});vocP.catch(()=>{}); /* 분석 시작과 함께 내려받아 디코딩과 겹친다 */const my=job={cancel:false,step:0};let prev=null,done=false;el('start').disabled=true;el('cancel').hidden=false;el('cancel').disabled=false;el('cancel').textContent='취소';el('result').hidden=true;el('err').hidden=true;const w=el('steps');w.innerHTML=STEPS.map(([n,d])=>`<div class="step"><i></i><span><b>${n}</b> <span class="muted">${d}</span></span><span class="t">대기</span></div>`).join('');rows=[...w.children];t0=performance.now();
  const chk=()=>{if(my.cancel)throw new Error('__cancel')},go=async(i)=>{my.step=i;stepState(i,'run');await sleep(30);chk()};
@@ -1509,7 +1516,7 @@ el('start').onclick=async()=>{if(!picked||running)return;running=true;const libP
  catch(e){if(e&&e.message==='__cancel'){el('err').hidden=false;el('err').textContent=`취소했습니다(${STEPS[my.step][0]} 단계에서 멈춤). 파일은 그대로 선택돼 있어 다시 시작할 수 있습니다.`;rows.forEach((r,i)=>{if(!r.className.includes('done')){r.className='step';r.querySelector('.t').textContent='취소'}});el('start').disabled=false}else{console.error(e);fail(e&&e.message?e.message:String(e),my.step)}}
  finally{if(prev){if(done){if(prev.url)URL.revokeObjectURL(prev.url)}else{URL.revokeObjectURL(userUrl);userUrl=prev.url;raw=prev.raw;U=prev.U}}running=false;job=null;el('cancel').hidden=true}};
 el('cancel').onclick=()=>{if(job){job.cancel=true;el('cancel').disabled=true;el('cancel').textContent='취소 중…'}};
-const makeUser=()=>buildSong(raw.notes,U.bpm,U.off,raw.duration,raw.name,{style:U.style,edits:U.edits,chroma:raw.chroma,vocal:raw.vocal,nedit:U.nedit,bands:raw.bands});
+const makeUser=()=>buildSong(raw.notes,U.bpm,U.off,raw.duration,raw.name,{style:U.style,edits:U.edits,chroma:raw.chroma,vocal:raw.vocal,nedit:U.nedit,bands:raw.bands,secSaved:raw.secSaved});
 function installUser(s){U.edits=s.edits;U.style=s.style;SONGS.user=s;if(!document.querySelector('#songsel [data-s=user]')){const b=document.createElement('button');b.dataset.s='user';sel.prepend(b)}songBtnText(document.querySelector('#songsel [data-s=user]'),'내 곡 · '+s.title,'내 곡');el('resMeta').textContent=s.desc;el('result').hidden=false;el('start').disabled=!picked;mute.score=true;mute.vocal=true;el('relinkLab').hidden=!!s.audio;el('vocNote').textContent=s.parts.vocal?'보컬 멜로디(추정): 믹스의 가운데 소리에서 신호로 추정한 선율입니다. 기본은 꺼짐이고 따라 부르기·곡 윗선율 시창의 기준으로 씁니다. 측정(1분 발췌 6개) 기준 프레임 음높이 약 7할, 음 단위 일치 F1 약 0.5라 틀린 음이 많습니다. 참고용으로만 보세요.':'';const ov=s.audio?60:0;el('origVol').value=ov;el('origVal').textContent=ov+'%';mode='synth';document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));loadSong('user');persist()}
 /* 박자 다시 맞추기: BPM·첫 박을 바꿔 채보 음에서 코드·반주를 다시 만든다(채보 모델은 다시 돌지 않음). 고친 코드는 초기화 */
 function realign(bpm,off){if(!raw||!(bpm>=40&&bpm<=220)||!isFinite(off))return false;el('bpmMsg').textContent='';U={bpm,off,style:U.style,edits:{},nedit:U.nedit};el('bpmIn').value=bpm;installUser(makeUser());return true}
@@ -1526,6 +1533,11 @@ el('tapBtn').onclick=()=>tapHit();window.tapHit=tapHit; /* 시험용: 가짜 시
 el('tapApply').onclick=()=>{if(!(TAP.bpm>=40&&TAP.bpm<=220)){el('bpmMsg').textContent=`탭 BPM ${TAP.bpm||'—'}은 40~220 범위를 벗어나 적용하지 않았습니다.`;return}if(realign(TAP.bpm,+el('offIn').value)){TAP.t=[];TAP.bpm=0;el('tapApply').disabled=true;el('tapOut').textContent='적용했습니다. 마디를 다시 맞췄습니다(채보·고친 음은 그대로, 손으로 고친 코드는 새 마디에 맞춰 다시 추정).'}};
 el('relink').onchange=()=>{const f=el('relink').files[0];if(!f||!SONGS.user)return;if(S.playing)stop();if(userUrl)URL.revokeObjectURL(userUrl);userUrl=URL.createObjectURL(f);SONGS.user.audio=userUrl;el('relinkLab').hidden=true;if(song.id==='user'){real.src=userUrl;real.load();vcrReset();el('origVol').value=60;el('origVal').textContent='60%';applyMode()}};
 
+/* 곡 구간 띠(연습 탭 구간 반복 카드). 같은 글자 = 같은 소리끼리 묶음(절·후렴 판정 아님). 누르면 그 구간 반복 */
+const SECC=['--bass','--drums','--keys','--guitar','--vocal','--edit','--score'];
+function renderSecStrip(){const pn=el('secPanel'),sc=song&&song.sections;if(!sc||!sc.segs||!sc.segs.length||song.id!=='user'){pn.hidden=true;el('secStrip').innerHTML='';return}pn.hidden=false;const lt=[...new Set(sc.segs.map(s=>s.l))];
+ el('secStrip').innerHTML=sc.segs.map(s=>{const n=s.b-s.a,c=SECC[lt.indexOf(s.l)%SECC.length];return `<button class="secb" type="button" data-a="${s.a}" data-b="${s.b}" style="flex-grow:${n};--c:var(${c})" aria-label="${s.l} 구간 ${s.a+1}~${s.b}마디 반복"><b>${s.l}</b><span>${s.a+1}–${s.b}마디</span></button>`}).join('')}
+el('secStrip').addEventListener('click',e=>{const c=e.target.closest('.secb');if(!c)return;const a=+c.dataset.a,b=+c.dataset.b;setLoopBars(a+1,b);seekTo(a*4)});
 /* 마디별 소리 대역 활동 히트맵(채보 탭). 값은 곡 안 0~1, 악기 이름은 붙이지 않는다. 마디 번호·칸을 누르면 그 마디 반복 */
 function renderBands(){const pn=el('bandPanel'),br=song&&song.bandRows;if(!br||!br.rows.length){pn.hidden=true;el('bandGrid').innerHTML='';return}pn.hidden=false;const B=br.bars,g=el('bandGrid');g.style.gridTemplateColumns=`minmax(9.5em,auto) repeat(${B},minmax(24px,1fr))`;
  let h='<span class="bl"></span>';for(let b=0;b<B;b++)h+=`<button class="bn" type="button" data-b="${b}" aria-label="${b+1}마디 반복${br.rows.map(r=>` · ${r.label.replace(/\(.*\)/,'')} ${r.v[b]}`).join('')}">${b+1}</button>`;
@@ -1538,9 +1550,9 @@ const DB={open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('prac
  async op(m,fn){const db=await this.open();try{return await new Promise((res,rej)=>{const t=db.transaction('kv',m),q=fn(t.objectStore('kv'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}finally{db.close()}},
  get(k){return this.op('readonly',s=>s.get(k))},put(k,v){return this.op('readwrite',s=>s.put(v,k))},del(k){return this.op('readwrite',s=>s.delete(k))}};
 let saveT=0;
-function persist(){if(!raw)return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await DB.put('last',{v:1,name:raw.name,duration:raw.duration,bpm:U.bpm,off:U.off,style:U.style,edits:{...U.edits},nedit:U.nedit||null,notes:raw.notes.map(n=>[n.startTimeSeconds,n.durationSeconds,n.pitchMidi,n.amplitude]),chroma:raw.chroma||null,vocal:raw.vocal||null,bands:raw.bands||null,at:Date.now()});el('saveNote').textContent='분석 결과를 이 브라우저에 저장했습니다(원본 파일은 저장하지 않음).'}catch(e){el('saveNote').textContent='이 브라우저에서는 분석 결과를 저장하지 못했습니다(사생활 보호 모드 등). 연습은 그대로 됩니다.'}},400)}
+function persist(){if(!raw)return;clearTimeout(saveT);saveT=setTimeout(async()=>{try{await DB.put('last',{v:1,name:raw.name,duration:raw.duration,bpm:U.bpm,off:U.off,style:U.style,edits:{...U.edits},nedit:U.nedit||null,notes:raw.notes.map(n=>[n.startTimeSeconds,n.durationSeconds,n.pitchMidi,n.amplitude]),chroma:raw.chroma||null,vocal:raw.vocal||null,bands:raw.bands||null,sections:(SONGS.user&&SONGS.user.sections)||null,at:Date.now()});el('saveNote').textContent='분석 결과를 이 브라우저에 저장했습니다(원본 파일은 저장하지 않음).'}catch(e){el('saveNote').textContent='이 브라우저에서는 분석 결과를 저장하지 못했습니다(사생활 보호 모드 등). 연습은 그대로 됩니다.'}},400)}
 async function checkSaved(){try{const r=await DB.get('last');if(!r||!Array.isArray(r.notes)||!(r.bpm>=40&&r.bpm<=220)||!isFinite(r.off)||!(r.duration>0)||r.notes.some(n=>!Array.isArray(n)||n.length<4))return;saved=r;el('restore').hidden=false;el('restoreInfo').textContent=`${r.name} · ${r.bpm} BPM · 채보 ${r.notes.length}음 · 고친 코드 ${Object.keys(r.edits||{}).length}개${neN(r.nedit)?` · 고친 음 ${neN(r.nedit)}개`:''}${Array.isArray(r.vocal)&&r.vocal.length?` · 보컬 멜로디(추정) ${r.vocal.length}음`:''} · ${new Date(r.at).toLocaleString('ko-KR')} 저장. 원본 파일은 저장하지 않았으니 원곡 소리는 다시 고르면 됩니다.`}catch(e){}}
-el('restoreGo').onclick=async()=>{const r=saved;if(!r||running)return;if(Array.isArray(r.vocal)&&r.vocal.length){try{await loadLib('vocal')}catch(e){}if(saved!==r||running)return} /* 보컬 음 보정값 계산에만 vocal.js 필요(모델·TF 불필요) */raw={notes:r.notes.map(([a,b,c,d])=>({startTimeSeconds:a,durationSeconds:b,pitchMidi:c,amplitude:d})),duration:r.duration,name:r.name,chroma:r.chroma||null,bands:(window.Bands?Bands.unpack(r.bands):null),vocal:Array.isArray(r.vocal)&&r.vocal.every(n=>Array.isArray(n)&&n.length>=3&&isFinite(n[0]+n[1]+n[2]))?r.vocal:null};if(userUrl){URL.revokeObjectURL(userUrl);userUrl=null}picked=null;U={bpm:r.bpm,off:r.off,style:r.style||'pop',edits:r.edits||{},nedit:neClean(r.nedit)};
+el('restoreGo').onclick=async()=>{const r=saved;if(!r||running)return;if(Array.isArray(r.vocal)&&r.vocal.length){try{await loadLib('vocal')}catch(e){}if(saved!==r||running)return} /* 보컬 음 보정값 계산에만 vocal.js 필요(모델·TF 불필요) */raw={notes:r.notes.map(([a,b,c,d])=>({startTimeSeconds:a,durationSeconds:b,pitchMidi:c,amplitude:d})),duration:r.duration,name:r.name,chroma:r.chroma||null,bands:(window.Bands?Bands.unpack(r.bands):null),secSaved:r.sections||null,vocal:Array.isArray(r.vocal)&&r.vocal.every(n=>Array.isArray(n)&&n.length>=3&&isFinite(n[0]+n[1]+n[2]))?r.vocal:null};if(userUrl){URL.revokeObjectURL(userUrl);userUrl=null}picked=null;U={bpm:r.bpm,off:r.off,style:r.style||'pop',edits:r.edits||{},nedit:neClean(r.nedit)};
  el('fileinfo').hidden=false;el('fname').textContent=r.name+' (이전 분석)';el('fmeta').textContent='저장된 분석 결과 · 원본 파일 없음';el('steps').innerHTML='';el('upProg').style.width='100%';el('err').hidden=true;el('longWarn').hidden=true;el('bpmIn').value=U.bpm;el('offIn').value=U.off;installUser(makeUser());el('restore').hidden=true};
 el('restoreDel').onclick=async()=>{try{await DB.del('last')}catch(e){}saved=null;el('restore').hidden=true};
 el('openDemo').addEventListener('click',()=>{if(SONGS.user&&song.id!=='user')loadSong('user')});
