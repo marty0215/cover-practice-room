@@ -2,7 +2,8 @@
    - yin: 단음 음높이 추정 (YIN, 누적 평균 정규화 차분 + 포물선 보간)
    - tracker: 마이크 스트림 → 20 ms 간격 [시각, midi(소수), 신뢰도] 기록
    - makeExercise: 키·음역 안에서 순차 진행 위주의 시창 멜로디 생성 (박 단위 [시작박, 길이박, midi])
-   - scoreTake: 목표 음별로 ±50 cent 안에 든 유성 프레임 비율, 평균 cent 오차, 판정
+   - scoreTake: 목표 음별로 ±tol(기본 50) cent 안에 든 유성 프레임 비율, 평균 cent 오차, 판정 + 3단계(맞음·가까움·벗어남) + 시작 음 편차·끝 음 드리프트
+   - voicedMask·octaveGuard·suppressOctave: 유성 판정(연속성)과 옥타브 점프 억제(순수). TOL_LEVELS·tolTier: 허용폭 단계
    - estimateLatency: 스피커 클릭을 마이크로 다시 듣는 왕복 지연(ms) 추정
    - smoothNotes: pyin+평활 분할과 같은 방식으로 음높이 곡선을 음 목록으로 (2026-11-07 시험 F1 0.755 방식)
    - earQuiz: 키 안의 음정·3화음·7화음 성질·음계 도수(종지 뒤 한 음) 문제 생성
@@ -45,14 +46,36 @@ function yin(buf,sr,fmin=70,fmax=1100,thr=.12){const n=buf.length,maxL=Math.min(
  if(tau<0)return null;const a=c[tau-1]??c[tau],b=c[tau],e=c[tau+1]??c[tau],den=a-2*b+e;const t=den?tau+.5*(a-e)/den:tau;
  const f=sr/t;return {f,midi:69+12*Math.log2(f/440),conf:1-b,rms}}
 
+/* 유성 판정(순수). yin 은 c[tau]<0.12 일 때만 값을 내므로 conf=1−c[tau] 는 항상 0.88 초과라 conf 문턱(예전 minConf .5·.6)은 아무것도 거르지 않았다.
+   그래서 유성 여부는 "연속성"으로 정한다: 값이 있는 프레임이 이웃 유성 프레임과 ±cent(100) 안으로 이어진 묶음이 minRun(3)프레임 이상일 때만 유성.
+   숨소리·배경 소리의 홀로 튀는 프레임과 옥타브 튐 프레임은 묶음이 짧아 빠진다. minConf 는 YIN 이 아닌 다른 신뢰도 출처(합성 곡선 등)용 안전 문턱으로만 남긴다(YIN 곡선에는 영향 없음). 반환: 프레임별 boolean 배열 */
+function voicedMask(track,{cent=100,minRun=3,minConf=.5}={}){const T=track||[],n=T.length,m=new Array(n).fill(false),vo=f=>!!f&&f[1]!=null&&f[2]>=minConf;let i=0;
+ while(i<n){if(!vo(T[i])){i++;continue}let j=i;while(j+1<n&&vo(T[j+1])&&Math.abs(T[j+1][1]-T[j][1])*100<=cent)j++;if(j-i+1>=minRun)for(let k=i;k<=j;k++)m[k]=true;i=j+1}
+ return m}
+/* 옥타브 점프 억제(스트리밍). 직전 유성 프레임 n(5)개 중앙값에서 ±1200±band(80) cent 떨어진 프레임은 의심: 이웃과 ±1 반음 안으로 persist(4)프레임 이상 이어질 때만 인정한다.
+   그동안 의심 프레임은 fr[1]=null·fr[2]=0 으로 두고(화면·채점에서 무음), 인정되면 같은 배열 객체를 되살린다. step(fr) 은 fr 을 제자리에서 고친다. 사람 소리는 순간 옥타브 이동이 드물다는 설계 가정(값은 벤치로 확인) */
+function octaveGuard({n=5,band=80,persist=4,minHist=3}={}){const hist=[];let pend=[];const med=a=>{const s=a.slice().sort((x,y)=>x-y);return s[s.length>>1]};
+ return function step(fr){const m=fr[1];if(m==null){pend=[];return fr}
+  if(hist.length>=minHist){const d=Math.abs(m-med(hist))*100;
+   if(Math.abs(d-1200)<=band){if(pend.length&&Math.abs(m-pend[pend.length-1].m)>1)pend=[];pend.push({fr,m,c:fr[2]});fr[1]=null;fr[2]=0;
+    if(pend.length>=persist){for(const p of pend){p.fr[1]=p.m;p.fr[2]=p.c}hist.length=0;for(const p of pend.slice(-n))hist.push(p.m);pend=[]}return fr}}
+  pend=[];hist.push(m);if(hist.length>n)hist.shift();return fr}}
+/* 기록 전체에 octaveGuard 를 적용한 복사본(순수) */
+function suppressOctave(track,o){const g=octaveGuard(o),out=(track||[]).map(f=>f.slice());for(const f of out)g(f);return out}
+/* 음 허용폭 단계: 쉬움 ±50(기본·예전 값) / 보통 ±35 / 어려움 ±25 cent. 기본을 50 으로 둔 이유: 기존 판정·벤치 보정이 50 기준이라 조용히 엄해지지 않게. normTol 은 저장값 검증 */
+const TOL_LEVELS=[['쉬움',50],['보통',35],['어려움',25]],TOL_DEFAULT=50;
+const normTol=v=>{v=+v;return TOL_LEVELS.some(x=>x[1]===v)?v:TOL_DEFAULT};
+/* 3단계: |편차| ≤tol 맞음, ≤2·tol 가까움, 그 밖 벗어남. 편차 없음(null)은 null */
+function tolTier(dev,tol=TOL_DEFAULT){if(dev==null||!isFinite(dev))return null;const a=Math.abs(dev);return a<=tol?'맞음':a<=2*tol?'가까움':'벗어남'}
+
 /* 마이크 → 음높이 기록. ctx 는 호출 쪽 AudioContext. stop() 은 트랙과 노드를 정리한다.
    opts.analyser: 공용 마이크가 만든 AnalyserNode 를 그대로 읽는다(스트림·노드는 호출 쪽 소유라 stop() 은 읽기만 멈춘다).
    opts.stream: 이미 열린 MediaStream 에서 노드만 새로 만든다(트랙은 끄지 않는다). 둘 다 없으면 예전처럼 직접 연다. */
 async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,an=opts.analyser||null,own=false;
  if(!an){if(opts.stream)stream=opts.stream;else{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});own=true}
   try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=2048;src.connect(an)}catch(e){if(own)stream.getTracks().forEach(t=>t.stop());throw e}}
- const buf=new Float32Array(an.fftSize),track=[];let on=true;
- const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];track.push(fr);onFrame&&onFrame(fr)},20);
+ const buf=new Float32Array(an.fftSize),track=[],guard=opts.octave===false?null:octaveGuard();let on=true; /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임 지속 시 인정) */
+ const iv=setInterval(()=>{if(!on)return;an.getFloatTimeDomainData(buf);const r=yin(buf,ctx.sampleRate);const fr=[ctx.currentTime,r?r.midi:null,r?r.conf:0];if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)},20);
  return {track,stop(){on=false;clearInterval(iv);if(src)try{src.disconnect()}catch(_){}if(own)stream.getTracks().forEach(t=>t.stop())}}}
 
 function rng(seed){let s=seed>>>0||1;return ()=>(s=(s*1664525+1013904223)>>>0)/4294967296}
@@ -72,24 +95,40 @@ function makeExercise({key=0,minor=false,bars=4,lo=57,hi=69,seed=1,level=1}={}){
  return out}
 
 /* 목표 [시작박,길이박,midi] + 기록 [초,midi|null,conf] + 박→초 함수. 각 음의 앞 15%·뒤 10% 는 이동 구간이라 뺀다 */
-function scoreTake(target,track,beatToSec,{tol=50,minConf=.5}={}){const per=target.map(([s,d,p])=>{const a=beatToSec(s+d*.15),b=beatToSec(s+d*.9);
-  const fr=track.filter(f=>f[0]>=a&&f[0]<=b);const v=fr.filter(f=>f[1]!=null&&f[2]>=minConf);
+function scoreTake(target,track,beatToSec,{tol=TOL_DEFAULT,minConf=.5}={}){const mk=voicedMask(track,{minConf}),per=target.map(([s,d,p])=>{const a=beatToSec(s+d*.15),b=beatToSec(s+d*.9);
+  const fr=[],v=[];for(let i=0;i<track.length;i++){const f=track[i];if(f[0]>=a&&f[0]<=b){fr.push(f);if(mk[i])v.push(f)}}
   const cents=v.map(f=>{let c=(f[1]-p)*100;return c});const inT=cents.filter(c=>Math.abs(c)<=tol).length;
   const med=cents.length?cents.slice().sort((x,y)=>x-y)[cents.length>>1]:null;
-  const oct=med!=null&&Math.abs(Math.abs(med)-1200)<tol*2;
-  return {pitch:p,frames:fr.length,voiced:v.length,hit:v.length?inT/v.length:0,medCents:med,octave:oct,
-   verdict:!v.length?'소리 없음':oct?'옥타브 차이':inT/v.length>=.6?'맞음':med>0?'높음':'낮음'}});
- const sung=per.filter(x=>x.voiced);return {notes:per,score:sung.length?Math.round(100*per.filter(x=>x.verdict==='맞음').length/per.length):0,
+  const oct=med!=null&&Math.abs(Math.abs(med)-1200)<tol*2,dev=med==null?null:oct?med-Math.sign(med)*1200:med;
+  const verdict=!v.length?'소리 없음':oct?'옥타브 차이':inT/v.length>=.6?'맞음':med>0?'높음':'낮음';
+  return {pitch:p,frames:fr.length,voiced:v.length,hit:v.length?inT/v.length:0,medCents:med,devCents:dev,octave:oct,verdict,
+   tier:!v.length?null:verdict==='맞음'?'맞음':!oct&&Math.abs(dev)<=2*tol?'가까움':'벗어남'}});
+ const sung=per.filter(x=>x.voiced),tiers={맞음:0,가까움:0,벗어남:0};for(const x of per)if(x.tier)tiers[x.tier]++;
+ return {notes:per,tol,tiers,...takeDrift(per),score:sung.length?Math.round(100*per.filter(x=>x.verdict==='맞음').length/per.length):0,
   meanAbsCents:sung.length?Math.round(sung.reduce((a,x)=>a+Math.abs(x.octave?x.medCents-Math.sign(x.medCents)*1200:x.medCents),0)/sung.length):null}}
+/* 시작 음 편차·끝 음 드리프트(신호 기반 cent). notes = scoreTake 의 per(음 순서). start = 소리가 잡힌 첫 음의 편차(옥타브 접은 중앙값),
+   end = 마지막 음(연습 멜로디는 으뜸음으로 끝남)의 편차, drift = end − start. 첫 음과 마지막 음이 모두 잡혀야 drift 를 낸다(그 둘이 같은 음이면 null) */
+function takeDrift(notes){const L=notes||[],fi=L.findIndex(x=>x.devCents!=null),last=L.length-1;if(fi<0)return {start:null,end:null,drift:null};
+ const start=Math.round(L[fi].devCents);if(last<=fi||L[last].devCents==null)return {start,end:null,drift:null};const end=Math.round(L[last].devCents);return {start,end,drift:end-start}}
 
 /* 왕복 지연 추정(ms). samples [[초, rms]] 시간순, clicks 예약 시각(초) 배열. 첫 클릭 전 구간 rms 중앙값(잡음 바닥)의 5배와 0.02 중 큰 값을 클릭 뒤 [-30 ms, +450 ms] 안에서 처음 넘는 시각 − 예약 시각의 중앙값. 잡힌 클릭이 2개 미만이면 null */
-function estimateLatency(samples,clicks,{win=.45,minRms=.02,k=5}={}){const base=samples.filter(s=>s[0]<clicks[0]-.05).map(s=>s[1]).sort((a,b)=>a-b),nf=base.length?base[base.length>>1]:0,thr=Math.max(minRms,nf*k),lat=[];
+function latencyStats(samples,clicks,{win=.45,minRms=.02,k=5}={}){const base=samples.filter(s=>s[0]<clicks[0]-.05).map(s=>s[1]).sort((a,b)=>a-b),nf=base.length?base[base.length>>1]:0,thr=Math.max(minRms,nf*k),lat=[];
  for(const c of clicks){const s=samples.find(x=>x[0]>=c-.03&&x[0]<=c+win&&x[1]>thr);if(s)lat.push(Math.max(0,s[0]-c))}
- if(lat.length<2)return null;lat.sort((a,b)=>a-b);return Math.round(1000*lat[lat.length>>1])}
+ if(lat.length<2)return null;lat.sort((a,b)=>a-b);const qt=p=>{const x=p*(lat.length-1),i=Math.floor(x);return lat[i]+(lat[Math.min(i+1,lat.length-1)]-lat[i])*(x-i)};
+ return {ms:Math.round(1000*lat[lat.length>>1]),iqr:Math.round(1000*(qt(.75)-qt(.25))),n:lat.length}}
+function estimateLatency(samples,clicks,o){const r=latencyStats(samples,clicks,o);return r?r.ms:null}
+/* 지연 측정 안내(순수). iqr(클릭별 값의 사분위 범위, ms)가 maxIqr(60) 초과면 unstable. outputLatency(초, 있으면)는 참고값으로만 쓴다(실측 우선, 입력 지연 미포함, 일부 브라우저엔 없음).
+   labels = 선택된 입·출력 장치 이름: 블루투스 계열 낱말이 있으면 유선 이어폰 권장(블루투스 지연이 크다는 것은 일반 지식이며 이 앱에서 확인한 것은 아님) */
+const BT_RE=/bluetooth|airpods|buds|블루투스/i;
+function latencyAdvice({iqr=null,outputLatency=null,labels=[]}={},{maxIqr=60}={}){const lines=[],unstable=iqr!=null&&iqr>maxIqr;
+ if(unstable)lines.push(`측정이 불안정합니다(클릭마다 ${iqr} ms 퍼짐). 조용한 곳에서 이어폰 소리를 키우지 말고 스피커 음량을 적당히 올려 다시 측정하세요.`);
+ const bt=(labels||[]).some(l=>BT_RE.test(String(l||'')));if(bt)lines.push('블루투스 이어폰은 지연이 커서 유선 이어폰을 권장합니다.');
+ if(typeof outputLatency==='number'&&isFinite(outputLatency)&&outputLatency>0)lines.push(`참고값: 브라우저가 알려 준 출력 지연 ${Math.round(outputLatency*1000)} ms(입력 지연은 빠져 있어 실측값과 다를 수 있습니다).`);
+ return {unstable,bluetooth:bt,lines}}
 
 /* 음높이 곡선 → 음 목록 [시작초,길이초,midi]. 중앙값에서 0.6 반음 이상 벗어나면 새 음, 60 ms 미만 버림 */
-function smoothNotes(track,{dev=.6,minDur=.06}={}){const out=[];let seg=[];const flush=()=>{if(seg.length>1){const ps=seg.map(f=>f[1]).sort((a,b)=>a-b),m=ps[ps.length>>1],dur=seg[seg.length-1][0]-seg[0][0];if(dur>=minDur)out.push([seg[0][0],dur,Math.round(m)])}seg=[]};
- for(const f of track){if(f[1]==null||f[2]<.5){flush();continue}if(seg.length){const ps=seg.map(x=>x[1]).sort((a,b)=>a-b);if(Math.abs(f[1]-ps[ps.length>>1])>dev)flush()}seg.push(f)}flush();return out}
+function smoothNotes(track,{dev=.6,minDur=.06}={}){const out=[],mk=voicedMask(track);let seg=[];const flush=()=>{if(seg.length>1){const ps=seg.map(f=>f[1]).sort((a,b)=>a-b),m=ps[ps.length>>1],dur=seg[seg.length-1][0]-seg[0][0];if(dur>=minDur)out.push([seg[0][0],dur,Math.round(m)])}seg=[]};
+ for(let i=0;i<track.length;i++){const f=track[i];if(!mk[i]){flush();continue}if(seg.length){const ps=seg.map(x=>x[1]).sort((a,b)=>a-b);if(Math.abs(f[1]-ps[ps.length>>1])>dev)flush()}seg.push(f)}flush();return out}
 
 const INTERVALS=[['단2도',1],['장2도',2],['단3도',3],['장3도',4],['완전4도',5],['증4도',6],['완전5도',7],['단6도',8],['장6도',9],['단7도',10],['장7도',11],['옥타브',12]];
 /* 청음 문제: type 'interval' | 'triad' | 'seventh' | 'degree'. level 1 은 키 안의 음만(7화음은 maj7·7·m7, 도수는 장음계 7음), 2 는 전부(7화음 5종, 도수 12음).
@@ -483,24 +522,23 @@ function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null,k
  return {mode:'iv',ref,target:ref+(d==='asc'?s:-s),iv:n,dir:d,semis:s,id:'pm:'+n+':'+d}}
 /* 기록 [초,midi|null,conf] → 판정. 첫 발성(t0 이후 연속 run 프레임 이상 유성)의 skip 초 뒤부터 win 초 창에서 cent 중앙값을 낸다.
    창 안 유성 프레임이 8개 미만·60% 미만이거나 기록이 창 끝 전에 끝났거나 p10–p90 폭이 spread cent 초과면 '불안정'(기록 안 함). 옥타브 차이는 scoreTake 와 같은 기준(±1200±2·tol). */
-function pmJudge(track,{target,t0=0,tol=50,minConf=.5,skip=.15,win=.6,run=3,spread=160}={}){const vo=f=>f[1]!=null&&f[2]>=minConf,tr=track.filter(f=>f[0]>=t0);let on=-1,n=0;
- for(let i=0;i<tr.length;i++){if(vo(tr[i])){if(++n>=run){on=i-run+1;break}}else n=0}
- const base={target,onset:null,frames:0,voiced:0,medCents:null,devCents:null,spread:null,octave:false,ok:false};if(on<0)return {...base,verdict:'소리 없음'};
+function pmJudge(track,{target,t0=0,tol=TOL_DEFAULT,minConf=.5,skip=.15,win=.6,run=3,spread=160}={}){const tr=track.filter(f=>f[0]>=t0),mk=voicedMask(tr,{minRun:run,minConf}),vs=new Set(tr.filter((f,i)=>mk[i])),vo=f=>vs.has(f),on=mk.indexOf(true);
+ const base={target,tol,onset:null,frames:0,voiced:0,medCents:null,devCents:null,spread:null,octave:false,ok:false,tier:null};if(on<0)return {...base,verdict:'소리 없음'};
  const a=tr[on][0]+skip,b=a+win,fr=tr.filter(f=>f[0]>=a&&f[0]<=b),v=fr.filter(vo),r={...base,onset:tr[on][0]-t0,frames:fr.length,voiced:v.length};
  if(v.length<8||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
  const c=v.map(f=>(f[1]-target)*100).sort((x,y)=>x-y),med=c[c.length>>1],sp=c[Math.floor(.9*(c.length-1))]-c[Math.floor(.1*(c.length-1))];
  if(sp>spread)return {...r,medCents:med,spread:sp,verdict:'불안정'};
  const oct=Math.abs(Math.abs(med)-1200)<tol*2,dev=oct?med-Math.sign(med)*1200:med,ok=!oct&&Math.abs(med)<=tol;
- return {...r,medCents:med,devCents:dev,spread:sp,octave:oct,ok,verdict:oct?'옥타브 차이':ok?'맞음':med>0?'높음':'낮음'}}
+ return {...r,medCents:med,devCents:dev,spread:sp,octave:oct,ok,tier:ok?'맞음':oct?'벗어남':tolTier(dev,tol)==='맞음'?'가까움':tolTier(dev,tol),verdict:oct?'옥타브 차이':ok?'맞음':med>0?'높음':'낮음'}}
 /* 판정 → 통계 [[id,frac,chosen]]. 소리 없음·불안정은 기록하지 않는다([]) */
 function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.leak||res.verdict==='불안정'||res.verdict==='소리 없음')return [];
  return [[q.id,res.ok?1:0,res.ok?null:res.octave?'옥타브':res.verdict==='높음'?'높게':'낮게']]}
 
 /* ---------- 음역 찾기(순수 함수) ----------
    rangeFromTake: 한 번 부른 기록 [초,midi,conf] 에서 안정된 유성 프레임만 모아 p10(낮은 음) 또는 p90(높은 음)을 낸다.
-   안정 = 신뢰도 ≥minConf, 유성인 앞뒤 프레임과 ±1 반음 안이고 이웃 하나는 유성(잡음·옥타브 튐 제외). 그 뒤 중앙값에서 ±maxDev 반음 넘는 프레임도 뺀다. 안정 프레임이 minFrames(20 ms 간격 기준 0.5초) 미만이면 ok:false. */
-function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[],vo=f=>!!f&&f[1]!=null&&f[2]>=minConf&&f[1]>=28&&f[1]<=96;let st=[];
- for(let i=0;i<T.length;i++){if(!vo(T[i]))continue;const nb=[T[i-1],T[i+1]].filter(vo);if(nb.length&&nb.every(f=>Math.abs(f[1]-T[i][1])<=1))st.push(T[i][1])}
+   안정 = voicedMask 유성(이웃 유성 프레임과 ±100 cent 로 이어진 3프레임 이상 묶음, 잡음·옥타브 튐 제외)이고 MIDI 28–96. minConf 는 YIN 곡선에선 효력 없는 안전 문턱. 그 뒤 중앙값에서 ±maxDev 반음 넘는 프레임도 뺀다. 안정 프레임이 minFrames(20 ms 간격 기준 0.5초) 미만이면 ok:false. */
+function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[],mk=voicedMask(T,{minConf});let st=[];
+ for(let i=0;i<T.length;i++){if(mk[i]&&T[i][1]>=28&&T[i][1]<=96)st.push(T[i][1])}
  if(st.length>=minFrames){const o=st.slice().sort((x,y)=>x-y),med=o[o.length>>1];st=st.filter(m=>Math.abs(m-med)<=maxDev)}
  if(st.length<minFrames)return {ok:false,n:st.length,reason:'소리가 짧거나 불안정했습니다'};
  const o=st.sort((x,y)=>x-y),q=p=>o[Math.floor(p*(o.length-1))];return {ok:true,n:o.length,midi:Math.round(which==='high'?q(.9):q(.1)),med:o[o.length>>1]}}
@@ -579,5 +617,5 @@ function mergeBackup(cur,inc){const out={},J=s=>{try{return JSON.parse(s)}catch(
   else out[k]=cur[k]}
  return out}
 
-const api={dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
