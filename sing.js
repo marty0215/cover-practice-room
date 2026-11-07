@@ -107,15 +107,15 @@ function makeProgression({key=0,level=1,seed=1,songChords=null,songKey=0,degs:fi
 
 /* 윗선율 추출. notes [시작박,길이박,midi,…]. 구간 [from,to) 박 안에서 시작하는 음만 쓰고, 같은 순간(eps 박)에 시작한 음 중 가장 높은 음을 고르며,
    이미 울리는 더 높은 음 밑에서 시작한 낮은 음은 무시하고 더 낮은 음이 울리던 중이면 그 음을 자른다. 같은 음이 이어지면 합치고 minBeats 미만은 버린다.
-   중앙값이 [lo,hi] 중앙에 가깝도록 전체를 옥타브 이동한 뒤 음역 밖 음은 옥타브 접기. 시작은 from 을 0 으로 옮긴다. 반환 [시작박,길이박,midi] */
-function topLine(notes,{from=0,to=Infinity,lo=52,hi=67,minBeats=.125,eps=.06}={}){
+   fixed 이면 옥타브 이동·접기를 하지 않는다. 아니면 중앙값이 [lo,hi] 중앙에 가깝도록 전체를 옥타브 이동한 뒤 음역 밖 음은 옥타브 접기. 시작은 from 을 0 으로 옮긴다. 반환 [시작박,길이박,midi] */
+function topLine(notes,{from=0,to=Infinity,lo=52,hi=67,minBeats=.125,eps=.06,fixed=false}={}){
  const sel=notes.filter(n=>n[0]>=from-1e-6&&n[0]<to-1e-6).slice().sort((a,b)=>a[0]-b[0]),cl=[];
  for(const n of sel){const c=cl[cl.length-1];if(c&&n[0]-c.s<=eps){if(n[2]>c.p){c.p=n[2];c.d=n[1]}else if(n[2]===c.p&&n[1]>c.d)c.d=n[1]}else cl.push({s:n[0],d:n[1],p:n[2]})}
  const out=[];for(const c of cl){const q=out[out.length-1];if(q&&q.s+q.d>c.s+eps&&q.p>c.p)continue;if(q&&q.s+q.d>c.s)q.d=c.s-q.s;out.push({...c})}
  const mg=[];for(const c of out){const q=mg[mg.length-1];if(q&&q.p===c.p&&q.s+q.d>=c.s-eps)q.d=Math.max(q.d,c.s+c.d-q.s);else mg.push({...c})}
  const keep=mg.filter(c=>c.d>=minBeats-1e-9);if(!keep.length)return [];
- const ps=keep.map(c=>c.p).sort((a,b)=>a-b),med=ps[ps.length>>1],ctr=(lo+hi)/2,sh=Math.round((ctr-med)/12)*12;
- const fold=p=>{p+=sh;while(p>hi)p-=12;while(p<lo)p+=12;return p};
+ const ps=keep.map(c=>c.p).sort((a,b)=>a-b),med=ps[ps.length>>1],ctr=(lo+hi)/2,sh=fixed?0:Math.round((ctr-med)/12)*12;
+ const fold=p=>{if(fixed)return p;p+=sh;while(p>hi)p-=12;while(p<lo)p+=12;return p};
  return keep.map(c=>[Math.round((c.s-from)*1e4)/1e4,Math.round(Math.min(c.d,isFinite(to)?to-c.s:c.d)*1e4)/1e4,fold(c.p)])}
 
 /* 진도 기록: stats {id:{n:총횟수,h:[최근 결과 0..1, 최대 cap개]}} 를 갱신해 돌려준다. lastAcc 는 최근 k회 평균(없으면 null) */
@@ -125,7 +125,7 @@ function lastAcc(rec,k=10){const h=rec&&Array.isArray(rec.h)?rec.h.filter(x=>typ
 
 /* ---------- 적응형 청음: 세부 통계(pr-stats2) · 약점 · 오늘의 연습 ----------
    stats2 = {v:2, items:{id:{n,h:[결과 0..1 (1=정답), 최근 60개]}}, conf:{id:{고른 답:횟수}}}
-   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · all:<옛 항목>(옛 pr-stats 이관분) */
+   id: iv:<음정>:<asc|desc|har> · tr:<3화음> · sv:<7화음 성질> · dg:<으뜸음 기준 반음 0–11 (음계 도수)> · pg:<로마숫자>:<칸 0–3> · md:d<으뜸음 기준 반음> · md:s<직전 음 대비 반음> · sg:d<반음> · sg:v:<hi|lo> · pm:동음:same · pm:<음정>:<asc|desc> · pm:화음:<3up|3down|5> (음정 부르기) · rh:<리듬 칸 종류> · rt:<탭 종류> · rt:<탭 종류>:<late|early> · sd:<vocal|score|bass> (곡 받아쓰기, 창마다 정답률 0..1; 루틴에는 안 씀) · all:<옛 항목>(옛 pr-stats 이관분) */
 const DIRS=['asc','desc','har'],DIR_KO={asc:'상행',desc:'하행',har:'동시'},SOLF=['도','도#','레','레#','미','파','파#','솔','솔#','라','라#','시'];
 const IV_ITEMS=[],TR_ITEMS=['메이저','마이너','디미니시','오그먼트'].map(n=>'tr:'+n),SV_ITEMS=SV_ALL.map(q=>'sv:'+q[0]),DG_ITEMS=SOLF.map((_,i)=>'dg:'+i);for(const [n] of INTERVALS)for(const d of DIRS)IV_ITEMS.push('iv:'+n+':'+d);
 const KIND_OF={iv:'ear',tr:'ear',sv:'ear',dg:'ear',pg:'prog',md:'mel',sg:'sight',rh:'rhy',rt:'rhy',pm:'pitch'},KIND_LAB={ear:'음정·화음 듣기',prog:'코드 진행',mel:'멜로디 받아쓰기',rhy:'리듬',sight:'시창',pitch:'음정 부르기'};
@@ -218,6 +218,7 @@ function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{
  if(p[0]==='sg'){const n=SOLF[+p[1].slice(1)];return often?`시창에서 「${n}」${jong(n)?'을':'를'} 자주 ${top==='옥타브'?'옥타브 어긋나게':top+' '}부릅니다.`.replace('  ',' '):`시창에서 「${n}」 음이 자주 어긋납니다${pct}.`}
  if(p[0]==='pm'){const l=pmLab(p[1],p[2]);return often?(top==='옥타브'?`${l}에서 자주 옥타브가 어긋납니다.`:`${l}에서 자주 ${top} 부릅니다.`):`${l}가 자주 어긋납니다${pct}.`}
  if(p[0]==='rh'){const c=RCELLS[p[1]];if(!c)return String(id);return often?`리듬 받아쓰기에서 「${c.ko}」 칸을 자주 「${top}」${jong(top)===1?'으로':'로'} 적습니다.`:`리듬 받아쓰기에서 「${c.ko}」 정답률이 낮습니다${pct}.`}
+ if(p[0]==='sd'){const l=DICT_LAB[p[1]];if(!l)return String(id);return `곡 받아쓰기(${l})의 정답률이 낮습니다${pct}.`}
  if(p[0]==='rt'){const l=RCAT_LAB[p[1]];if(!l)return String(id);if(p[2]==='late')return `${l}에서 늦게 칩니다${pct}.`;if(p[2]==='early')return `${l}에서 빠르게 칩니다${pct}.`;return `${l} 타이밍이 자주 어긋납니다${pct}.`}
  return String(id)}
 /* 항목 id 의 짧은 이름 (집중 항목 표시용) */
@@ -226,6 +227,7 @@ function itemLabel(id){const p=String(id).split(':');
  if(p[0]==='md')return p[1][0]==='d'?`받아쓰기 「${SOLF[+p[1].slice(1)]}」`:`받아쓰기 ${stepKo(+p[1].slice(1))}`;
  if(p[0]==='sg')return p[1]==='v'?(p[2]==='hi'?'시창 높게 부름':'시창 낮게 부름'):`시창 「${SOLF[+p[1].slice(1)]}」`;
  if(p[0]==='pm')return pmLab(p[1],p[2]);
+ if(p[0]==='sd')return DICT_LAB[p[1]]?`곡 받아쓰기 ${DICT_LAB[p[1]]}`:String(id);
  if(p[0]==='rh')return RCELLS[p[1]]?`리듬 「${RCELLS[p[1]].ko}」`:String(id);
  if(p[0]==='rt')return RCAT_LAB[p[1]]?`${RCAT_LAB[p[1]]} 탭${p[2]==='late'?' 늦음':p[2]==='early'?' 빠름':''}`:String(id);return String(id)}
 /* 약점 상위 n개: 기록 minN 이상, 오답률 rateMin 이상. within 이 있으면 그 id 만 */
@@ -236,6 +238,28 @@ function topWeak(st,{n=3,minN=2,rateMin=.4,within=null}={}){const wk=weakness(st
 function summary(st,log,{n=3}={}){const bl=[];for(const e of log){const b=bl[e.block]||(bl[e.block]={block:e.block,kind:e.kind,label:e.label||KIND_LAB[e.kind],n:0,ok:0});b.n++;if(e.ok)b.ok++}
  const blocks=bl.filter(Boolean).map(b=>({...b,acc:b.n?b.ok/b.n:null})),touched=new Set(log.flatMap(e=>e.items||[]));
  return {blocks,weak:topWeak(st,{n,within:[...touched]})}}
+
+/* ---------- 곡 받아쓰기(이 곡에서): 현재 곡의 층(보컬 멜로디 추정·채보 음·베이스)에서 1–2마디 창을 골라 받아쓴다. 음높이 순서만 채점(박자 제외) ---------- */
+const DICT_LAB={vocal:'보컬 멜로디(추정)',score:'채보 음',bass:'베이스'},DICT_LAYERS=['vocal','score','bass'];
+/* 단선율화(윗음): [from,to) 박 안에서 시작하는 음만, 절대 박 위치·원래 음높이 유지(옥타브 이동 없음) */
+function dictMono(notes,{from=0,to=Infinity}={}){return topLine(Array.isArray(notes)?notes:[],{from,to,fixed:true}).map(n=>[Math.round((n[0]+from)*1e4)/1e4,n[1],n[2]])}
+/* 창 목록: size 마디씩 겹치지 않게 자르고, 단선율 음이 min..max 개인 창만 쓴다. 반환 [{a,b,n,notes}] (a,b = 시작·끝 마디 인덱스, notes 절대 박) */
+function dictWindows(notes,bars,{size=2,min=3,max=12}={}){const out=[];size=size===1?1:2;for(let a=0;a<(bars|0);a+=size){const b=Math.min(bars,a+size),m=dictMono(notes,{from:a*4,to:b*4});if(m.length>=min&&m.length<=max)out.push({a,b,n:m.length,notes:m})}return out}
+/* 층마다 쓸 수 있는 창 수 {vocal:n,…} (창이 0이면 그 층은 못 씀) */
+function dictLayers(parts,bars,size=2){const o={};for(const l of DICT_LAYERS){const ns=parts&&parts[l];if(ns&&ns.length){const w=dictWindows(ns,bars,{size});if(w.length)o[l]=w.length}}return o}
+/* 입력 건반(C4–C5) 안으로: 접지 않고 들어가는 옥타브가 있으면 그쪽으로, 없으면 가장 낮은 음이 lo..lo+11 에 오도록 옮기고 hi 를 넘는 음은 한 옥타브씩 접는다. 시작은 창 첫 마디 = 0. 반환 {ex:[시작박,길이박,midi],folded} */
+function dictRef(win,{lo=60,hi=72}={}){const ns=win&&win.notes||[];if(!ns.length)return {ex:[],folded:false};const from=win.a*4,ps=ns.map(n=>n[2]),mn=Math.min(...ps),mx=Math.max(...ps);let sh=12*Math.ceil((lo-mn)/12),folded=false;
+ for(let k=-6;k<=6;k++)if(mn+12*k>=lo&&mx+12*k<=hi&&(!(mn+sh>=lo&&mx+sh<=hi)||Math.abs(12*k-(60-mn))<Math.abs(sh-(60-mn))))sh=12*k; /* 접지 않고 들어가는 옥타브가 있으면 그것(여럿이면 60 에 가까운 쪽) */
+
+ const ex=ns.map(n=>{let p=n[2]+sh;while(p>hi){p-=12;folded=true}return [Math.round((n[0]-from)*1e4)/1e4,n[1],p]});return {ex,folded}}
+/* 다음 창 위치. done: 이미 푼 창의 a 집합(Set). dir>0 뒤로, <0 앞으로, 끝에서 돌아온다. skip 이 참이면 안 푼 창만, 전부 풀었으면 바로 옆 */
+function dictNext(wins,done,cur,dir=1,skip=true){const n=wins.length;if(!n)return -1;const d=dir<0?-1:1,c=cur==null||cur<0?(d>0?-1:n):cur;
+ if(skip)for(let k=1;k<=n;k++){const i=(((c+d*k)%n)+n)%n;if(!done||!done.has(wins[i].a))return i}
+ return (((c+d)%n)+n)%n}
+/* 채점: ex[0] 은 주어진 첫 음. ans[i] 와 ex[i][2] 를 비교(둘째 음부터). 반환 {n,ok,frac,marks:[null|true|false]} */
+function dictGrade(ex,ans){const n=Math.max(0,ex.length-1);let ok=0;const marks=ex.map((x,i)=>{if(!i)return null;const c=!!ans&&ans[i]===x[2];if(c)ok++;return c});return {n,ok,frac:n?ok/n:0,marks}}
+/* 창의 원곡 음원 구간(초). 음원 시간 = 박 x 60/bpm (재생 위치 규칙과 같음) */
+function dictSpan(win,bpm){const spb=60/(bpm||100);return {t0:win.a*4*spb,t1:win.b*4*spb}}
 
 /* ---------- 리듬 받아쓰기·따라 치기 ----------
    박(4분음표) 단위 4/4. 한 칸 = 1박. 2박짜리 칸(2분음표·점4분+8분·당김음)은 첫 칸에 id, 다음 칸에 '~'(이어짐)를 둔다.
@@ -370,5 +394,5 @@ function voiceHint(lo,hi){const c=(lo+hi)/2;return c<56?'낮은 음역':c<62?'�
 /* 연습용 음역: 양 끝에서 margin 반음 안쪽. 안쪽이 6반음 미만으로 줄면 여유 0 */
 function rangeWithMargin(lo,hi,margin=1){return hi-lo>=6+2*margin?[lo+margin,hi-margin]:[lo,hi]}
 
-const api={rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={rangeFromTake,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
