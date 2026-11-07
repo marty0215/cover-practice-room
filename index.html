@@ -1105,7 +1105,7 @@ el('neUndo').onclick=()=>neUndo(false);el('neRedo').onclick=()=>neUndo(true);el(
 el('neLen').onchange=()=>{ne.len=+el('neLen').value||1};
 el('neAdd').onclick=()=>{const ns=neNotes(),b=Math.max(0,Math.min(TOTAL-.25,nowBeat())),near=ne.sel>=0?ns[ne.sel]:ns.length?ns.reduce((a,n)=>Math.abs(n[0]-b)<Math.abs(a[0]-b)?n:a):null;const bar=Math.floor(b/4);if(bar<view.start||bar>=view.start+view.len)setView(Math.floor(bar/view.len)*view.len);neAdd(b,near?near[2]:Math.round((lo+hi)/2))};
 /* 키보드: 켜 둔 동안 롤(.rollwrap)에 초점이 있고 음을 골랐을 때만 ↑↓←→·Delete 를 쓴다(그 밖에서는 전역 ←/→ 마디 이동·Space 재생 그대로). Ctrl+Z 는 켜 둔 동안 어디서나(입력칸 제외) */
-document.addEventListener('keydown',e=>{if(!ne.on||typing(e.target)||el('keysheet').open)return;const k=e.key,mod=e.ctrlKey||e.metaKey;
+document.addEventListener('keydown',e=>{if(!ne.on||typing(e.target)||el('keysheet').open||el('tab-score').hidden)return; /* 다른 탭에서는 보이지 않는 되돌리기 금지 */const k=e.key,mod=e.ctrlKey||e.metaKey;
  if(mod&&!e.altKey&&/^[zy]$/i.test(k)){e.preventDefault();e.stopPropagation();neUndo(/y/i.test(k)||e.shiftKey);return}
  if(mod||e.altKey||!(e.target.closest&&e.target.closest('.rollwrap'))||ne.sel<0)return;
  const m={ArrowUp:[0,1],ArrowDown:[0,-1],ArrowLeft:[-.25,0],ArrowRight:[.25,0]}[k];
@@ -1439,7 +1439,7 @@ function compGain(W,S){const n=W[0].length,win=256,nf=Math.ceil(n/win),gf=new Fl
  const g=new Float32Array(n);for(let i=0;i<n;i++){const x=(i-win/2+.5)/win,f0=Math.max(0,Math.min(nf-1,Math.floor(x))),f1=Math.min(nf-1,f0+1),t=Math.max(0,Math.min(1,x-f0));g[i]=gf[f0]*(1-t)+gf[f1]*t}return g}
 var EXP={cancel:false,sig:null};
 /* 내보내는 동안 곡·키·템포·음량·뮤트가 바뀌면 믹스와 스템이 서로 다른 설정으로 렌더되므로(README 도 어긋남) 단계 사이에서 중단한다 */
-const expSig=()=>({s:song,p:song.parts,k:JSON.stringify([transpose,el('tempo').value,el('master').value,mute,solo,vol,drumOn,SAMP.on])}),expChk=()=>{const a=EXP.sig,b=a&&expSig();if(a&&(a.s!==b.s||a.p!==b.p||a.k!==b.k))throw new Error('내보내는 동안 곡·키·템포·음량·파트 설정이 바뀌어 중단했습니다. 설정을 바꾸지 말고 다시 받으세요')};
+const expSig=()=>({s:song,p:song.parts,l:PARTS.map(x=>song.parts[x]) /* 음 고치기는 층 배열을 통째로 바꾸므로 층 참조도 비교 */,k:JSON.stringify([transpose,el('tempo').value,el('master').value,mute,solo,vol,drumOn,SAMP.on])}),expChk=()=>{const a=EXP.sig,b=a&&expSig();if(a&&(a.s!==b.s||a.p!==b.p||a.k!==b.k||a.l.some((x,i)=>x!==b.l[i])))throw new Error('내보내는 동안 곡·키·템포·음량·파트 설정이 바뀌어 중단했습니다. 설정을 바꾸지 말고 다시 받으세요')};
 const tick0=()=>new Promise((r,j)=>setTimeout(()=>{if(EXP.cancel)return j(new Error('사용자가 취소했습니다'));try{expChk();r()}catch(e){j(e)}},0));
 /* kind: 'wav' | 'zip'. 같은 이득 G(라우드니스 맞춤)를 믹스와 모든 스템에 곱한다. 파트는 하나씩 차례로 렌더(메모리) */
 async function exportRender(kind,say){const ps=expParts();if(!ps.length)throw new Error('켠 파트가 없습니다');EXP.sig=expSig();
@@ -1601,7 +1601,7 @@ try{if(localStorage.getItem('pr-stview')==='staff')STV.v='staff';const l=localSt
 function stLabels(ex,pc){if(STV.lab==='0')return null;return ex.map(n=>{if(STV.lab==='sol')return SingLab.SOLF[((n[2]-pc)%12+12)%12];const s=Staff.spell(n[2],pc);return 'CDEFGAB'[s.l]+(s.acc>0?'#':s.acc<0?'b':'')})}
 function stDraw(k,box,host,ex,bars,v,cur,pc){if(!window.Staff||!ex.length){host.innerHTML='';STV.sig[k]=null;return}const w=Math.max(220,Math.round((box.clientWidth||340)-16)),s=[ex,v,cur,w,STV.lab,pc,bars],o=STV.sig[k];if(o&&o.every((x,i)=>x===s[i]))return;STV.sig[k]=s;
  host.innerHTML=Staff.svg(Staff.layout(ex,{key:pc,bars}),{width:w,marks:{cur,v},labels:stLabels(ex,pc)})}
-function stSing(){const h=sing.head,ex=sing.ex,cur=h==null?-1:ex.findIndex(n=>h>=n[0]&&h<n[0]+n[1]),r=sing.res;stDraw('s',el('sStaffBox'),el('sStaff'),ex,sing.bars,r?(r._v||(r._v=r.notes.map(x=>VK[x.verdict]))):null,cur>=0?cur:null,singKeyPc())}
+function stSing(){const h=sing.head,ex=sing.ex,cur=h==null?-1:ex.findIndex(n=>h>=n[0]&&h<n[0]+n[1]),r=sing.res;stDraw('s',el('sStaffBox'),el('sStaff'),ex,sing.bars,r?(r._v||(r._v=r.notes.map(x=>VK[x.verdict]))):null,cur>=0?cur:null,sing.src==='song'?(KEY%12+12)%12:singKeyPc())} /* 현재 곡 윗선율은 이조·키 선택과 무관하게 곡의 원래 음높이라 곡 원래 키로 그린다 */
 function mdStaff(){const box=el('mdStaffBox'),on=STV.v==='staff'&&!!window.Staff&&md.done&&md.ex.length>0;box.hidden=!on;if(!on){STV.sig.md=null;return}
  stDraw('md',box,el('mdStaff'),md.ex,Math.max(1,Math.ceil(md.ex.reduce((a,n)=>Math.max(a,n[0]+n[1]),0)/4)),md.ex.map((n,i)=>i?md.ans[i]==null?'none':md.ans[i]===n[2]?'ok':md.ans[i]>n[2]?'hi':'lo':undefined),null,singKeyPc())}
 async function setStView(v,save){if(v==='staff'){try{await loadLib('staff')}catch(e){v='roll';el('sMsg').textContent='오선보 모듈(staff.js)을 불러오지 못해 피아노롤로 보여 줍니다.'}}
@@ -1767,10 +1767,11 @@ function pmLive(f,q){const m=f[1],nd=el('pmNeedle');if(m==null||f[2]<.5){el('pmN
  const c=(m-q.target)*100,k=Math.round(c/1200),cf=c-1200*k;el('pmNote').textContent=fuNm(m);nd.style.left=(50+Math.max(-100,Math.min(100,cf))/2)+'%';nd.className=!k&&Math.abs(cf)<=50?'ok':'bad';
  el('pmTxt').textContent=`목표 ${sn(q.target)} 기준 ${cf>0?'+':''}${Math.round(cf)} cent${k?' · 옥타브 다름':''}`}
 async function pmRec(){if(sing.busy||!window.SingLab)return;const inRT=RT.on;if(inRT&&(RT.plan.blocks[RT.bi].kind!=='pitch'||!pm.q))return;if(inRT&&RT.answered){el('pmMsg').textContent='이 문제는 끝났습니다. 「새 문제」로 넘어가세요.';return}if(!pm.q)pmNew();clearInterval(sing.liv);if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
- const msg=el('pmMsg'),q=pm.q;let t0=0,lu=0,tr;msg.textContent='마이크를 여는 중입니다…';sing.busy=true;pmBtns(true);
- try{tr=await micTracker('pm',f=>{const n=performance.now();if(!t0||f[0]<t0||n-lu<60)return;lu=n;pmLive(f,q)},()=>{if(sing.abort)sing.abort()})}catch(e){sing.busy=false;pmBtns(false);const n=e&&e.name;
+ const msg=el('pmMsg'),q=pm.q;let t0=0,lu=0,tr,cut=false;msg.textContent='마이크를 여는 중입니다…';sing.busy=true;pmBtns(true);sing.abort=()=>{cut=true}; /* 마이크를 여는 동안 「그만」을 눌러도 듣는 쪽에서 끊는다 */
+ try{tr=await micTracker('pm',f=>{const n=performance.now();if(!t0||f[0]<t0||n-lu<60)return;lu=n;pmLive(f,q)},()=>{if(sing.abort)sing.abort()})}catch(e){sing.abort=null;sing.busy=false;pmBtns(false);const n=e&&e.name;
   if(inRT&&RT.on&&RT.plan.blocks[RT.bi].kind==='pitch')return rtPmSkip('마이크를 쓸 수 없어 음정 부르기를 건너뛰었습니다(기록 없음).');
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 「기준음 듣기」는 마이크 없이 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
+ sing.abort=null;if(cut){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='중단했습니다.';return}
  if(inRT&&!RT.on||inRT&&RT.plan.blocks[RT.bi].kind!=='pitch'||el('tab-sing').hidden||document.hidden||(!inRT&&singSub!=='pitch')){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='음정 부르기 화면을 벗어나 녹음을 시작하지 않았습니다.';return}
  const ts=ctx.currentTime+.15;try{tone('sing',ts,1.2,q.ref,92)}catch(e){tr.stop();sing.busy=false;pmBtns(false);msg.textContent='기준음을 내지 못했습니다: '+e.message;return}
  t0=ts+1.2+.2;msg.textContent='기준음을 듣는 중입니다…';pmReset();let finished=false;
