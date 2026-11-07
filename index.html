@@ -372,6 +372,7 @@ dialog td:first-child{white-space:nowrap;width:9.5em}
   <h1 class="brand">커버 연습실</h1>
   <div class="seg" id="songsel" role="group" aria-label="곡 선택"></div>
   <div class="chips" aria-label="곡 정보"><span class="chip mono" id="chipKey"></span><span class="chip mono" id="chipBpm"></span><span class="chip mono" id="chipBars"></span></div>
+  <button class="chip upd" id="micChip" type="button" hidden aria-label="마이크 사용 중. 누르면 모두 끕니다"><span aria-hidden="true">●</span> 마이크 사용 중 · 끄기</button>
   <button class="chip upd" id="updChip" type="button" hidden>업데이트 있음 · 새로 고침</button>
   <button class="ibtn" id="themeBtn" type="button" aria-label="테마 바꾸기" title="테마 바꾸기"></button>
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
@@ -684,6 +685,31 @@ const userInv=sg=>{const low=sg.chords.filter((c,i)=>sg.conf[i]<.15&&!sg.edits[i
 let ctx,master,masterGain,noise,gains={},mute={},solo={},vol={},drumOn={36:true,38:true,42:true};
 const anySolo=()=>Object.values(solo).some(Boolean),audible=p=>anySolo()?!!solo[p]:!mute[p],eff=p=>(audible(p)?1:0)*(vol[p]??1);
 const masterLevel=()=>el('master').value/100, origLevel=()=>el('origVol').value/100;
+/* ---------- 공용 마이크 관리: getUserMedia 는 여기서만 부른다. 같은 조건이면 스트림 하나를 소유자(owner)별 참조 수로 나눠 쓰고, 마지막 소유자가 놓으면 트랙을 끈다.
+   에코 제거(ec): 스트림이 이미 열려 있으면 처음 열 때의 값을 그대로 쓴다(다른 기능의 입력을 끊지 않으려고). 녹음의 ec 옵션은 마이크를 쥔 다른 기능이 없을 때만 새로 반영된다(Mic.ec 가 실제 값). 음높이 기능은 ec=false 로 연다. ---------- */
+const Mic={st:null,ec:false,own:new Map(),pend:null,sctx:null,src:null,an:null,calls:0,
+ _live(){return !!this.st&&this.st.getAudioTracks().length>0&&this.st.getAudioTracks().every(t=>t.readyState==='live')},
+ _kill(){const s=this.st;this.st=null;try{this.an&&this.an.disconnect()}catch(_){}try{this.src&&this.src.disconnect()}catch(_){}this.an=this.src=this.sctx=null;if(s)s.getTracks().forEach(t=>t.stop());this.own.clear();this._ui()},
+ _end(why){const hs=[...this.own.values()];this._kill();for(const h of hs)if(h)try{h(why)}catch(_){}},
+ async acquire(o,opt={}){const ec=!!opt.ec;
+  for(;;){if(this.pend){try{await this.pend}catch(_){}continue}
+   if(this.st&&!this._live()){this._end('ended');continue}
+   if(this.st){const only=this.own.size===0||(this.own.size===1&&this.own.has(o));
+    if(only&&this.ec!==ec){this._kill();break}
+    this.own.set(o,opt.onEnd||null);this._ui();return this.st}
+   break}
+  this.calls++;const p=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:ec,noiseSuppression:false,autoGainControl:false}});this.pend=p;let s;
+  try{s=await p}finally{this.pend=null}
+  this.st=s;this.ec=ec;this.own.set(o,opt.onEnd||null);s.getTracks().forEach(t=>t.addEventListener('ended',()=>{if(this.st===s)this._end('ended')}));this._ui();return s},
+ release(o){if(!this.own.delete(o))return;if(!this.own.size)this._kill();else this._ui()},
+ releaseAll(){if(this.st||this.own.size)this._end('user')},
+ source(c){if(!this.st)return null;if(this.sctx!==c||!this.src){try{this.an&&this.an.disconnect()}catch(_){}try{this.src&&this.src.disconnect()}catch(_){}this.an=null;this.src=c.createMediaStreamSource(this.st);this.sctx=c}return this.src},
+ tap(c){const sr=this.source(c);if(!sr)return null;if(!this.an){this.an=c.createAnalyser();this.an.fftSize=2048;sr.connect(this.an)}return this.an},
+ _ui(){const b=document.getElementById('micChip');if(!b)return;const on=!!this.st&&this.own.size>0;b.hidden=!on;b.title=on?'사용 중: '+[...this.own.keys()].join(', '):''}};
+document.getElementById('micChip').onclick=()=>Mic.releaseAll();
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener('devicechange',()=>{if(Mic.st&&!Mic._live())Mic._end('ended')});
+async function micTracker(o,onFrame,onEnd){await Mic.acquire(o,{ec:false,onEnd});let tr;try{tr=await SingLab.tracker(ctx,onFrame,{analyser:Mic.tap(ctx)})}catch(e){Mic.release(o);throw e}
+ return {track:tr.track,stop(){tr.stop();Mic.release(o)}}}
 function ensureCtx(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createDynamicsCompressor();master.threshold.value=-14;master.ratio.value=4;masterGain=ctx.createGain();masterGain.gain.value=masterLevel();master.connect(masterGain).connect(ctx.destination);for(const p of ORDER){gains[p]=ctx.createGain();gains[p].gain.value=eff(p);gains[p].connect(master)}gains.sing=ctx.createGain();gains.sing.gain.value=2.2;gains.sing.connect(master);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
 const hz=m=>440*Math.pow(2,(m-69)/12);
 function tone(part,t,dur,pitch,vel){const v=vel/127,out=gains[part],f=hz(pitch+(part==='sing'?0:transpose));
@@ -1220,7 +1246,7 @@ function fuSumm(){const bs=Object.keys(fu.st).map(Number).sort((a,b)=>a-b),T=fu.
  el('fuSumm').innerHTML=bs.length?`<table class="stt"><caption class="note" style="text-align:left;caption-side:top;margin:0">마디별 결과 (±50 cent 안 비율${el('fuFold').checked?', 옥타브 무시':''}) · 전체 <b>${Math.round(100*T.k/T.n)}%</b></caption><tr><th scope="col">마디</th><th scope="col">맞은 비율</th><th scope="col">평균 편차(cent)</th><th scope="col">프레임</th></tr>${bs.map(b=>{const o=fu.st[b];return `<tr><td class="n">${b+1}</td><td class="n">${Math.round(100*o.k/o.n)}%</td><td class="n">${o.sum/o.n>0?'+':''}${Math.round(o.sum/o.n)}</td><td class="n">${o.n}</td></tr>`}).join('')}</table>`:''}
 async function fuStart(){if(fu.on||fu.busy)return;const msg=el('fuMsg');if(!window.SingLab){el('fuOn').checked=false;msg.textContent='시창 모듈(sing.js)을 불러오지 못했습니다.';return}
  fu.busy=true;ensureCtx();let tr;
- try{if(ctx.state==='suspended')await ctx.resume();tr=await SingLab.tracker(ctx,fuFrame)}catch(e){fu.busy=false;el('fuOn').checked=false;const n=e&&e.name;
+ try{if(ctx.state==='suspended')await ctx.resume();tr=await micTracker('follow',fuFrame,()=>{fuStop();el('fuMsg').textContent='마이크가 꺼졌습니다.'})}catch(e){fu.busy=false;el('fuOn').checked=false;const n=e&&e.name;
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 켜 주세요.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 연결을 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
  fu.busy=false;if(!el('fuOn').checked||document.hidden||el('tab-score').hidden){tr.stop();el('fuOn').checked=false;return}
  fu.tr=tr;fu.on=true;fu.fr=[];fu.st={};fu.tot={n:0,k:0};fu.last=-1;fu.ui=0;const k=melSrc(song);fu.mel=k?topOf(song.parts[k]):[];el('fuSumm').innerHTML='';
@@ -1237,12 +1263,12 @@ const recM=t=>{el('recMsg').textContent=t};
 function applyBack(){const k=rec.pb?el('recBack').value/100:1;if(masterGain)masterGain.gain.setTargetAtTime(masterLevel()*k,ctx.currentTime,.02);real.volume=(mode==='real'?masterLevel():masterLevel()*origLevel())*k}
 async function recArm(){if(rec.st||rec.busy)return;
  if(!navigator.mediaDevices||!window.MediaRecorder){el('recOn').checked=false;recM('이 브라우저는 녹음(MediaRecorder)을 지원하지 않습니다.');return}
- rec.busy=true;let st;
- try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:el('recEc').checked,noiseSuppression:false,autoGainControl:false}})}catch(e){rec.busy=false;el('recOn').checked=false;const n=e&&e.name;
+ rec.busy=true;let st,ecNote='';
+ try{const want=el('recEc').checked;st=await Mic.acquire('rec',{ec:want,onEnd:()=>{if(rec.mr)stop();recDisarm()}});if(Mic.ec!==want)ecNote=' (다른 기능이 마이크를 쓰는 중이라 에코 제거 '+(Mic.ec?'켬':'끔')+' 상태로 열렸습니다. 모두 끈 뒤 다시 켜면 바뀝니다.)'}catch(e){rec.busy=false;el('recOn').checked=false;const n=e&&e.name;
   recM((n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 켜 주세요.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 연결을 확인하세요.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}
- rec.busy=false;if(!el('recOn').checked||document.hidden){st.getTracks().forEach(t=>t.stop());el('recOn').checked=false;return}
- rec.st=st;recM(rec.tk.length>=RMAX?`녹음이 ${RMAX}개입니다. 하나를 지우면 다시 녹음할 수 있습니다.`:'녹음 대기 중입니다. 재생하면 카운트인 뒤부터 녹음합니다.')}
-function recDisarm(){recStop();const was=!!rec.st;if(rec.st){rec.st.getTracks().forEach(t=>t.stop());rec.st=null}el('recOn').checked=false;if(was)recM('녹음을 껐습니다. 마이크도 닫았습니다.')}
+ rec.busy=false;if(!el('recOn').checked||document.hidden){Mic.release('rec');el('recOn').checked=false;return}
+ rec.st=st;recM((rec.tk.length>=RMAX?`녹음이 ${RMAX}개입니다. 하나를 지우면 다시 녹음할 수 있습니다.`:'녹음 대기 중입니다. 재생하면 카운트인 뒤부터 녹음합니다.')+ecNote)}
+function recDisarm(){recStop();const was=!!rec.st;rec.st=null;Mic.release('rec');el('recOn').checked=false;if(was)recM('녹음을 껐습니다. 마이크도 닫았습니다.')}
 /* 카운트인이 끝나는 시각(S.anchorT)에 녹음을 시작한다. lead = 실제 시작 − anchorT(초), 듣기 때 이만큼 더해 맞춘다 */
 function recBegin(){clearTimeout(rec.tm);rec.tm=0;if(!rec.st||rec.pb)return;if(rec.tk.length>=RMAX){recM(`녹음이 ${RMAX}개라 이번에는 녹음하지 않습니다. 하나를 지워 주세요.`);return}
  rec.tm=setTimeout(()=>{rec.tm=0;if(!S.playing||!rec.st)return;const mt=RMIME.find(t=>MediaRecorder.isTypeSupported(t));let mr;
@@ -1277,7 +1303,7 @@ function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.st
 async function singRec(){if(sing.busy||!window.SingLab)return;if(!sing.ex.length)singNew();if(!sing.ex.length)return;
  clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
  const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let tr;
- try{tr=await SingLab.tracker(ctx,null)}catch(e){singSetBusy(false);const n=e&&e.name;
+ try{tr=await micTracker('sing',null,()=>{if(sing.abort)sing.abort()})}catch(e){singSetBusy(false);const n=e&&e.name;
   msg.textContent=(n==='NotAllowedError'||n==='SecurityError')?'마이크 사용이 허용되지 않았습니다. 주소창의 사이트 설정에서 마이크를 허용한 뒤 다시 눌러 주세요. 마이크 없이도 「들어보기」와 청음은 쓸 수 있습니다.':(n==='NotFoundError'||n==='OverconstrainedError')?'마이크를 찾지 못했습니다. 마이크가 연결돼 있는지 확인하세요. 「들어보기」와 청음은 마이크 없이 쓸 수 있습니다.':'마이크를 열지 못했습니다'+(e&&e.message?': '+e.message:'')+'.';return}
  if(el('tab-sing').hidden||document.hidden){tr.stop();singSetBusy(false);msg.textContent='시창 탭을 벗어나 녹음을 시작하지 않았습니다.';return} // 권한 창이 떠 있는 동안 탭을 옮긴 경우 마이크를 바로 닫는다
  const spb=singSpb(),tot=sing.bars*4,t0=ctx.currentTime+.15,rec0=t0+4*spb,end=rec0+tot*spb+.12;
@@ -1298,14 +1324,14 @@ function setLat(ms){sing.lat=ms/1000;try{localStorage.setItem('pr-miclat',String
 function calClick(t){const o=ctx.createOscillator();o.frequency.value=1800;const g=ctx.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.06)}
 async function singCal(){if(sing.busy||!window.SingLab)return;clearInterval(sing.liv);sing.head=null;if(S.playing)stop();ensureCtx();if(ctx.state==='suspended')await ctx.resume();
  const msg=el('sMsg');msg.textContent='마이크를 여는 중입니다…';singSetBusy(true);let st;
- try{st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})}catch(e){singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
- let src,iv=0,cl=[];const sm=[];
- try{const an=ctx.createAnalyser();an.fftSize=512;src=ctx.createMediaStreamSource(st);src.connect(an);const buf=new Float32Array(512);
+ try{st=await Mic.acquire('cal',{ec:false})}catch(e){singSetBusy(false);msg.textContent='마이크를 열지 못했습니다'+(e&&e.name==='NotAllowedError'?': 마이크 사용을 허용해 주세요':'')+'. 보정값은 그대로입니다.';return}
+ let src,an0,iv=0,cl=[];const sm=[];
+ try{const an=an0=ctx.createAnalyser();an.fftSize=512;src=Mic.source(ctx);src.connect(an);const buf=new Float32Array(512);
  iv=setInterval(()=>{an.getFloatTimeDomainData(buf);let r=0;for(let i=0;i<512;i++)r+=buf[i]*buf[i];sm.push([ctx.currentTime,Math.sqrt(r/512)])},8);
  const t0=ctx.currentTime+.8;cl=[0,1,2,3].map(i=>t0+i*.7);cl.forEach(calClick);msg.textContent='클릭 소리 4번을 재는 중입니다…(이어폰을 빼고 스피커로)';
  await sleep(Math.max(0,(cl[3]+.7-ctx.currentTime)*1000))}
  catch(e){msg.textContent='지연 재기에 실패했습니다: '+e.message+'. 보정값은 그대로입니다.';cl=[]}
- finally{clearInterval(iv);try{src&&src.disconnect()}catch(_){}st.getTracks().forEach(t=>t.stop());singSetBusy(false)}
+ finally{clearInterval(iv);try{src&&an0&&src.disconnect(an0)}catch(_){}Mic.release('cal');singSetBusy(false)}
  if(!cl.length)return;const ms=SingLab.estimateLatency(sm,cl);
  if(ms==null)msg.textContent='클릭 소리가 마이크에 잡히지 않았습니다. 이어폰을 빼고 스피커 음량을 올린 뒤 조용한 곳에서 다시 해 보세요. 보정값은 바꾸지 않았습니다.';
  else{setLat(ms);msg.textContent=`왕복 지연 ${ms} ms를 재서 저장했습니다. 판정에서 음 구간을 그만큼 뒤로 밀어 맞춥니다(신호 기반 추정).`}}
