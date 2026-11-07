@@ -120,5 +120,83 @@ function svg(lay,o={}){const pl=place(lay,o),mk=o.marks||{},lb=o.labels,hasV=!!(
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.W} ${H}" width="100%" role="img" aria-label="${lab}" data-notes="${nh}" style="display:block;max-width:${pl.W}px"><style>${CSS}</style>${P.join('')}</svg>`}
 function nextX(s,b,it){const a=b.items,i=a.indexOf(it);for(let j=i+1;j<a.length;j++)if(a[j].k==='n'&&a[j].i===it.i)return a[j].x;const bi=s.bars.indexOf(b),nb=s.bars[bi+1];if(nb)for(const x of nb.items)if(x.k==='n'&&x.i===it.i)return x.x;return null}
 function render(el,lay,o){const h=svg(lay,o);if(el){el.innerHTML=h;return h}return h}
-const api={keyName,keyLabel,ledgerOf,layout,place,svg,render,keySig,spell,split,beamGroups,chordRow,rests:(a,z)=>split(a,z-a,true)};
+/* ---------- 큰보표(건반): 같은 시작(±1 칸)의 음을 화음으로 묶고 중앙 도(60)에서 두 손으로 가른다. 한 손에 겹친 음은 한 줄기(화음)로 그린다.
+   hands(notes) → {t:[{a,b,ms}],b:[…]} (칸 단위 a,b, ms=오름차순 midi). 손 가르기: 60 이상 오른손(높은음), 미만 왼손(낮은음). 58–61 은 그 손의 직전 음에 더 가까우면 건너편 손이 가져갈 수 있다(2도 이내 교차, 덧줄 줄이기).
+   한 화음 길이는 가장 긴 음(다음 화음 시작에서 자름). grand(notes,o) → 마디별 {t,b} 항목(화음 항목은 k:'n', notes[] 오름차순, fl=2도 어긋남 머리, col=임시표 열). svgGrand(lay,{width}) */
+function hands(notes){const q=notes.map(n=>{const a=Math.round(n[0]*4);return {a,b:Math.max(Math.round((n[0]+n[1])*4),a+1),m:n[2]}}).sort((x,y)=>x.a-y.a||x.m-y.m),g=[];
+ for(const e of q){const l=g[g.length-1];if(l&&e.a-l.a<=1)l.ns.push(e);else g.push({a:e.a,ns:[e]})}
+ const T=[],B=[];let lt=null,lb=null;
+ for(const x of g){let t=[],b=[];
+  for(const e of x.ns){const m=e.m;let h=m>=60?'t':'b';
+   if(m>=58&&m<=61){const al=h==='t'?'b':'t',la=al==='t'?lt:lb,ld=h==='t'?lt:lb,da=la==null?1e9:Math.abs(la-m),dd=ld==null?1e9:Math.abs(ld-m);if(da<dd)h=al}
+   (h==='t'?t:b).push(e)}
+  if(t.length&&b.length&&Math.max(...b.map(e=>e.m))>Math.min(...t.map(e=>e.m))){t=x.ns.filter(e=>e.m>=60);b=x.ns.filter(e=>e.m<60)}/* 손끼리 음이 뒤바뀌면 기본 가르기로 되돌림 */
+  const mk=a=>({a:x.a,b:Math.max(...a.map(e=>e.b)),ms:[...new Set(a.map(e=>e.m))].sort((p,r)=>p-r)});
+  if(t.length){const c=mk(t);T.push(c);lt=c.ms[0]}if(b.length){const c=mk(b);B.push(c);lb=c.ms[c.ms.length-1]}}
+ for(const L of [T,B])for(let i=0;i<L.length-1;i++)L[i].b=Math.max(L[i].a+1,Math.min(L[i].b,L[i+1].a));
+ return {t:T,b:B}}
+const GST={t:{bs:30,mid:34,clef:'treble'},b:{bs:18,mid:22,clef:'bass'}};
+function gFlips(it){const ns=it.notes,up=it.dir==='u';ns.forEach(n=>{n.fl=false});
+ if(up){for(let i=1;i<ns.length;i++)if(ns[i].step-ns[i-1].step<=1&&!ns[i-1].fl)ns[i].fl=true}else for(let i=ns.length-2;i>=0;i--)if(ns[i+1].step-ns[i].step<=1&&!ns[i+1].fl)ns[i].fl=true;
+ it.fl=ns.some(n=>n.fl);const ls=[];ns.filter(n=>n.acc).sort((a,b)=>b.step-a.step).forEach(n=>{let j=ls.findIndex(s=>s-n.step>=6);if(j<0){j=ls.length;ls.push(0)}ls[j]=n.step;n.col=j});it.ac=ls.length}
+function gBars(gs,o,ks,nb,U,k){const {bs,mid}=GST[k],per=Array.from({length:nb},()=>[]);
+ gs.forEach((e,i)=>{for(let b=Math.floor(e.a/U);b<nb&&b*U<e.b;b++)if(b>=0)per[b].push({e,i,a:Math.max(e.a,b*U)-b*U,z:Math.min(e.b,(b+1)*U)-b*U,tp:e.a<b*U,tn:e.b>(b+1)*U})});
+ return per.map((sg,bi)=>{const items=[];let cur=0;const fill=(a,z)=>{let p=a;for(const u of split(a,z-a,true)){items.push({k:'r',pos:p,u,dur:DUR[u],dots:0});p+=u}};
+  for(const s of sg){if(s.a>cur)fill(cur,s.a);const us=split(s.a,s.z-s.a,false);let p=s.a;
+   const base=s.e.ms.map(m=>{const sp=spell(m,ks.pc,o.minor);return {midi:m,step:sp.step,l:sp.l,oct:sp.oct,acc0:sp.acc,acc:''}}).sort((x,y)=>x.step-y.step||x.midi-y.midi),far=base.reduce((a,n)=>Math.abs(n.step-mid)>Math.abs(a.step-mid)?n:a,base[0]);
+   us.forEach((u,j)=>{items.push({k:'n',i:s.i,pos:p,u,dur:DUR[u],dots:u===12||u===6||u===3?1:0,notes:base.map(n=>({...n})),midi:base[0].midi,step:far.step,dir:'u',beam:-1,tiePrev:j?true:s.tp,tieNext:j<us.length-1?true:s.tn});p+=u});cur=s.z}
+  if(cur<U)fill(cur,U);
+  const A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const st={};
+  for(const it of items){if(it.k!=='n')continue;for(const n of it.notes){const key=n.l+':'+n.oct,c=key in st?st[key]:A[n.l];if(n.acc0!==c&&!it.tiePrev)n.acc=n.acc0===1?'#':n.acc0===-1?'b':'n';st[key]=n.acc0}}
+  beamGroups(items,mid,bi);for(const it of items)if(it.k==='n')gFlips(it);return items})}
+function grand(notes,o={}){const bpb=o.beatsPerBar||4,U=bpb*4,ks=keySig(o.key||0),h=hands(notes),end=Math.max(0,...h.t.map(e=>e.b),...h.b.map(e=>e.b)),nb=o.bars||Math.max(1,Math.ceil(end/U)),T=gBars(h.t,o,ks,nb,U,'t'),B=gBars(h.b,o,ks,nb,U,'b');
+ return {grand:true,key:ks,minor:!!o.minor,keyLabel:keyLabel(ks.pc,!!o.minor),bpb,ts:{n:bpb,d:4},U,count:notes.length,hands:{t:h.t.length,b:h.b.length},bars:T.map((t,b)=>({t,b:B[b],chords:chordsOf(o.chords&&o.chords[b])}))}}
+const GCW=it=>12+it.u*4.5+(it.ac?it.ac*9:0)+(it.fl?8:0);
+function placeGrand(lay,o={}){const W=o.width||640,M=16,hd=f=>30+lay.key.n*7+(f?18:0)+8,pre=lay.bars.map(b=>{const m=new Map();for(const k of ['t','b'])for(const it of b[k]){const w=it.k==='n'?GCW(it):12+it.u*4.5,c=m.get(it.pos)||{pos:it.pos,w:0,ac:0,u:0,fl:0};c.w=Math.max(c.w,w);c.ac=Math.max(c.ac,it.ac||0);c.u=Math.max(c.u,it.u);m.set(it.pos,c)}
+  const cols=[...m.values()].sort((a,b)=>a.pos-b.pos);return {cols,nat:16+cols.reduce((a,c)=>a+c.w,0)}}),sys=[];let i=0;
+ while(i<pre.length){const first=!sys.length,h=hd(first),av=W-2*M-h;let j=i,t=0;while(j<pre.length&&(j===i||t+pre[j].nat<=av)){t+=pre[j].nat;j++}
+  const last=j>=pre.length,f=Math.min(last?1.25:1.7,Math.max(.01,av/t)),bs=[];let x=M+h;
+  for(let b=i;b<j;b++){let c=8;const cx=new Map(),cols=[];for(const cl of pre[b].cols){const aw=cl.ac*9,hx=Math.round((x+(c+aw+6)*f)*10)/10;const ax=Math.round((hx-11-(cl.ac-1)*9)*10)/10;cx.set(cl.pos,hx);cols.push({pos:cl.pos,u:cl.u,x:hx,ax,acc:cl.ac>0});c+=cl.w}
+   const bw=Math.round(pre[b].nat*f*10)/10,bx=Math.round(x*10)/10,mv=its=>its.map(it=>({...it,x:cx.get(it.pos)}));
+   bs.push({b,x:bx,w:bw,cols,t:mv(lay.bars[b].t),b2:mv(lay.bars[b].b),chords:chordX(lay.bars[b].chords||[],cols,bx,bw)});x+=pre[b].nat*f}
+  sys.push({first,x0:M,hdr:h,x1:Math.round(x*10)/10,bars:bs});i=j}
+ return {W,systems:sys}}
+function svgGrand(lay,o={}){const pl=placeGrand(lay,o),P=[],r1=x=>Math.round(x*10)/10;let Y=0,nh=0;const nbar=lay.bars.length;
+ lay.bars.forEach(b=>['t','b'].forEach(k=>b[k].forEach(it=>{if(it.k==='n'&&!it.tiePrev)nh+=it.notes.length})));
+ for(const s of pl.systems){const bk=b=>({t:b.t,b:b.b2}),ext=k=>{let te=18,be=14;for(const b of s.bars)for(const it of bk(b)[k]){if(it.k!=='n')continue;const hi=it.notes[it.notes.length-1].step-GST[k].bs,lo=it.notes[0].step-GST[k].bs;te=Math.max(te,it.dir==='u'?hi*4+28-32:hi*4+6-32);be=Math.max(be,it.dir==='d'?-lo*4+28:-lo*4+6)}return [te,be]};
+  const [tet,bet]=ext('t'),[teb,beb]=ext('b'),crow=chordRow(s),CZ=crow.length?18:0,Y0=Y;Y+=CZ;const ybs={t:Y+tet+8+32};ybs.b=ybs.t+bet+teb+8+32;const topT=ybs.t-32,x0=s.x0,x1=s.x1;let g='';
+  for(const k of ['t','b']){const yb=ybs[k],y=st=>yb-(st-GST[k].bs)*4,cv=k==='b'?14:0;let q=`<path class="st-l" d="${[0,1,2,3,4].map(i=>`M${x0} ${yb-i*8}H${x1}`).join('')}"/>`;
+   q+=k==='b'?`<g transform="translate(${x0+16} ${y(24)}) scale(.8)"><path d="${BASS}" class="st-s" style="stroke-width:2.6"/><circle cx="-8" cy="0" r="3.6" class="st-f"/><circle cx="14" cy="-5" r="1.8" class="st-f"/><circle cx="14" cy="5" r="1.8" class="st-f"/></g>`:`<g transform="translate(${x0+15} ${y(32)}) scale(.8)"><path d="${TREB}" class="st-s" style="stroke-width:2.4"/></g>`;
+   lay.key.steps.forEach((st,j)=>{q+=`<g class="st-g" transform="translate(${x0+32+j*7} ${y(st-cv)}) scale(.85)">${ACC[lay.key.kind]}</g>`});
+   if(s.first){const tx=x0+32+lay.key.n*7+9;q+=`<g class="st-ts" data-ts="${lay.ts.n}/${lay.ts.d}"><text class="st-n" x="${tx}" y="${yb-20}">${lay.ts.n}</text><text class="st-n" x="${tx}" y="${yb-4}">${lay.ts.d}</text></g>`}
+   g+=`<g class="st-stf" data-staff="${k}">${q}</g>`}
+  const yb2=ybs.b,hb=yb2-topT,ym=(topT+yb2)/2,xr=x0-3;
+  g+=`<path class="st-l" style="stroke:var(--text,#111)" d="M${x0} ${topT}V${yb2}"/><path class="st-brace st-s" style="color:var(--text,#111);stroke-width:2.4" d="M${xr} ${topT}C${xr-8} ${r1(topT+hb*.12)} ${xr-1} ${r1(ym-hb*.2)} ${xr-9} ${r1(ym)}C${xr-1} ${r1(ym+hb*.2)} ${xr-8} ${r1(yb2-hb*.12)} ${xr} ${yb2}"/>`;
+  for(const c of crow)g+=`<text class="st-ch" x="${c.x}" y="${Y0+13}" data-pos="${c.pos}" style="font-size:${c.fs}px">${esc(c.label)}</text>`;
+  for(const k of ['t','b']){const yb=ybs[k],y=st=>yb-(st-GST[k].bs)*4,top=yb-32,beams={};
+   for(const bar of s.bars){const its=bk(bar)[k];its.forEach((it,ix)=>{const hx=it.x;
+    if(it.k==='r'){g+=it.dur==='w'?`<g class="st-g" transform="translate(${r1(bar.x+bar.w/2)} ${yb-24})">${RST.w}</g>`:`<g class="st-g" transform="translate(${hx} ${yb-16})">${RST[it.dur]}</g>`;return}
+    const up=it.dir==='u',sx=up?hx+4.9:hx-4.9,cys=it.notes.map(n=>y(n.step)),low=Math.max(...cys),high=Math.min(...cys),near=up?low:high,far=up?high:low,tip=up?Math.min(far-28,y(GST[k].mid)):Math.max(far+28,y(GST[k].mid));
+    const ln=new Set();let n='';
+    for(const nt of it.notes){const cy=y(nt.step),off=nt.step-GST[k].bs,nx=nt.fl?hx+(up?9.8:-9.8):hx;
+     for(let L=-2;L>=off-.5;L-=2)ln.add(`${r1(nx-9)} ${yb-L*4}H${r1(nx+9)}`);for(let L=10;L<=off+.5;L+=2)ln.add(`${r1(nx-9)} ${yb-L*4}H${r1(nx+9)}`);
+     n+=`<ellipse data-m="${nt.midi}" cx="${r1(nx)}" cy="${cy}" rx="${it.dur==='w'?6.2:5.2}" ry="3.8" transform="rotate(-20 ${r1(nx)} ${cy})" class="${it.dur==='w'||it.dur==='h'?'st-o':'st-f'}"/>`;
+     if(nt.acc)n+=`<g transform="translate(${r1(hx-11-nt.col*9-(it.fl&&!up?8:0))} ${cy}) scale(.85)">${ACC[nt.acc]}</g>`;
+     if(it.dots)n+=`<circle cx="${r1(hx+9+(it.fl&&up?9.8:0))}" cy="${off%2?cy:cy-4}" r="1.5" class="st-f"/>`;
+     if(it.tieNext){const nx2=gNext(its,ix,s,bar,k),dn=!up||it.dur==='w'?1:-1,x2=nx2==null?nx+16:nx2;n+=`<path class="st-s" d="M${r1(nx+2)} ${r1(cy+dn*5)}Q${r1((nx+x2)/2)} ${r1(cy+dn*12)} ${r1(x2-2)} ${r1(cy+dn*5)}"/>`}}
+    if(ln.size)g+=`<path class="st-l" d="${[...ln].map(d=>'M'+d).join('')}"/>`;
+    if(it.beam>=0)(beams[it.beam]=beams[it.beam]||{up,m:[]}).m.push({it,sx,near,far});
+    else if(it.dur!=='w'){n+=`<path class="st-s" d="M${r1(sx)} ${r1(near)}V${r1(tip)}"/>`;if(it.u<4)for(let q=0;q<(it.u===1?2:1);q++){const d=up?1:-1,t=tip+(up?q*6:-q*6);n+=`<path class="st-s" style="stroke-width:1.8" d="M${r1(sx)} ${r1(t)}C${r1(sx)} ${r1(t+d*8)} ${r1(sx+9)} ${r1(t+d*10)} ${r1(sx+7)} ${r1(t+d*20)}"/>`}}
+    g+=`<g class="st-g" data-i="${k}${it.i}" data-staff="${k}">${n}</g>`})}
+   for(const q in beams){const B=beams[q],up=B.up,ys=B.m.map(m=>up?m.far-28:m.far+28),by=up?Math.min(...ys):Math.max(...ys),a=B.m[0],z=B.m[B.m.length-1],th=up?4:-4;let d='';
+    for(const m of B.m)d+=`M${r1(m.sx)} ${r1(m.near)}V${r1(by)}`;
+    g+=`<path class="st-s" style="color:var(--text,#111)" d="${d}"/><path class="st-t" style="color:var(--text,#111);stroke-width:4" d="M${r1(a.sx-.6)} ${r1(by+th/2)}H${r1(z.sx+.6)}"/>`;
+    B.m.forEach((m,j)=>{if(m.it.u!==1)return;const nx=B.m[j+1],pv=B.m[j-1];let xa=m.sx,xb;if(nx&&nx.it.u===1)xb=nx.sx;else if(pv&&pv.it.u===1)return;else xb=nx?m.sx+7:m.sx-7;
+     g+=`<path class="st-t" style="color:var(--text,#111);stroke-width:3" d="M${r1(Math.min(xa,xb))} ${r1(by+(up?6.5:-6.5))}H${r1(Math.max(xa,xb))}"/>`})}}
+  const lastS=s===pl.systems[pl.systems.length-1];for(const bar of s.bars){const bx=r1(bar.x+bar.w),fin=lastS&&bar===s.bars[s.bars.length-1];g+=fin?`<path class="st-s" style="color:var(--text,#111)" d="M${bx-4} ${topT}V${yb2}"/><path class="st-t" style="color:var(--text,#111)" d="M${bx} ${topT}V${yb2}"/>`:`<path class="st-s st-bl" style="color:var(--text,#111)" d="M${bx} ${topT}V${yb2}"/>`}
+  P.push(`<g class="st-sys">${g}</g>`);Y=yb2+beb+4}
+ const H=Math.ceil(Y)+4,lab=o.label||`큰보표: ${nbar}마디, 음 ${lay.count}개`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pl.W} ${H}" width="100%" role="img" aria-label="${lab}" data-notes="${nh}" data-grand="1" style="display:block;max-width:${pl.W}px"><style>${CSS}</style>${P.join('')}</svg>`}
+function gNext(its,ix,s,bar,k){for(let j=ix+1;j<its.length;j++)if(its[j].k==='n')return its[j].x;const nb=s.bars[s.bars.indexOf(bar)+1];if(nb)for(const it of (k==='t'?nb.t:nb.b2))if(it.k==='n')return it.x;return null}
+const api={hands,grand,placeGrand,svgGrand,keyName,keyLabel,ledgerOf,layout,place,svg,render,keySig,spell,split,beamGroups,chordRow,rests:(a,z)=>split(a,z-a,true)};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Staff=api})(typeof window!=='undefined'?window:globalThis);
