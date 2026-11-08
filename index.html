@@ -516,7 +516,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <details class="help"><summary>도움말</summary><p>M = 그 파트 끄기, S = 그 파트만 듣기. 단축키는 <button class="btn sm" type="button" id="helpBtn2">? 단축키 보기</button>에서 볼 수 있습니다.</p></details></div>
   <p class="muted small songdesc" id="songdesc"></p>
   <div class="opts">
-  <section class="sec wide" aria-labelledby="hMix"><h3 class="sh" id="hMix">믹서</h3>
+  <section class="sec wide" aria-labelledby="hMix"><h3 class="sh" id="hMix">믹서</h3><button class="btn sm" id="vcrJump" type="button" hidden aria-controls="vcrBox">보컬 줄이기 · A/B로 가기 ↓</button>
   <div class="mixer" id="mixer" role="group" aria-label="믹서">
     <div class="ch" style="--c:var(--accent)"><span class="name">전체 볼륨</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="master" min="0" max="100" value="80" aria-label="전체 볼륨"><span class="val" id="masterVal">80%</span></div>
     <div class="ch" style="--c:var(--score)"><span class="name" id="origLabel">음원</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="origVol" min="0" max="100" value="0" aria-label="음원 볼륨 (합성과 함께)"><span class="val" id="origVal">0%</span></div>
@@ -1428,6 +1428,7 @@ function renderArr(){const R=arrCheck(song),sc=R.src?PARTDEF[R.src].name.replace
  el('arrTips').innerHTML=[['원곡 구성',up?'이 반주는 코드에서 생성한 초안이라 원곡의 실제 악기 구성은 알 수 없습니다. 원곡에 없는 악기를 더해 저음이나 빈틈을 채우기보다, 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하세요.':`${song.inventory||'원곡 구성 정보가 없습니다.'} 강조는 세기(다이나믹)나 같은 악기의 옥타브 겹침으로 하고, 원곡에 없는 악기를 더해 채우지 마세요.`],
   ['보이스 리딩 기초','화음이 바뀔 때 겹치는 공통음은 그대로 두고, 나머지 음은 가장 가까운 음으로 옮기세요. 이끈음(7음)은 보통 위로 해결합니다. 베이스는 근음이 기본이고, 베이스가 순차(계단식)로 이어질 때만 전위(3음을 베이스로)를 씁니다. 이 점검의 이동량·근음 기준은 출발점이며 규칙이 아닙니다.'],
   ['저음 밸런스','이 프로젝트의 청취에서는 저음 영역(베이스 약 150 Hz, 건반 약 250 Hz)을 −4 dB쯤 낮춘 쪽이 선호됐습니다. 규칙이 아니라 출발점이며, 곡과 스피커에 따라 직접 들어 조정하세요.']].map(([k,v])=>`<div class="tip"><span class="k">${k}</span><span>${v}</span></div>`).join('')}
+el('vcrJump').addEventListener('click',()=>{const b=el('vcrBox');b.scrollIntoView({block:'start'});const f=b.querySelector('input,button:not([disabled])');if(f)f.focus({preventScroll:true})}); /* UX 점검 #3: 믹서 아래 깊은 보컬 줄이기 블록 바로가기 */
 el('arrBars').addEventListener('click',e=>{const c=e.target.closest('.arrbar');if(!c)return;const b=+c.dataset.b;setLoopBars(b,b);seekTo((b-1)*4)});
 
 /* ---------- upload flow (prototype) ---------- */
@@ -1942,7 +1943,7 @@ function vcrUi(){const b=VCR.busy;el('vcrGo').disabled=b||!song.audio;el('vcrGo'
  document.querySelectorAll('#abSel button').forEach(x=>{x.disabled=b||(x.dataset.ab==='vr'&&!VCR.url)}); /* 만드는 중에는 A/B 도 잠근다(두 번째 디코드·음량 경합 방지) */el('abHint').hidden=!!VCR.url; /* 만들기 전에는 왜 비활성인지 눈에 보이게 */
  document.querySelectorAll('#abSel button').forEach(x=>x.setAttribute('aria-pressed',AB.on&&AB.sel===x.dataset.ab?'true':'false'))}
 function vcrReset(){VCR.job=null;VCR.tok=(VCR.tok||0)+1;if(VCR.url){URL.revokeObjectURL(VCR.url);VCR.url=null}vcrEl.pause();vcrEl.removeAttribute('src');vcrEl.load();VCR.lo=VCR.lv=VCR.lg=null;AB.gk=null;AB.gain={o:1,v:1,g:1};if(AB.on)abOff();
- el('vcrBox').hidden=!song.audio;vcrMsg('');el('abInfo').textContent='';vcrUi()}
+ el('vcrBox').hidden=!song.audio;el('vcrJump').hidden=!song.audio;vcrMsg('');el('abInfo').textContent='';vcrUi()}
 async function vcrDecode(){const r=await fetch(song.audio);if(!r.ok)throw new Error('음원을 읽지 못했습니다');const ab=await r.arrayBuffer();
  if(ab.byteLength>30e6&&!confirm(`파일이 ${(ab.byteLength/1048576).toFixed(0)} MB입니다. 길이가 10분을 넘을 수 있고, 처리에 몇 분 이상 걸리며 메모리를 많이 씁니다(브라우저가 느려지거나 멈출 수 있음). 계속할까요?`))throw new Error('길이 때문에 취소했습니다');
  const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext,dc=new OC(2,1,44100);
