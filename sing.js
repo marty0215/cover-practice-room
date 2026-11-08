@@ -64,8 +64,8 @@ function loadCtl(hopMs,o){o={...LOAD,...(o||{})};let ema=null,n=0,k=1,since=1e9;
 /* 유성 판정(순수). yin 은 c[tau]<0.12 일 때만 값을 내므로 conf=1−c[tau] 는 항상 0.88 초과라 conf 문턱(예전 minConf .5·.6)은 아무것도 거르지 않았다.
    그래서 유성 여부는 "연속성"으로 정한다: 값이 있는 프레임이 이웃 유성 프레임과 ±cent(100) 안으로 이어진 묶음이 minRun(3)프레임 이상일 때만 유성.
    숨소리·배경 소리의 홀로 튀는 프레임과 옥타브 튐 프레임은 묶음이 짧아 빠진다. minConf 는 YIN 이 아닌 다른 신뢰도 출처(합성 곡선 등)용 안전 문턱으로만 남긴다(YIN 곡선에는 영향 없음). 반환: 프레임별 boolean 배열 */
-function voicedMask(track,{cent=100,minRun=3,minConf=.5}={}){const T=track||[],n=T.length;minRun=Math.ceil(minRun*frameScale(T)-1e-9);const m=new Array(n).fill(false),vo=f=>!!f&&f[1]!=null&&f[2]>=minConf;let i=0;
- while(i<n){if(!vo(T[i])){i++;continue}let j=i;while(j+1<n&&vo(T[j+1])&&Math.abs(T[j+1][1]-T[j][1])*100<=cent)j++;if(j-i+1>=minRun)for(let k=i;k<=j;k++)m[k]=true;i=j+1}
+function voicedMask(track,{cent=100,minRun=3,minConf=.5}={}){const T=track||[],n=T.length;const W=frameW(T),m=new Array(n).fill(false),vo=f=>!!f&&f[1]!=null&&f[2]>=minConf;let i=0;
+ while(i<n){if(!vo(T[i])){i++;continue}let j=i;while(j+1<n&&vo(T[j+1])&&Math.abs(T[j+1][1]-T[j][1])*100<=cent)j++;if(wr(W,i,j)>=minRun-1e-9)for(let k=i;k<=j;k++)m[k]=true;i=j+1}
  return m}
 /* 옥타브 점프 억제(스트리밍). 직전 유성 프레임 n(5)개 중앙값에서 ±1200±band(80) cent 떨어진 프레임은 의심: 이웃과 ±1 반음 안으로 persist(4)프레임 이상 이어질 때만 인정한다.
    그동안 의심 프레임은 fr[1]=null·fr[2]=0 으로 두고(화면·채점에서 무음), 인정되면 같은 배열 객체를 되살린다. step(fr) 은 fr 을 제자리에서 고친다. 사람 소리는 순간 옥타브 이동이 드물다는 설계 가정(값은 벤치로 확인) */
@@ -89,7 +89,7 @@ const LOW={fmin:55,win:4096};
 const lowWin=sr=>{let w=LOW.win;while(w<.085*(sr||48000)&&w<32768)w*=2;return w};
 /* 73 Hz(D2, MIDI 38) 미만 음이 반복 잡히거나, 잰 가장 낮은 안정 음이 그 바닥(≤D2)이면 낮은 음 모드를 권한다(순수) */
 const LOW_FLOOR=38;
-function lowModeAdvice(track,lowMidi,{minFrames=5}={}){minFrames=Math.ceil(minFrames*frameScale(track)-1e-9);let n=0;for(const f of track||[])if(f&&f[1]!=null&&f[1]<LOW_FLOOR-.5)n++;return n>=minFrames||(lowMidi!=null&&lowMidi<=LOW_FLOOR)}
+function lowModeAdvice(track,lowMidi,{minFrames=5}={}){const T=track||[],W=frameW(T);let n=0;for(let i=0;i<T.length;i++){const f=T[i];if(f&&f[1]!=null&&f[1]<LOW_FLOOR-.5)n+=W[i]}return n>=minFrames-1e-9||(lowMidi!=null&&lowMidi<=LOW_FLOOR)}
 /* ---- 균일 프레임(AudioWorklet) 보조: 순수 함수 ----
    hopFor(sr): 약 11 ms 를 128 샘플(렌더 양자) 배수로 맞춘 hop(48 kHz → 512 = 10.7 ms).
    frameCentre(end,win,sr): 창 끝 표본 번호 → 창 중심 시각(초, 오디오 시계). 예전 경로는 폴링 시각(≈창 끝)을 썼다.
@@ -100,6 +100,14 @@ function iosVersion(ua,platform,touch){ua=String(ua||'');const ios=/iPhone|iPad|
 function workletAllowed(e){e=e||{};if(e.force==='analyser')return {ok:false,why:'forced'};if(!e.hasWorklet)return {ok:false,why:'no-worklet'};const v=iosVersion(e.ua,e.platform,e.touch);if(v!==null&&v<17)return {ok:false,why:'ios<17'};return {ok:true,why:v===null?'ok':'ios17+'}}
 /* 기록 간격에 맞춰 프레임 수 기준 값을 늘리는 배율: 예전 20 ms 간격=1, 10.7 ms 간격≈1.9. 간격이 16 ms 이상이면 1 */
 function frameScale(track){const T=track||[],d=[];for(let i=1;i<T.length&&d.length<40;i++){const x=T[i][0]-T[i-1][0];if(x>0)d.push(x)}if(d.length<3)return 1;d.sort((a,b)=>a-b);const m=d[d.length>>1];return m<.016?Math.round(.02/m*100)/100:1}
+/* 프레임별 가중치(순수): 20 ms 기준 프레임 1개 = 1.0. 가중치 = 1/지역 배율, 지역 배율은 그 프레임 둘레 ±FW_HALF 간격의 중앙값으로 frameScale 과 같은 식으로 낸다.
+   분석 주기가 한 기록 안에서 바뀌어도(부하 조절 10.7→21→32 ms) 프레임 수 대신 가중치 합(≈ 20 ms 환산 프레임 수)으로 길이 문턱을 비교한다. 균일한 기록에서는 frameScale 과 같은 결과. */
+const FW_HALF=8;
+function frameW(track){const T=track||[],n=T.length,w=new Array(n).fill(1);if(n<2)return w;const g=new Array(n).fill(0);for(let i=1;i<n;i++)g[i]=T[i][0]-T[i-1][0];
+ for(let i=0;i<n;i++){const d=[];for(let k=Math.max(1,i-FW_HALF);k<=Math.min(n-1,i+FW_HALF);k++)if(g[k]>0)d.push(g[k]);if(d.length<3)continue;d.sort((a,b)=>a-b);const m=d[d.length>>1];if(m<.016)w[i]=1/(Math.round(.02/m*100)/100)}
+ return w}
+const wsum2=(tr,v)=>{const W=frameW(tr),M=new Map(tr.map((f,i)=>[f,W[i]]));let t=0;for(const f of v)t+=M.get(f);return t};
+const wr=(w,i,j)=>{let t=0;for(let k=i;k<=j;k++)t+=w[k];return t};
 const _now=()=>typeof performance!=='undefined'?performance.now():Date.now();
 const _wl=new WeakMap();
 function loadWorklet(ctx,url){if(!_wl.has(ctx))_wl.set(ctx,ctx.audioWorklet.addModule(url).catch(e=>{_wl.delete(ctx);throw e}));return _wl.get(ctx)}
@@ -662,7 +670,7 @@ function pmQuestion({mode='same',range=[52,67],seed=1,iv=null,dir=null,wk=null,k
 function pmJudge(track,{target,t0=0,tol=TOL_DEFAULT,minConf=.5,skip=.15,win=.6,run=3,spread=160}={}){const tr=track.filter(f=>f[0]>=t0),mk=voicedMask(tr,{minRun:run,minConf}),vs=new Set(tr.filter((f,i)=>mk[i])),vo=f=>vs.has(f),on=mk.indexOf(true);
  const base={target,tol,onset:null,frames:0,voiced:0,medCents:null,devCents:null,spread:null,octave:false,ok:false,tier:null};if(on<0)return {...base,verdict:'소리 없음'};
  const a=tr[on][0]+skip,b=a+win,fr=tr.filter(f=>f[0]>=a&&f[0]<=b),v=fr.filter(vo),r={...base,onset:tr[on][0]-t0,frames:fr.length,voiced:v.length};
- if(v.length<Math.ceil(8*frameScale(tr))||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
+ if(v.length<1||wsum2(tr,v)<8-1e-9||v.length/fr.length<.6||tr[tr.length-1][0]<b-.05)return {...r,verdict:'불안정'};
  const c=v.map(f=>(f[1]-target)*100).sort((x,y)=>x-y),med=c[c.length>>1],sp=c[Math.floor(.9*(c.length-1))]-c[Math.floor(.1*(c.length-1))];
  if(sp>spread)return {...r,medCents:med,spread:sp,verdict:'불안정'};
  const oct=Math.abs(Math.abs(med)-1200)<tol*2,dev=oct?med-Math.sign(med)*1200:med,ok=!oct&&Math.abs(med)<=tol;
@@ -674,10 +682,11 @@ function pmStatItems(q,res){if(!q||!res||res.medCents==null||res.leak||res.verdi
 /* ---------- 음역 찾기(순수 함수) ----------
    rangeFromTake: 한 번 부른 기록 [초,midi,conf] 에서 안정된 유성 프레임만 모아 p10(낮은 음) 또는 p90(높은 음)을 낸다.
    안정 = voicedMask 유성(이웃 유성 프레임과 ±100 cent 로 이어진 3프레임 이상 묶음, 잡음·옥타브 튐 제외)이고 MIDI 28–96. minConf 는 YIN 곡선에선 효력 없는 안전 문턱. 그 뒤 중앙값에서 ±maxDev 반음 넘는 프레임도 뺀다. 안정 프레임이 minFrames(20 ms 간격 기준 0.5초) 미만이면 ok:false. */
-function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[];minFrames=Math.ceil(minFrames*frameScale(T)-1e-9);const mk=voicedMask(T,{minConf});let st=[];
- for(let i=0;i<T.length;i++){if(mk[i]&&T[i][1]>=28&&T[i][1]<=96)st.push(T[i][1])}
- if(st.length>=minFrames){const o=st.slice().sort((x,y)=>x-y),med=o[o.length>>1];st=st.filter(m=>Math.abs(m-med)<=maxDev)}
- if(st.length<minFrames)return {ok:false,n:st.length,reason:'소리가 짧거나 불안정했습니다'};
+function rangeFromTake(track,which,{minConf=.6,minFrames=25,maxDev=3}={}){const T=track||[];const W=frameW(T),mk=voicedMask(T,{minConf});let st=[],sw=[];
+ for(let i=0;i<T.length;i++){if(mk[i]&&T[i][1]>=28&&T[i][1]<=96){st.push(T[i][1]);sw.push(W[i])}}
+ const tw=a=>{let t=0;for(const x of a)t+=x;return t-0};let wt=tw(sw);
+ if(wt>=minFrames-1e-9){const o=st.slice().sort((x,y)=>x-y),med=o[o.length>>1],k=st.map(m=>Math.abs(m-med)<=maxDev);st=st.filter((m,i)=>k[i]);sw=sw.filter((m,i)=>k[i]);wt=tw(sw)}
+ if(wt<minFrames-1e-9)return {ok:false,n:st.length,reason:'소리가 짧거나 불안정했습니다'};
  const o=st.sort((x,y)=>x-y),q=p=>o[Math.floor(p*(o.length-1))];return {ok:true,n:o.length,midi:Math.round(which==='high'?q(.9):q(.1)),med:o[o.length>>1]}}
 const noteNm=m=>NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1);
 /* 낮은 음 lo·높은 음 hi → {ok,span,label,hint,reason}. 5반음 미만이거나 뒤집히면 ok:false */
