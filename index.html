@@ -27,32 +27,36 @@
 <script>try{var t=localStorage.getItem('pr-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
 <style>
 /* 연습 도구형 앱 화면: 상단 바 · 짧은 히어로 · 코드 띠(고정) · 탭 · 하단 고정 트랜스포트. 토큰은 :root(라이트) / 다크(시스템·수동). 파트 색은 모든 화면에서 같다 */
 :root{
-  --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#ECEEF3; --border:#D5D9E2; --control-border:#767F91;
-  --text:#1B1F29; --text-muted:#566074; --accent:#0B6BCB; --on-accent:#FFFFFF; --loop:#92400E;
-  --accent-soft:rgba(11,107,203,.10); --loop-soft:rgba(146,64,14,.12);
-  --bass:#2F5FD0; --drums:#C2410C; --keys:#7C3AED; --guitar:#0B7A52; --score:#6B7287; --vocal:#C0267E; --edit:#0E7C86;
-  --ok:#1D7A42; --warn:#A15C08;
+  --bg:#EEE9DA; --surface:#FAF7EE; --surface-2:#E5DFCB; --border:#D4CCB2; --control-border:#7A7257;
+  --text:#23280B; --text-muted:#585741; --accent:#465016; --on-accent:#F3F0E2; --loop:#8A3B12;
+  --accent-soft:rgba(70,80,22,.10); --loop-soft:rgba(138,59,18,.12);
+  --ticket:#465016; --ticket-back:#23280B; --ticket-ink:#E9E6D3; --grain:.07;
+  --bass:#2A52B8; --drums:#A2360A; --keys:#6A2DD2; --guitar:#09663F; --score:#575C6E; --vocal:#A31D69; --edit:#0A666E;
+  --ok:#176536; --warn:#854C06;
+  --display:"Archivo","Noto Sans KR",system-ui,sans-serif;
   --body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --hit:36px; --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem; --s5:1.5rem; --s6:2rem; color-scheme:light }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0F1115; --surface:#171A21; --surface-2:#1F232C; --border:#2C313D; --control-border:#77808F;
-  --text:#E8EAF0; --text-muted:#9AA3B2; --accent:#5CB8FF; --on-accent:#06121F; --loop:#FFB347;
-  --accent-soft:rgba(92,184,255,.14); --loop-soft:rgba(255,179,71,.16);
+  --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
+  --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
+  --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
+  --ticket:#465016; --ticket-back:#5A6624; --ticket-ink:#E9E6D3; --grain:.05;
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2; --vocal:#FF7AC2; --edit:#5FE0E8;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark } }
 :root[data-theme="dark"]{
-  --bg:#0F1115; --surface:#171A21; --surface-2:#1F232C; --border:#2C313D; --control-border:#77808F;
-  --text:#E8EAF0; --text-muted:#9AA3B2; --accent:#5CB8FF; --on-accent:#06121F; --loop:#FFB347;
-  --accent-soft:rgba(92,184,255,.14); --loop-soft:rgba(255,179,71,.16);
+  --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
+  --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
+  --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
+  --ticket:#465016; --ticket-back:#5A6624; --ticket-ink:#E9E6D3; --grain:.05;
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2; --vocal:#FF7AC2; --edit:#5FE0E8;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
-@media(max-width:700px){:root{--hit:44px}.hero .eyebrow,.hero p.lead,.hero details{display:none}.hero .in{padding-block:.6rem .5rem;gap:.4rem}.hero .big{font-size:1.15rem}.top .in{padding-block:.35rem}}
+@media(max-width:700px){:root{--hit:44px}.hero .tk-sm,.hero .tk-more{display:none}.hero .in{padding-block:.7rem .6rem}.hero .big{font-size:1.02rem}.top .in{padding-block:.35rem}}
 .hero.gone{display:none}
 .upd{border-color:var(--accent);color:var(--accent);cursor:pointer;font:inherit;font-size:.78rem;font-weight:700}
 .swnote{margin-left:.6rem;color:var(--ok);font-size:.82rem}
@@ -477,6 +481,38 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 .onb-steps li>div{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);align-items:center}
 .onb .num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:.8rem;font-weight:700;flex:none}
 @media(max-width:700px){.onb-in{display:grid;grid-template-columns:1fr auto;gap:var(--s1) var(--s2);padding-block:var(--s2)}.onb-steps{grid-column:1/-1;flex-direction:column;gap:var(--s1)}.onb-steps li>div{flex-wrap:nowrap;justify-content:space-between;flex:1}.onb-steps li>div .btn{min-height:36px}.onb-steps li>div b{font-size:.88rem}.onb .btn.ghost{grid-row:1;grid-column:2}}
+
+/* ── 디자인: 빈티지 티켓·종이 결 (올리브·크림·갈색) ── */
+body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .12 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");background-blend-mode:multiply}
+.brand{display:flex;align-items:center;gap:.5rem;letter-spacing:-.01em}
+.brand::before{content:"";width:22px;height:16px;border-radius:3px;background:var(--accent);-webkit-mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
+.hero .in{padding-block:1.4rem 1.2rem}
+.tkwrap{position:relative;isolation:isolate}
+.tkwrap::before{content:"";position:absolute;inset:-6px 10px 8px -8px;background:var(--ticket-back);border-radius:6px;transform:rotate(-1.2deg);z-index:-1}
+.ticket{--n:14px;position:relative;display:grid;justify-items:center;text-align:center;gap:.55rem;padding:1.6rem 1.25rem 1.4rem;color:var(--ticket-ink);background:var(--ticket) repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.05) 79px 80px);
+ -webkit-mask:radial-gradient(var(--n) at 0 0,#0000 98%,#000) 0 0/51% 51% no-repeat,radial-gradient(var(--n) at 100% 0,#0000 98%,#000) 100% 0/51% 51% no-repeat,radial-gradient(var(--n) at 0 100%,#0000 98%,#000) 0 100%/51% 51% no-repeat,radial-gradient(var(--n) at 100% 100%,#0000 98%,#000) 100% 100%/51% 51% no-repeat;
+ mask:radial-gradient(var(--n) at 0 0,#0000 98%,#000) 0 0/51% 51% no-repeat,radial-gradient(var(--n) at 100% 0,#0000 98%,#000) 100% 0/51% 51% no-repeat,radial-gradient(var(--n) at 0 100%,#0000 98%,#000) 0 100%/51% 51% no-repeat,radial-gradient(var(--n) at 100% 100%,#0000 98%,#000) 100% 100%/51% 51% no-repeat}
+.tk-sm{font-size:.74rem;font-weight:700;letter-spacing:.32em;opacity:.9}
+.wordmark{margin:0;font-family:var(--display);font-weight:800;font-stretch:125%;text-transform:uppercase;line-height:.92;font-size:clamp(1.9rem,5.6vw,4.2rem);letter-spacing:.01em;text-shadow:.06em .06em 0 #23280B;display:grid}
+.wordmark span+span{padding-left:.9em}
+.hero .ticket .big{font-size:clamp(1.05rem,2.2vw,1.35rem);font-weight:700;color:var(--ticket-ink)}
+.tk-cta{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin-top:.35rem}
+.btn.label{--n:9px;background:var(--ticket-ink);color:#23280B;border:0;border-radius:4px;min-height:46px;padding:0 1.7rem;font-weight:800;font-size:1rem;
+ -webkit-mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
+.btn.label:hover{background:var(--ticket-ink);filter:brightness(1.06)}
+.btn.tk-ghost{background:transparent;color:var(--ticket-ink);border:1px solid var(--ticket-ink);min-height:46px}
+.btn.tk-ghost:hover{background:rgba(255,255,255,.08)}
+.ticket :focus-visible{outline:2px solid var(--ticket-ink);outline-offset:3px}
+.hero .tk-more{font-size:.86rem;max-width:44em;color:var(--ticket-ink)}
+.hero .tk-more summary{cursor:pointer;min-height:32px;display:inline-flex;align-items:center;opacity:.85;text-decoration:underline;text-underline-offset:3px}
+.tk-more p{text-align:left}
+.sh{letter-spacing:-.005em;display:flex;align-items:center;gap:.45rem}
+.sec>.sh::before,.panel>.sh::before,.panel>summary.sh::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--accent);flex:none}
+.tabpanel>.in>.head h2{font-size:1.3rem}
+.plan .price{font-family:var(--display);font-stretch:125%}
+@media(max-width:700px){.ticket{--n:10px;padding:1rem .9rem .9rem;gap:.4rem}.tkwrap::before{inset:-4px 6px 6px -5px}.wordmark{font-size:clamp(1.55rem,8.4vw,2.2rem)}.btn.label,.btn.tk-ghost{min-height:44px;padding:0 1.1rem;font-size:.92rem}}
+@media(max-width:700px){#hero:has(~ #onb:not([hidden])) .tk-cta{display:none}}
+@media (prefers-reduced-motion:no-preference){.ticket{animation:tkIn .5s cubic-bezier(.2,.8,.2,1) both}@keyframes tkIn{from{opacity:0;transform:translateY(8px) rotate(-.6deg)}to{opacity:1;transform:none}}}
 </style>
 </head>
 <body>
@@ -491,15 +527,17 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
 </div></header>
 
-<section class="hero" id="hero" aria-label="소개"><div class="in">
-  <span class="eyebrow">시안 · 브라우저 안에서 채보까지 실제 동작</span>
+<section class="hero" id="hero" aria-label="소개"><div class="in"><div class="tkwrap"><div class="ticket">
+  <span class="tk-sm">시안 · 브라우저 안에서 채보까지 실제 동작</span>
+  <p class="wordmark" aria-hidden="true"><span>Cover</span><span>Practice Room</span></p>
   <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
-  <details><summary>자세히 보기</summary>
+  <div class="tk-cta"><button class="btn label" type="button" id="heroPlay">▶ 데모 듣기</button><a class="btn tk-ghost" href="#upload">내 곡 올리기</a></div>
+  <details class="tk-more"><summary>자세히 보기</summary>
     <p>파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰고, 시창·청음으로 귀와 목소리도 연습하세요.</p>
     <p>곡을 올리면 베이스·드럼·건반을 새로 만든 반주 초안과 채보, 박자, 코드·키를 브라우저 안에서 계산합니다. 들어 있는 곡은 이 프로젝트에서 만든 것입니다. One Dream 후렴 4마디(데모 음원이 붙은 데모)와 원작 연습곡 1(16마디, 합성 반주). 파일은 서버로 가지 않습니다.</p>
     <p>모든 수치는 신호 기반 분석이며 청취로 검증한 결과가 아닙니다.</p>
   </details>
-</div></section>
+</div></div></div></section>
 
 <section class="onb" id="onb" aria-labelledby="onbT" hidden><div class="in"><div class="onb-in"><h2 id="onbT">처음 오셨나요?</h2>
   <ol class="onb-steps"><li><span class="num">1</span><div><b>데모 듣기</b><button class="btn primary sm" type="button" id="onbPlay">▶ 데모 재생</button></div></li>
@@ -2506,6 +2544,7 @@ window.onTabShown=t=>{if(t!=='sing')sdStop();if(t==='sing'&&singSub==='dict')sdS
 {let sid='onedream';try{const v=localStorage.getItem('pr-song');if(v&&Object.prototype.hasOwnProperty.call(SONGS,v)&&v!=='user')sid=v}catch(e){}loadSong(sid)}checkSaved();updLat();trUi();updThemeBtn();if(window.SingLab){singNew();pmNew();earNew();progNew();mdNew();rhyInit();(window.requestIdleCallback?f=>requestIdleCallback(f,{timeout:1500}):f=>setTimeout(f,300))(()=>statRender())}else{el('sMsg').textContent='시창 모듈(sing.js)을 불러오지 못했습니다.'}
 if(STV.lab!=='0')setStLab(STV.lab);if(STV.v==='staff')setStView('staff',false);
 setSub(singSub,false);
+el('heroPlay').onclick=()=>{showTab('practice');if(location.hash!=='#practice'){tabClick=true;location.hash='practice'}if(!S.playing)play()};
 /* 처음 안내: 첫 방문에만(localStorage 실패 시에는 매번 보이되 닫을 수 있음) */
 (function(){const o=el('onb');let seen=false;try{seen=localStorage.getItem('pr-onb')==='1';if(!seen)localStorage.setItem('pr-onb','1')}catch(e){}
  if(seen)return;o.hidden=false;el('onbClose').onclick=()=>{o.hidden=true};
