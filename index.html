@@ -333,6 +333,8 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
 /* 좁은 화면: 곡 선택을 둘째 줄 전체 폭으로, 테마·도움말은 제목 줄 오른쪽에 */
 @media (max-width:560px){.top .brand{flex:1}#songsel{order:5;width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}#songsel button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
  .tp-r2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:.4rem .7rem;padding-bottom:2px}
+ /* 좁은 화면의 시창·청음 탭: 자체 재생 버튼이 있으므로 하단 둘째 줄(속도·키·반복)을 접어 화면을 덜 가린다(UX 점검 #3) */
+ body[data-tab=sing] .tp-r2{display:none}
  .play{width:48px;height:48px}
  .now{min-width:3.2rem}
  .tp-r2{flex-wrap:nowrap;overflow:visible;gap:.3rem;justify-content:space-between}
@@ -1799,7 +1801,7 @@ let ready=false;const heroEl=el('hero');
 /* 히어로는 한 번 쓰고 나면(재생·탭 이동·아래로 스크롤) 접어 작업 영역을 넓힌다. 이미 지나간 위치면 스크롤을 보정한다 */
 function heroOff(){if(heroEl.classList.contains('gone'))return;const past=scrollY>=heroEl.offsetTop+heroEl.offsetHeight-1,h=heroEl.offsetHeight;heroEl.classList.add('gone');if(past)scrollBy(0,-h)}
 window.addEventListener('scroll',()=>{if(ready&&!heroEl.classList.contains('gone')&&scrollY>heroEl.offsetTop+heroEl.offsetHeight+8)heroOff()},{passive:true});
-function showTab(t){if(ready)heroOff();if(!TABS.includes(t))t='practice';for(const n of TABS){el('tab-'+n).hidden=n!==t;const tb=el('tabb-'+n);tb.setAttribute('aria-selected',n===t);tb.tabIndex=n===t?0:-1}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
+function showTab(t){if(ready)heroOff();if(!TABS.includes(t))t='practice';document.body.dataset.tab=t;for(const n of TABS){el('tab-'+n).hidden=n!==t;const tb=el('tabb-'+n);tb.setAttribute('aria-selected',n===t);tb.tabIndex=n===t?0:-1}if(t==='score')draw();if(window.onTabShown)window.onTabShown(t)}
 function fromHash(first){const h=location.hash.replace('#','');if(h==='plans'){setTimeout(()=>el('plans').scrollIntoView(),50);return}
  if(TABS.includes(h)){showTab(h);const w=el('work');if(!tabClick&&window.scrollY<w.offsetTop-4)w.scrollIntoView()}else if(first)showTab('practice');tabClick=false}
 window.addEventListener('hashchange',()=>fromHash(false));
