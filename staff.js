@@ -10,12 +10,12 @@ const SSH=[38,35,39,36,33,37,34],SFL=[34,37,33,36,32,35,31];/* 높은음자리 �
 const DUR={16:'w',12:'h',8:'h',6:'q',4:'q',3:'e',2:'e',1:'s'};
 const mod=n=>((n%12)+12)%12;
 function keySig(pc){pc=mod(pc);const [n,k]=KS[pc],ls=(k==='#'?SH:k==='b'?FL:[]).slice(0,n);return {pc,n,kind:k,letters:ls,steps:(k==='#'?SSH:SFL).slice(0,n)}}
-/* midi → {l:글자 0–6(C=0), acc:-1|0|1, oct, step:오선 단계(옥타브*7+글자)}. 조 안 음은 조표대로, 조 밖 흰 건반은 제자리표.
+/* midi → {l:글자 0–6(C=0), acc:-2..2(2=이중샤프), oct, step:오선 단계(옥타브*7+글자)}. 조 안 음은 조표대로, 조 밖 흰 건반은 제자리표.
    조 밖 검은 건반은 으뜸음 기준 도수로: ♭3·♭7 은 플랫, ♯1·♯4·♯5 는 샤프(C 장조 Eb·Bb, F 장조 F#·C#; 예전 규칙은 C 장조 ♭7 을 A#, F 장조 ♯1 을 Gb 로 적었다). sing.js SOLF·pcName 과 같은 규칙 */
 function spell(m,pc,minor){const ks=keySig(pc),A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const p=mod(m);
  const mk=(l,a)=>{const o=Math.floor((m-a-LP[l])/12)-1;return {l,acc:a,oct:o,step:o*7+l}};
- const r=mod(p-pc),u7=minor&&r===8?LP.indexOf((p+11)%12):-1;/* 단조 보기: 화성단음계 올린 7음(A 단조의 G#, F#m 의 E#, C#m 의 B#)은 흰 건반이어도 샤프. 이중샤프가 되는 G#m·D#m 은 제자리로 둔다 */
- for(let l=0;l<7;l++)if(mod(LP[l]+A[l])===p)return mk(l,A[l]);if(u7>=0)return mk(u7,1);const w=LP.indexOf(p);if(w>=0)return mk(w,0);
+ const r=mod(p-pc),u7=minor&&r===8?LP.indexOf((p+11)%12):-1;/* 단조 보기: 화성단음계 올린 7음(A 단조의 G#, F#m 의 E#, C#m 의 B#)은 흰 건반이어도 샤프. 이중샤프가 되는 G#m(F##)·D#m(C##)은 흰 건반 글자 + alter 2 */
+ for(let l=0;l<7;l++)if(mod(LP[l]+A[l])===p)return mk(l,A[l]);if(u7>=0)return mk(u7,1);if(minor&&r===8&&ks.kind==='#'){const d=LP.indexOf((p+10)%12);if(d>=0)return mk(d,2)}const w=LP.indexOf(p);if(w>=0)return mk(w,0);
  return r===3||r===10?mk(LP.indexOf((p+1)%12),-1):mk(LP.indexOf((p+11)%12),1)}
 const NSH=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],NFL=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 /* 조 이름: pc = 조표를 정하는 으뜸음(장조 기준). minor 면 나란한단조 이름(A 단조 ← C). 조표 종류(#/b)대로 철자 */
@@ -63,7 +63,7 @@ function layout(notes,o={}){const bpb=o.beatsPerBar||4,U=bpb*4,U12=bpb*12,ks=key
   let ott=null;if(o.ottava){let mx=0,mn=0;for(const it of items)if(it.k==='n'){const L=ledgerOf(it.step-bstep);mx=Math.max(mx,L);mn=Math.min(mn,L)}
    ott=mx>4?'8va':mn<-4?'8vb':null;if(ott)for(const it of items)if(it.k==='n'){const d=ott==='8va'?-7:7;it.step+=d;it.oct+=d/7}}
   const A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const st={};
-  for(const it of items){if(it.k!=='n')continue;const key=it.l+':'+it.oct,c=key in st?st[key]:A[it.l];if(it.acc0!==c&&!it.tiePrev)it.acc=it.acc0===1?'#':it.acc0===-1?'b':'n';st[key]=it.acc0}
+  for(const it of items){if(it.k!=='n')continue;const key=it.l+':'+it.oct,c=key in st?st[key]:A[it.l];if(it.acc0!==c&&!it.tiePrev)it.acc=it.acc0===2?'x':it.acc0===1?'#':it.acc0===-1?'b':'n';st[key]=it.acc0}
   beamGroups(items,mid,bars.length);
   const tg={};items.forEach((it,i)=>{if(it.tr)(tg[it.tr.b]=tg[it.tr.b]||[]).push(i)});
   const tups=Object.keys(tg).map(k=>{const ix=tg[k];items[ix[0]].tup='start';items[ix[ix.length-1]].tup='stop';return {beat:+k,from:ix[0],to:ix[ix.length-1]}});
@@ -87,7 +87,7 @@ function place(lay,o={}){const W=o.width||640,M=6,hd=f=>30+lay.key.n*7+(f?18:0)+
   sys.push({first,x0:M,hdr:h,x1:Math.round(x*10)/10,bars:bs});i=j}
  return {W,systems:sys}}
 /* 글리프: 임시표·쉼표·자리표(선으로만 그린 모양, 글꼴 의존 없음). 좌표는 오선 간격 8 기준 */
-const ACC={'#':'<path d="M-2.2-8V7M2.2-7V8" class="st-s"/><path d="M-4.5-1.5L4.5-4.5M-4.5 4.5L4.5 1.5" class="st-t"/>','b':'<path d="M-2.5-12V4.5M-2.5 4.5C6 0 5-6-2.5-2" class="st-s"/>','n':'<path d="M-2.5-8V3.5M2.5-3.5V8M-2.5-2L2.5-4M-2.5 4L2.5 2" class="st-s"/>'};
+const ACC={'x':'<path d="M-4.2-4.2L4.2 4.2M-4.2 4.2L4.2-4.2" class="st-t"/><path d="M-4.6-4.6h2v2h-2zM2.6-4.6h2v2h-2zM-4.6 2.6h2v2h-2zM2.6 2.6h2v2h-2z" class="st-f"/>','#':'<path d="M-2.2-8V7M2.2-7V8" class="st-s"/><path d="M-4.5-1.5L4.5-4.5M-4.5 4.5L4.5 1.5" class="st-t"/>','b':'<path d="M-2.5-12V4.5M-2.5 4.5C6 0 5-6-2.5-2" class="st-s"/>','n':'<path d="M-2.5-8V3.5M2.5-3.5V8M-2.5-2L2.5-4M-2.5 4L2.5 2" class="st-s"/>'};
 const TREB='M-5 20C-6 26 3 28 3 20C3 10 1-10 1-20C0-28 1-38 4-46C9-40 9-30 1-16C-8-12-10-2-8 3C-5 9 5 10 8 5C11 0 7-7 1-7C-3-7-5-3-3 0',BASS='M-9-2C-4-12 9-9 9 2C9 12-2 20-14 25';
 const RST={w:'<rect x="-5" y="0" width="10" height="4" class="st-f"/>',h:'<rect x="-5" y="-4" width="10" height="4" class="st-f"/>',q:'<path d="M-2-11L2.5-5.5L-2-1.5L2.5 3.5C-1 3-3 5-1 8" class="st-s"/>',e:'<circle cx="-2" cy="-3" r="1.8" class="st-f"/><path d="M-.5-3C1-3 2-4 3-6L-1.5 6" class="st-s"/>',s:'<circle cx="-2" cy="-3" r="1.8" class="st-f"/><circle cx="-3" cy="2" r="1.8" class="st-f"/><path d="M-.5-3C1-3 2-4 3-6L-2.5 9" class="st-s"/>'};
 const CSS='.st-l{stroke:var(--text-muted,#666);stroke-width:1;fill:none}.st-s{stroke:currentColor;fill:none;stroke-width:1.2;stroke-linecap:round}.st-t{stroke:currentColor;fill:none;stroke-width:2}.st-f{fill:currentColor;stroke:none}.st-o{fill:none;stroke:currentColor;stroke-width:1.7}.st-g{color:var(--text,#111)}.st-g.ok{color:var(--ok,#1d7a42)}.st-g.bad{color:var(--warn,#a15c08)}.st-g.none{color:var(--text-muted,#666)}.st-g.cur{color:var(--accent,#0b6bcb)}.st-c{fill:var(--accent,#0b6bcb);opacity:.14}.st-x{font:11px "JetBrains Mono",monospace;fill:var(--text-muted,#666);text-anchor:middle}.st-ch{font:700 13px "JetBrains Mono",monospace;fill:var(--text,#111);text-anchor:start}.st-ln{font:700 9px "JetBrains Mono",monospace;fill:var(--accent,#0b6bcb)}.st-8{font:italic 700 12px sans-serif;fill:var(--text,#111)}.st-ob{fill:none;stroke:var(--text,#111);stroke-width:1;stroke-dasharray:3 2}.st-v{font:700 12px sans-serif;text-anchor:middle;fill:currentColor}.st-n{font:700 17px sans-serif;text-anchor:middle;fill:var(--text,#111)}.st-tp{font:italic 700 12px sans-serif;text-anchor:middle;fill:var(--text,#111)}';
@@ -164,7 +164,7 @@ function gBars(gs,o,ks,nb,U,k){const {bs,mid}=GST[k],per=Array.from({length:nb},
    us.forEach((u,j)=>{items.push({k:'n',i:s.i,pos:p,u,dur:DUR[u],dots:u===12||u===6||u===3?1:0,notes:base.map(n=>({...n})),midi:base[0].midi,step:far.step,dir:'u',beam:-1,tiePrev:j?true:s.tp,tieNext:j<us.length-1?true:s.tn});p+=u});cur=s.z}
   if(cur<U)fill(cur,U);
   const A=[0,0,0,0,0,0,0];ks.letters.forEach(l=>A[l]=ks.kind==='#'?1:-1);const st={};
-  for(const it of items){if(it.k!=='n')continue;for(const n of it.notes){const key=n.l+':'+n.oct,c=key in st?st[key]:A[n.l];if(n.acc0!==c&&!it.tiePrev)n.acc=n.acc0===1?'#':n.acc0===-1?'b':'n';st[key]=n.acc0}}
+  for(const it of items){if(it.k!=='n')continue;for(const n of it.notes){const key=n.l+':'+n.oct,c=key in st?st[key]:A[n.l];if(n.acc0!==c&&!it.tiePrev)n.acc=n.acc0===2?'x':n.acc0===1?'#':n.acc0===-1?'b':'n';st[key]=n.acc0}}
   beamGroups(items,mid,bi);for(const it of items)if(it.k==='n')gFlips(it);return items})}
 function grand(notes,o={}){const bpb=o.beatsPerBar||4,U=bpb*4,ks=keySig(o.key||0),h=hands(notes),end=Math.max(0,...h.t.map(e=>e.b),...h.b.map(e=>e.b)),nb=o.bars||Math.max(1,Math.ceil(end/U)),T=gBars(h.t,o,ks,nb,U,'t'),B=gBars(h.b,o,ks,nb,U,'b');
  return {grand:true,key:ks,minor:!!o.minor,keyLabel:keyLabel(ks.pc,!!o.minor),bpb,ts:{n:bpb,d:4},U,count:notes.length,hands:{t:h.t.length,b:h.b.length},bars:T.map((t,b)=>({t,b:B[b],chords:chordsOf(o.chords&&o.chords[b])}))}}

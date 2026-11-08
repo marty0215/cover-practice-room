@@ -23,7 +23,7 @@ function harmony(c,keyPc,tr,off,St){const p=parseChord(c);if(!p)return '';const 
 function mono(ns,low,trip){const T=new Set(trip||[]),hT=T.size>0,K=hT?12:4,qp=t=>{if(!hT)return Math.round(t*4);const b=Math.floor(t+1e-9),f=t-b;return b*12+(T.has(b)?Math.round(f*3)*4:Math.round(f*4)*3)};
  const q=ns.filter(n=>n&&isFinite(n[0]+n[1]+n[2])&&n[0]>=0&&n[1]>0).map(n=>{const a=qp(n[0]);return {a,b:Math.max(a+(hT?(T.has(Math.floor(a/12))?4:3):1),qp(n[0]+n[1])),m:n[2]}}).sort((x,y)=>x.a-y.a||(low?x.m-y.m:y.m-x.m)),o=[];
  for(const e of q){const l=o[o.length-1];if(l&&l.a===e.a)continue;if(l&&l.b>e.a)l.b=e.a;o.push(e)}return o.map(e=>[e.a/K,(e.b-e.a)/K,e.m])}
-const ACCN={'#':'sharp',b:'flat',n:'natural'};
+const ACCN={x:'double-sharp','#':'sharp',b:'flat',n:'natural'};
 /* 셋잇단: divisions=12 일 때 한 칸(셋잇단 8분)=4, 3:2 time-modification, 묶음 처음·끝에 <tuplet>. 요소 순서는 스키마대로 duration, tie, voice, type, dot, accidental, time-modification, beam, notations */
 const TM=it=>it.tr?'<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>':'';
 const TUP=it=>it.tup?`<tuplet type="${it.tup}"${it.tup==='start'?' bracket="yes" number="1"':' number="1"'}/>`:'';
