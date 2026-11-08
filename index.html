@@ -102,7 +102,7 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .grid{display:grid;gap:var(--s4)}
 @media(min-width:760px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
 .note{font-size:.82rem;color:var(--text-muted);margin-top:.6rem}
-.vcrbox{display:grid;gap:.6rem;margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border);min-width:0}.vcrh{font-size:.92rem}.vcrstr{display:inline-flex;align-items:center;gap:.5rem;min-height:var(--hit)}.vcrstr input{width:150px;max-width:100%;height:var(--hit);accent-color:var(--accent)}#vcrProg{width:100%;height:10px}#vcrMsg{color:var(--text-muted)}
+.vcrbox{display:grid;gap:.6rem;min-width:0}.vcrh{font-size:.92rem}.vcrstr{display:inline-flex;align-items:center;gap:.5rem;min-height:var(--hit)}.vcrstr input{width:150px;max-width:100%;height:var(--hit);accent-color:var(--accent)}#vcrProg{width:100%;height:10px}#vcrMsg{color:var(--text-muted)}
 .head{display:grid;gap:var(--s1);margin-bottom:var(--s4);max-width:44em}
 /* 알림 한 가지: .notice (+ .warn / .ok). 예전 .warnline 도 같은 모양 */
 .notice,.warnline{--nc:var(--accent);border-left:4px solid var(--nc);padding:var(--s3) var(--s4);background:var(--surface);border-radius:0 10px 10px 0;font-size:.9rem}
@@ -124,7 +124,16 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 .hero details p+p{margin-top:.4rem}
 @media(min-width:701px){.hero .in{padding-block:1rem .3rem;gap:.4rem}.hero summary{min-height:32px}.tabpanel>.in>.head details.help>summary{min-height:32px}}
 
-/* 고정 머리: 코드 띠 + 탭 */
+/* 고정 머리: 탭 + 코드 띠 */
+/* 단순화: 연습 외 탭에선 코드 띠 숨김, 요금 접기 */
+body[data-tab=sing] .strip,body[data-tab=upload] .strip{display:none}
+.dock .tabrow{border-bottom:1px solid var(--border)}
+body[data-tab=sing] .dock .tabrow,body[data-tab=upload] .dock .tabrow{border-bottom:0}
+.plansd>summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;font-size:.9rem;color:var(--text-muted);width:max-content;max-width:100%}
+.plansd[open]>summary{margin-bottom:var(--s3)}
+#vcrJump{justify-self:start}
+.vcrbox .msg:empty,.vcrbox .note:empty{display:none}
+
 .dock{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
 .strip{position:relative;display:flex;gap:4px;overflow-x:auto;padding:8px max(16px,calc((100% - 1148px)/2)) 6px;user-select:none;-webkit-user-select:none;touch-action:pan-x;scrollbar-width:thin}
 .sc{flex:1 0 66px;height:50px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;display:grid;align-content:center;justify-items:start;padding:0 .5rem;line-height:1.15;cursor:pointer;transition:opacity .15s}
@@ -281,7 +290,7 @@ canvas{display:block;width:100%;height:auto}
 .numin{width:5.5em}
 
 /* 요금 */
-section.plans{padding-block:2.2rem;border-top:1px solid var(--border)}
+section.plans{padding-block:.8rem;border-top:1px solid var(--border)}
 .plan{display:grid;gap:.6rem}
 .plan .price{font-size:1.5rem;font-weight:700}
 .plan ul{margin:0;padding-left:1.1em;font-size:.9rem;display:grid;gap:.2rem}
@@ -485,8 +494,8 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 <section class="hero" id="hero" aria-label="소개"><div class="in">
   <span class="eyebrow">시안 · 브라우저 안에서 채보까지 실제 동작</span>
   <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
-  <p class="lead">파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰고, 시창·청음으로 귀와 목소리도 연습하세요.</p>
   <details><summary>자세히 보기</summary>
+    <p>파트를 끄고 켜며 연습하고, 채보를 보며 음을 확인하고, 코드 진행을 편곡의 출발점으로 쓰고, 시창·청음으로 귀와 목소리도 연습하세요.</p>
     <p>곡을 올리면 베이스·드럼·건반을 새로 만든 반주 초안과 채보, 박자, 코드·키를 브라우저 안에서 계산합니다. 들어 있는 곡은 이 프로젝트에서 만든 것입니다. One Dream 후렴 4마디(데모 음원이 붙은 데모)와 원작 연습곡 1(16마디, 합성 반주). 파일은 서버로 가지 않습니다.</p>
     <p>모든 수치는 신호 기반 분석이며 청취로 검증한 결과가 아닙니다.</p>
   </details>
@@ -501,7 +510,6 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 
 <main id="work">
 <div class="dock">
-  <div class="strip" id="strip" role="group" aria-label="코드 띠. 누르면 그 마디로 이동, 끌면 구간 반복"></div>
   <div class="tabrow"><div class="tabs" id="tabs" role="tablist" aria-label="작업 영역">
     <button class="tab" role="tab" id="tabb-practice" data-tab="practice" aria-controls="tab-practice" aria-selected="true">연습</button>
     <button class="tab" role="tab" id="tabb-score" data-tab="score" aria-controls="tab-score" aria-selected="false">채보</button>
@@ -509,6 +517,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <button class="tab" role="tab" id="tabb-sing" data-tab="sing" aria-controls="tab-sing" aria-selected="false">시창·청음</button>
     <button class="tab" role="tab" id="tabb-upload" data-tab="upload" aria-controls="tab-upload" aria-selected="false">올리기</button>
   </div><button class="lclr" id="loopClr" type="button" hidden title="구간 반복 해제" aria-label="구간 반복 해제"><span class="tl">반복 해제 </span>✕</button></div>
+  <div class="strip" id="strip" role="group" aria-label="코드 띠. 누르면 그 마디로 이동, 끌면 구간 반복"></div>
 </div>
 
 <div class="tabpanel" id="tab-practice" role="tabpanel" tabindex="0" aria-labelledby="tabb-practice"><div class="in">
@@ -521,18 +530,6 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
     <div class="ch" style="--c:var(--accent)"><span class="name">전체 볼륨</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="master" min="0" max="100" value="80" aria-label="전체 볼륨"><span class="val" id="masterVal">80%</span></div>
     <div class="ch" style="--c:var(--score)"><span class="name" id="origLabel">음원</span><span class="ms"><button disabled aria-hidden="true" style="visibility:hidden">M</button></span><input type="range" id="origVol" min="0" max="100" value="0" aria-label="음원 볼륨 (합성과 함께)"><span class="val" id="origVal">0%</span></div>
     <div id="stems"></div>
-  </div>
-  <div class="vcrbox" id="vcrBox" hidden>
-    <h4 class="vcrh">보컬 줄이기 · A/B 비교</h4>
-    <div class="row"><label class="small vcrstr">줄이는 정도 <input type="range" id="vcrStr" min="0" max="100" value="100" aria-label="보컬 줄이는 정도"> <span class="val" id="vcrStrVal">100%</span></label>
-      <label class="tgl"><input type="checkbox" id="vcrPerc" checked aria-label="타악 보호(켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄임)"><span>타악 보호</span></label>
-      <button class="btn sm primary" type="button" id="vcrGo">보컬 줄인 음원 만들기</button><button class="btn sm" type="button" id="vcrCancel" hidden>취소</button></div>
-    <progress id="vcrProg" max="100" value="0" aria-label="보컬 줄이기 진행" hidden></progress>
-    <p class="msg" id="vcrMsg" role="status"></p>
-    <div class="row"><span class="small" id="abLab">A/B 비교</span><div class="seg" id="abSel" role="group" aria-labelledby="abLab"><button type="button" aria-pressed="false" data-ab="orig">데모 음원</button><button type="button" aria-pressed="false" data-ab="vr" disabled aria-describedby="abHint">보컬 줄인 음원</button><button type="button" aria-pressed="false" data-ab="gen">합성 반주</button></div></div>
-    <p class="note" id="abHint">먼저 「보컬 줄인 음원 만들기」를 누르세요.</p>
-    <p class="note" id="abInfo" role="status"></p>
-    <p class="note" id="abNote">보컬 줄이기(보컬이 가운데에 있을 때만 효과): 신호만으로 가운데에 모인 소리를 줄입니다. 가운데에 있는 다른 소리(스네어·솔로 등)도 같이 줄고(타악 보호를 켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄입니다. 처리가 약 2배 걸림), 보컬의 잔향·더블링은 남습니다. 이 브라우저 안에서만 처리하며 만든 음원은 저장하지 않습니다. 청취 평가는 없습니다.</p>
   </div>
   </section>
   <section class="sec" aria-labelledby="hSound"><h3 class="sh" id="hSound">소리와 음색</h3>
@@ -547,9 +544,21 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
       <details class="menu" id="stepMenu"><summary class="ibtn" title="단계 연습 설정" aria-label="단계 연습 설정">⚙</summary>
         <div class="pop"><b>단계 연습 설정</b>
           <div class="stepcfg"><label for="trFrom">시작 속도 (%)</label><input type="number" id="trFrom" min="25" max="110" inputmode="numeric"><label for="trTo">목표 속도 (%)</label><input type="number" id="trTo" min="25" max="110" inputmode="numeric"><label for="trStep">한 단계 (%p)</label><input type="number" id="trStep" min="1" max="25" inputmode="numeric"><label for="trReps">단계당 반복 횟수</label><input type="number" id="trReps" min="1" max="16" inputmode="numeric"></div>
-          <p class="note" style="margin:0" id="trNote"></p></div></details></div></div>
+          <p class="note" style="margin:0" id="trNote"></p></div></details></div>
     <div id="secPanel" hidden><div class="secstrip" id="secStrip" role="group" aria-label="곡 구간 추정. 누르면 그 구간 반복"></div><p class="note" id="secNote">반복 구조 추정(A·B는 같은 소리끼리 묶은 이름, 절·후렴 판정 아님). 누르면 그 구간을 반복합니다.</p></div>
     <details class="help"><summary>도움말</summary><p>코드 띠를 길게 눌러 끌거나(터치), 끌어서(마우스) 구간을 정합니다. 띠 양 끝의 손잡이로 길이를 고치고, 빈 곳을 누르거나 「반복 해제」로 풉니다.</p></details>
+  </section>
+  <section class="sec wide vcrbox" id="vcrBox" hidden aria-labelledby="hVcr">
+    <h3 class="sh" id="hVcr">보컬 줄이기 · A/B 비교</h3>
+    <div class="row"><label class="small vcrstr">줄이는 정도 <input type="range" id="vcrStr" min="0" max="100" value="100" aria-label="보컬 줄이는 정도"> <span class="val" id="vcrStrVal">100%</span></label>
+      <label class="tgl"><input type="checkbox" id="vcrPerc" checked aria-label="타악 보호(켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄임)"><span>타악 보호</span></label>
+      <button class="btn sm primary" type="button" id="vcrGo">보컬 줄인 음원 만들기</button><button class="btn sm" type="button" id="vcrCancel" hidden>취소</button></div>
+    <progress id="vcrProg" max="100" value="0" aria-label="보컬 줄이기 진행" hidden></progress>
+    <p class="msg" id="vcrMsg" role="status"></p>
+    <div class="row"><span class="small" id="abLab">A/B 비교</span><div class="seg" id="abSel" role="group" aria-labelledby="abLab"><button type="button" aria-pressed="false" data-ab="orig">데모 음원</button><button type="button" aria-pressed="false" data-ab="vr" disabled aria-describedby="abHint">보컬 줄인 음원</button><button type="button" aria-pressed="false" data-ab="gen">합성 반주</button></div></div>
+    <p class="note" id="abHint">먼저 「보컬 줄인 음원 만들기」를 누르세요.</p>
+    <p class="note" id="abInfo" role="status"></p>
+    <details class="help"><summary>도움말</summary><p class="note" id="abNote">보컬 줄이기(보컬이 가운데에 있을 때만 효과): 신호만으로 가운데에 모인 소리를 줄입니다. 가운데에 있는 다른 소리(스네어·솔로 등)도 같이 줄고(타악 보호를 켜면 가운데 소리를 더 세게 줄이면서 순간적인 타악은 덜 줄입니다. 처리가 약 2배 걸림), 보컬의 잔향·더블링은 남습니다. 이 브라우저 안에서만 처리하며 만든 음원은 저장하지 않습니다. 청취 평가는 없습니다.</p></details>
   </section>
   <section class="sec wide" id="recOpt" aria-labelledby="hRec"><h3 class="sh" id="hRec">녹음해서 들어보기</h3>
     <div class="row"><label class="chk"><input type="checkbox" id="recOn"><span>녹음 켜기</span></label><label class="chk" title="스피커로 듣고 부를 때만 켜세요. 켜면 목소리가 깎이거나 반주가 섞일 수 있습니다"><input type="checkbox" id="recEc"><span>에코 제거 켜기</span></label></div>
@@ -807,8 +816,8 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 </div></div>
 </main>
 
-<section class="plans" id="plans" aria-label="요금 안내"><div class="in">
-  <div class="head"><span class="eyebrow">요금 (안)</span><h2>곡 하나부터, 매주 올리는 분까지</h2><p class="muted small">아직 가정값입니다. 베타 결제 결과로 조정합니다.</p></div>
+<section class="plans" id="plans" aria-label="요금 안내"><div class="in"><details class="plansd"><summary>요금(안) · 저작권 안내 · 베타 알림</summary>
+  <div class="head"><h2>곡 하나부터, 매주 올리는 분까지</h2><p class="muted small">아직 가정값입니다. 베타 결제 결과로 조정합니다.</p></div>
   <div class="grid g4">
     <div class="panel plan"><span class="eyebrow">무료</span><div class="price">0원</div><ul><li>30초 미리듣기</li><li>워터마크 전곡 1회</li><li>채보·코드 보기</li></ul></div>
     <div class="panel plan"><span class="eyebrow">곡당</span><div class="price">7,900원</div><ul><li>전곡 WAV + 4파트 스템</li><li>MIDI 다운로드</li><li>키·템포 변경</li></ul></div>
@@ -819,7 +828,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
   <div class="panel" style="margin-top:1rem"><h3>베타 알림 받기</h3><p class="muted small">자동화 버전이 열리면 알려 드립니다.</p>
     <form class="wait" id="wait"><input type="email" id="email" placeholder="이메일" required aria-label="이메일"><button class="btn primary" type="submit">알림 신청</button></form>
     <div class="msg" id="waitMsg" role="status"></div></div>
-</div></section>
+</details></div></section>
 
 <footer><div class="in">데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 원작 연습곡 1은 합성 반주입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다. 음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다. <a href="help.html">사용 설명서</a> · <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
 
