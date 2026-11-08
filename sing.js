@@ -112,7 +112,7 @@ const envNow=()=>{const n=typeof navigator!=='undefined'?navigator:{};let force=
 async function tracker(ctx,onFrame,opts){opts=opts||{};let stream=null,src=null,an=opts.analyser||null,own=false;
  if(!an){if(opts.stream)stream=opts.stream;else{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});own=true}
   try{src=ctx.createMediaStreamSource(stream);an=ctx.createAnalyser();an.fftSize=opts.low?lowWin(ctx.sampleRate):2048;src.connect(an)}catch(e){if(own)stream.getTracks().forEach(t=>t.stop());throw e}}
- const sr=ctx.sampleRate,low=!!opts.low,win=an.fftSize,track=[],info={path:'analyser',hopMs:20,text:'분석: 기본(20 ms)'};let on=true,iv=0,node=null,zero=null,wd=0;
+ const sr=ctx.sampleRate,low=!!opts.low,win=an.fftSize,track=[],info={path:'analyser',hopMs:20,text:'분석: 기본(20 ms)'};let on=true,iv=0,node=null,zero=null,wd=0,ctl=null,wlHop=0; /* ctl·wlHop 은 트래커마다 따로(검수 #14: 선언 없이 전역으로 새던 것) */
  const mkGuard=()=>{if(opts.octave===false)return null;const k=.02/(info.hopMs/1e3);return k>1.2?octaveGuard({n:Math.round(5*k),persist:Math.round(4*k),minHist:Math.round(3*k)}):octaveGuard()};
  let guard=mkGuard(); /* 옥타브 점프는 octaveGuard 로 화면·채점 기록에서 미리 거른다(4프레임=80 ms 지속 시 인정; 균일 프레임 경로는 같은 시간으로 환산) */
  const emit=fr=>{if(guard)guard(fr);track.push(fr);onFrame&&onFrame(fr)};
@@ -294,7 +294,7 @@ function contrastPair(st,sel='auto'){let a,b,dir=null,src='fixed';const f=CONTRA
  const s=n=>INTERVALS.find(x=>x[0]===n)[1];if(s(a)>s(b))[a,b]=[b,a];return {a,b,dir,src}}
 /* 한 세션(8문제)의 idx 번째 문제: 두 음정을 번갈아(짝수 번째 a, 홀수 번째 b). 통계 항목은 보통 음정 문제와 같은 iv:<이름>:<방향> */
 /* 세션(8문제) 안 정답 순서: a 4번 + b 4번을 세션 시드로 섞고, 같은 쪽이 4번 이어지지 않게 한다(교대 규칙을 못 맞추게, 검수 #11). 값 0=a, 1=b */
-function contrastOrder(sess=1,n=CONTRAST_N){const R=rng((sess>>>0)+977);for(let t=0;t<200;t++){const o=[];for(let i=0;i<n;i++)o.push(i<n/2?0:1);for(let i=n-1;i>0;i--){const j=Math.floor(R()*(i+1));[o[i],o[j]]=[o[j],o[i]]}let run=1,mx=1;for(let i=1;i<n;i++){run=o[i]===o[i-1]?run+1:1;if(run>mx)mx=run}if(mx<=3)return o}return Array.from({length:n},(_,i)=>(i>>1)%2)}
+function contrastOrder(sess=1,n=CONTRAST_N){const R=rng((sess>>>0)+977);for(let t=0;t<200;t++){const o=[];for(let i=0;i<n;i++)o.push(i<n/2?0:1);for(let i=n-1;i>0;i--){const j=Math.floor(R()*(i+1));[o[i],o[j]]=[o[j],o[i]]}let run=1,mx=1;for(let i=1;i<n;i++){run=o[i]===o[i-1]?run+1:1;if(run>mx)mx=run}if(mx<=3&&o.some((x,i)=>i&&x===o[i-1]))return o}return Array.from({length:n},(_,i)=>(i>>1)%2)} /* 완전 교대(a,b,a,b…)도 짐작 가능하므로 버린다(약 4% 세션, smoke 간헐 실패 원인) */
 function contrastQuiz({pair,idx=0,seed=1,dir='asc',lo=55,hi=72,sess=1}={}){const R=rng(seed);for(let i=0;i<4;i++)R();const [a,b]=pair||CONTRAST_FIXED[0],ans=contrastOrder(sess)[((idx%CONTRAST_N)+CONTRAST_N)%CONTRAST_N]?b:a,semi=INTERVALS.find(x=>x[0]===ans)[1],dr=dir==='desc'||dir==='har'?dir:'asc',base=lo+Math.floor(R()*(hi-lo-12));
  return {type:'interval',contrast:true,idx,answer:ans,choices:[a,b],notes:[base,base+semi],label:pcName(dr==='desc'?base+semi:base,0),dir:dr,item:'iv:'+ans+':'+dr}}
 /* 탭 템포: 탭 시각(초) 배열 → {bpm,n}. 마지막 탭 기준 pause(2 s) 넘게 끊긴 앞은 버리고, 최근 max(9)탭의 간격 중앙값에서 25% 넘게 벗어난 간격은 제외한 평균으로 BPM. 간격 2개 미만이면 null */

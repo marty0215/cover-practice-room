@@ -929,7 +929,7 @@ function prep(){PARTS=ORDER.filter(p=>song.parts[p]&&song.parts[p].length);for(c
  mel=PARTS.filter(p=>p!=='drums');lo=127;hi=0;for(const p of mel)for(const n of song.parts[p]){lo=Math.min(lo,n[2]);hi=Math.max(hi,n[2])}lo-=1;hi+=1}
 const tvLabel=()=>`${transpose>0?'+':''}${transpose} · ${tn(KEY)}`;
 let modeAuto=false;
-function loadSong(id){if(S.playing)stop();if(typeof sdStop==='function'&&typeof sd!=='undefined')sdStop();progLim=16;secLim=8;const prevS=song;song=SONGS[id];song.id=id;BARS=song.bars;TOTAL=BARS*4;prep();edBar=-1;renderBands();renderSecStrip();
+function loadSong(id){if(S.playing)stop();swMsg=''; /* 검수 #14: 다른 곡으로 가면 지난 곡의 셋잇단 안내를 지운다 */if(typeof sdStop==='function'&&typeof sd!=='undefined')sdStop();progLim=16;secLim=8;const prevS=song;song=SONGS[id];song.id=id;BARS=song.bars;TOTAL=BARS*4;prep();edBar=-1;renderBands();renderSecStrip();
  S.anchorB=0;S.a=0;S.b=TOTAL;S.loop=false;el('loopOn').checked=false;selBar=0;view.start=0;view.len=Math.min(viewPref,BARS);
  if(mute.score===undefined)mute.score=true;if(mute.vocal===undefined)mute.vocal=true;
  if(song.muteDef&&(!prevS||prevS.id!==id))Object.assign(mute,song.muteDef);else if(prevS&&prevS.muteDef&&!song.muteDef)mute.score=true; /* 곡별 기본 켬/끔: 채보 곡은 채보 음 끔, 연습곡은 멜로디 가이드 켬 */

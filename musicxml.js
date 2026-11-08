@@ -50,7 +50,7 @@ function build(o){const St=o.Staff||(typeof require!=='undefined'?require('./sta
  const ch=(o.chords||[]).slice(0,bars),spl=o.split||[],tA=v=>Array.isArray(v)?v:[],tM=tA(o.melody&&o.melody.trip!=null?o.melody.trip:o.trip),tB=tA(o.bass&&o.bass.trip),D=(tM.length||tB.length)?3:1;/* 격자는 파트마다(스윙 베이스·직선 멜로디가 서로 격자를 빌리지 않게). bass.trip 이 없으면 직선 */
  const harm=bi=>{const c=ch[bi];if(c==null)return [];const s=spl[bi];return s&&s.a&&s.b?(s.a===s.b?[[0,s.a]]:[[0,s.a],[8,s.b]]):[[0,c]]};
  const parts=[{id:'P1',name:o.melody?o.melody.name:'코드 악보',notes:o.melody?mono(o.melody.notes,false,tM):[],lead:true,trip:tM}];if(o.bass)parts.push({id:'P2',name:o.bass.name||'베이스',notes:mono(o.bass.notes,true,tB),lead:false,trip:tB});
- const kn=(o.keys||[]).map(n=>[n[0],n[1],n[2]+tr]).filter(n=>n&&isFinite(n[0]+n[1]+n[2])&&n[0]>=0&&n[1]>0&&n[2]>=0&&n[2]<=127);
+ const kn=(o.keys||[]).filter(n=>Array.isArray(n)).map(n=>[n[0],n[1],n[2]+tr]).filter(n=>isFinite(n[0]+n[1]+n[2])&&n[0]>=0&&n[1]>0&&n[2]>=0&&n[2]<=127);
  if(o.keys&&o.keys.length)parts.push({id:'P'+(parts.length+1),name:'건반',keys:kn,notes:[],lead:false,trip:[]});
  let x='<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n<score-partwise version="4.0">\n';
  x+=`<work><work-title>${esc(`${title} (${kname} ${minor?'단조':'장조'}${tr?`, 키 ${tr>0?'+':''}${tr}`:''})`)}</work-title></work>\n`;
