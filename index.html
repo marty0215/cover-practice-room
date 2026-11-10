@@ -520,6 +520,12 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 @media(max-width:700px){#hero:has(~ #onb:not([hidden])) .tk-cta{display:none}.tk-picks{gap:.3rem}.btn.pick{padding:.3rem .35rem;min-height:52px;--n:6px}.pick .pk-n{font-size:.68rem;letter-spacing:-.01em;white-space:normal;text-overflow:clip;overflow-wrap:normal;text-transform:none;font-stretch:100%}.pick .pk-n::before{content:none}.pick .pk-m{font-size:.66rem}}
 @media(max-width:370px){.tk-picks{grid-template-columns:1fr}.btn.pick{grid-auto-flow:column;justify-content:space-between;min-height:44px;padding:0 .8rem}.pick .pk-n{font-size:.8rem}}
 @media (prefers-reduced-motion:no-preference){.ticket{animation:tkIn .5s cubic-bezier(.2,.8,.2,1) both}@keyframes tkIn{from{opacity:0;transform:translateY(8px) rotate(-.6deg)}to{opacity:1;transform:none}}}
+/* UX 4차(2026-11-11): 안내는 연습 탭에서만, 좁은 화면 탭·버튼 44px, 320px 머리띠, 바닥 글 접기 */
+body:not([data-tab=practice]) #onb{display:none}
+@media(max-width:700px){.seg button{min-height:var(--hit)}.tabrow .tab{min-height:var(--hit)}.top .ibtn{min-width:var(--hit)}.onb-steps li>div .btn{min-height:var(--hit)}.onb-steps{gap:0}.seg button{min-width:var(--hit)}.sc{height:var(--hit)}.ms button{min-width:40px;min-height:var(--hit)}}
+@media(max-width:380px){.brand{white-space:nowrap;font-size:.9rem;gap:.35rem}.brand::before{width:18px;height:13px}.songmore{max-width:5.2rem;padding:0 .3rem}.top .ibtn{min-width:42px;padding:0 .3rem}.top .seg button{padding:0 .2rem;font-size:.74rem}.top .in{gap:.3rem}}
+.fdet>summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;width:max-content;max-width:100%;color:var(--accent);font-weight:500}
+.fdet p{margin:.2rem 0 .8rem}
 </style>
 </head>
 <body>
@@ -535,7 +541,7 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 </div></header>
 
 <section class="hero" id="hero" aria-label="소개"><div class="in"><div class="tkwrap"><div class="ticket">
-  <span class="tk-sm">시안 · 브라우저 안에서 채보까지 실제 동작</span>
+  <span class="tk-sm">브라우저 안에서 채보까지 · 파일은 서버로 가지 않음</span>
   <p class="wordmark" aria-hidden="true"><span>Cover</span><span>Practice Room</span></p>
   <h2 class="big">내 노래에 맞춘 연습 반주, 채보, 편곡 힌트</h2>
   <div class="tk-picks" id="tkPicks" role="group" aria-label="대표 샘플 바로 듣기"></div>
@@ -876,7 +882,7 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
     <div class="msg" id="waitMsg" role="status"></div></div>
 </details></div></section>
 
-<footer><div class="in">대표 샘플: Nova 드롭 127–130(R20 렌더), Summersong 드롭2 74–77(Q07B 렌더), End of Time 드롭 33–36(Q09 렌더). 모두 이 프로젝트에서 직접 설계한 신스로 만든 4마디 커버 반주이며, 원곡 녹음은 들어 있지 않습니다. 라우드니스는 −19.25 LUFS로 맞췄습니다. 코드 이름은 악보 음에서 추정했습니다. 데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 원작 연습곡 1은 합성 반주입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다. 음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다. <a href="help.html">사용 설명서</a> · <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
+<footer><div class="in"><details class="fdet"><summary>샘플 출처 · 측정 한계 · 라이선스</summary><p>대표 샘플: Nova 드롭 127–130(R20 렌더), Summersong 드롭2 74–77(Q07B 렌더), End of Time 드롭 33–36(Q09 렌더). 모두 이 프로젝트에서 직접 설계한 신스로 만든 4마디 커버 반주이며, 원곡 녹음은 들어 있지 않습니다. 라우드니스는 −19.25 LUFS로 맞췄습니다. 코드 이름은 악보 음에서 추정했습니다. 데모 음원: One Dream 후렴 17–20마디 S59 렌더(2026-10-27, 드럼·베이스·기타, 82 BPM, 라우드니스 −19.25 LUFS 맞춤). signal_only 검사만 통과했고 청취 평가는 아직입니다. 원작 연습곡 1은 합성 반주입니다. 채보 모델: Spotify Basic Pitch 1.0.1 (Apache-2.0), TensorFlow.js 3.21. 분석 결과는 신호 기반 추정이며 청취로 검증하지 않았습니다. 음색 샘플은 CC0·CC-BY 자료이며 출처·라이선스는 <a href="samples/CREDITS.md">samples/CREDITS.md</a>에 있습니다.</p></details><a href="help.html">사용 설명서</a> · <span class="swnote" id="swNote" role="status" hidden>오프라인 사용 준비됨</span></div></footer>
 
 <div class="tp" id="transport" role="region" aria-label="재생 컨트롤"><div class="tp-in">
   <div class="tp-r1">
