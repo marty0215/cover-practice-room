@@ -5,10 +5,12 @@
 const NS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],NF=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
 const KIND={'':['major',''],m:['minor','m'],'7':['dominant','7'],maj7:['major-seventh','maj7'],m7:['minor-seventh','m7'],sus4:['suspended-fourth','sus4'],sus2:['suspended-second','sus2'],dim:['diminished','dim'],m7b5:['half-diminished','m7b5'],dim7:['diminished-seventh','dim7'],m6:['minor-sixth','m6'],'9':['dominant-ninth','9'],'6':['major-sixth','6'],aug:['augmented','aug'],add9:['major','add9']};
 const TYPE={16:'whole',12:'half',8:'half',6:'quarter',4:'quarter',3:'eighth',2:'eighth',1:'16th'};
-const CRE=/^([A-G]#?)(maj7|m7b5|m7|m6|m|7|sus4|sus2|dim7|dim|aug|add9|9|6)?(?:\/([A-G]#?))?$/,mod=n=>((n%12)+12)%12;
+const CRE=/^([A-G][#b]?)(maj7|m7b5|m7|m6|m|7|sus4|sus2|dim7|dim|aug|add9|9|6)?(?:\/([A-G][#b]?))?$/,mod=n=>((n%12)+12)%12;
 /* XML 1.0 에서 못 쓰는 문자(제어문자·짝 없는 서로게이트)를 빼고 이스케이프 */
 const esc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
-function parseChord(c){const m=CRE.exec(String(c||''));if(!m)return null;const r=NS.indexOf(m[1]),b=m[3]?NS.indexOf(m[3]):null;return {root:r,q:m[2]||'',bass:b===r?null:b}}
+/* 플랫 철자(Bb·Eb/G)도 받아 내부 반음 번호(샤프 기준)로 바꾼다 */
+const PCL={C:0,D:2,E:4,F:5,G:7,A:9,B:11},pcOf=s=>mod(PCL[s[0]]+(s[1]==='#'?1:s[1]==='b'?-1:0));
+function parseChord(c){const m=CRE.exec(String(c||''));if(!m)return null;const r=pcOf(m[1]),b=m[3]?pcOf(m[3]):null;return {root:r,q:m[2]||'',bass:b===r?null:b}}
 const sp=(pc,flat)=>{const n=(flat?NF:NS)[mod(pc)];return {step:n[0],alter:n[1]==='#'?1:n[1]==='b'?-1:0,name:n}};
 /* 코드 문자열 → <harmony> (이조·조표 철자 반영). 읽을 수 없으면 빈 문자열 */
 /* 철자는 sing.js chordLabel 과 같은 규칙(조 안 근음은 조표대로, 조 밖은 ♭II·♭III·♯IV·♭VI·♭VII, 슬래시 베이스는 근음에서 센 음정 글자: C 장조 Bb, D/F#) */
