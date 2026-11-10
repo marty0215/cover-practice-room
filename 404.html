@@ -5,25 +5,75 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>페이지를 찾을 수 없습니다 · 커버 연습실</title>
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#0F1115">
+<meta name="theme-color" content="#EEE9DA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1C1610" media="(prefers-color-scheme: dark)">
+<script>try{var t=localStorage.getItem('pr-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,800&family=Noto+Sans+KR:wght@400;500;700&display=swap"></noscript>
 <style>
-:root{--bg:#F6F7F9;--surface:#FFFFFF;--border:#D5D9E2;--control-border:#767F91;--text:#1B1F29;--text-muted:#566074;--accent:#0B6BCB;--on-accent:#FFFFFF;--body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color-scheme:light}
-@media (prefers-color-scheme: dark){:root{--bg:#0F1115;--surface:#171A21;--border:#2C313D;--control-border:#77808F;--text:#E8EAF0;--text-muted:#9AA3B2;--accent:#5CB8FF;--on-accent:#06121F;color-scheme:dark}}
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:var(--body);line-height:1.6;padding:16px;box-sizing:border-box}
-main{max-width:420px;text-align:center}
-h1{font-size:1.4rem;margin:.3rem 0}
-p{color:var(--text-muted);margin:.4rem 0 1.2rem}
-.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 1.1rem;border-radius:8px;background:var(--accent);color:var(--on-accent);font-weight:700;text-decoration:none;border:1px solid var(--accent)}
-.btn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
-a.t{display:inline-block;margin-top:1rem;color:var(--accent)}
+/* 없는 주소(어느 경로에서든 열린다)라 이 파일만으로 완결: index.html 과 같은 티켓·종이 결 토큰을 그대로 담고, 링크는 절대 주소를 쓴다 */
+:root{
+  --grain-light:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .12 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"); --grain-dark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .86 0 0 0 0 .66 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"); --grain-url:var(--grain-light); --grain-blend:multiply;
+  --bg:#EEE9DA; --surface:#FAF7EE; --surface-2:#E5DFCB; --border:#D4CCB2; --control-border:#7A7257;
+  --text:#23280B; --text-muted:#585741; --accent:#465016; --on-accent:#F3F0E2; --loop:#8A3B12;
+  --accent-soft:rgba(70,80,22,.10); --loop-soft:rgba(138,59,18,.12);
+  --ticket:#465016; --ticket-back:#23280B; --ticket-ink:#E9E6D3; --grain:.07;
+  --ok:#176536; --warn:#854C06;
+  --display:"Archivo","Noto Sans KR",system-ui,sans-serif;
+  --body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --hit:36px; --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem; --s5:1.5rem; --s6:2rem; color-scheme:light }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
+  --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
+  --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
+  --ticket:#333A10; --ticket-back:#4A5518; --ticket-ink:#E9E6D3; --grain:.05; --grain-url:var(--grain-dark); --grain-blend:screen;
+  --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
+  --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
+  --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
+  --ticket:#333A10; --ticket-back:#4A5518; --ticket-ink:#E9E6D3; --grain:.05; --grain-url:var(--grain-dark); --grain-blend:screen;
+  --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);background-image:var(--grain-url);background-blend-mode:var(--grain-blend);color:var(--text);font-family:var(--body);line-height:1.6;padding:16px;word-break:keep-all;overflow-wrap:break-word}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{width:min(100%,440px)}
+.brand{display:flex;align-items:center;justify-content:center;gap:.5rem;margin:0 0 1.4rem;font-weight:700;font-size:1.05rem;letter-spacing:-.01em;color:var(--text);text-decoration:none}
+.brand::before{content:"";width:22px;height:16px;border-radius:3px;background:var(--accent);flex:none;-webkit-mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
+.tkwrap{position:relative;isolation:isolate}
+.tkwrap::before{content:"";position:absolute;inset:-6px 10px 8px -8px;background:var(--ticket-back);border-radius:6px;transform:rotate(-1.2deg);z-index:-1}
+.ticket{--n:14px;position:relative;display:grid;justify-items:center;text-align:center;gap:.6rem;padding:2rem 1.25rem 1.8rem;color:var(--ticket-ink);background:var(--ticket) repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.05) 79px 80px);
+ -webkit-mask:radial-gradient(var(--n) at 0 0,#0000 98%,#000) 0 0/51% 51% no-repeat,radial-gradient(var(--n) at 100% 0,#0000 98%,#000) 100% 0/51% 51% no-repeat,radial-gradient(var(--n) at 0 100%,#0000 98%,#000) 0 100%/51% 51% no-repeat,radial-gradient(var(--n) at 100% 100%,#0000 98%,#000) 100% 100%/51% 51% no-repeat;
+ mask:radial-gradient(var(--n) at 0 0,#0000 98%,#000) 0 0/51% 51% no-repeat,radial-gradient(var(--n) at 100% 0,#0000 98%,#000) 100% 0/51% 51% no-repeat,radial-gradient(var(--n) at 0 100%,#0000 98%,#000) 0 100%/51% 51% no-repeat,radial-gradient(var(--n) at 100% 100%,#0000 98%,#000) 100% 100%/51% 51% no-repeat}
+h1{margin:0;font-family:var(--display);font-weight:800;font-stretch:125%;line-height:1.2;font-size:clamp(1.3rem,5.4vw,1.8rem);letter-spacing:.01em;text-shadow:.05em .05em 0 #23280B;text-wrap:balance}
+p{margin:0 0 .6rem;color:var(--ticket-ink)}
+.cta{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:center;margin-top:.4rem}
+.btn{--n:9px;display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 1.5rem;font:inherit;font-weight:800;line-height:1.2;text-decoration:none;background:var(--ticket-ink);color:#23280B;border:0;border-radius:4px;
+ -webkit-mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
+.btn:hover{filter:brightness(1.06)}
+.btn:focus-visible{outline:2px solid #23280B;outline-offset:-5px} /* 마스크(티켓 홈)가 바깥 윤곽선을 자르므로 안쪽에 그린다 */
+a.t{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 1.1rem;color:var(--ticket-ink);border:1px solid var(--ticket-ink);border-radius:4px;text-decoration:none;font-weight:500}
+a.t:hover{background:rgba(255,255,255,.08)}
+a.t:focus-visible{outline:2px solid var(--ticket-ink);outline-offset:3px}
+@media(max-width:700px){:root{--hit:44px}.ticket{--n:10px;padding:1.4rem .9rem 1.3rem}.tkwrap::before{inset:-4px 6px 6px -5px}}
 </style>
 </head>
 <body>
 <main>
+<a class="brand" href="https://marty0215.github.io/cover-practice-room/">커버 연습실</a>
+<div class="tkwrap"><div class="ticket">
 <h1>페이지를 찾을 수 없습니다</h1>
 <p>주소가 바뀌었거나 없는 페이지입니다.</p>
-<a class="btn" href="https://marty0215.github.io/cover-practice-room/">커버 연습실로 가기</a><br>
+<div class="cta">
+<a class="btn" href="https://marty0215.github.io/cover-practice-room/">커버 연습실로 가기</a>
 <a class="t" href="https://marty0215.github.io/cover-practice-room/help.html">사용 설명서</a>
+</div>
+</div></div>
 </main>
 </body>
 </html>
