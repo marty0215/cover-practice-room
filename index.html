@@ -139,6 +139,7 @@ body[data-tab=sing] .dock .tabrow,body[data-tab=upload] .dock .tabrow{border-bot
 .vcrbox .msg:empty,.vcrbox .note:empty{display:none}
 
 .dock{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border)}
+.vcrbox,#rtPanel{scroll-margin-top:calc(var(--dockH,110px) + 8px)} /* 고정 코드 띠 밑으로 제목이 숨지 않게 */
 .strip{position:relative;display:flex;gap:4px;overflow-x:auto;padding:8px max(16px,calc((100% - 1148px)/2)) 6px;user-select:none;-webkit-user-select:none;touch-action:pan-x;scrollbar-width:thin}
 .sc{flex:1 0 66px;height:50px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;display:grid;align-content:center;justify-items:start;padding:0 .5rem;line-height:1.15;cursor:pointer;transition:opacity .15s}
 .sc .n{font-family:var(--mono);font-size:.68rem;color:var(--text-muted)}
@@ -506,6 +507,8 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 .btn.label{--n:9px;background:var(--ticket-ink);color:#23280B;border:0;border-radius:4px;min-height:46px;padding:0 1.7rem;font-weight:800;font-size:1rem;
  -webkit-mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(var(--n) at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(var(--n) at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
 .btn.label:hover{background:var(--ticket-ink);filter:brightness(1.06)}
+.btn.label:focus-visible{outline:2px solid #23280B;outline-offset:-5px} /* 마스크(티켓 홈)가 바깥 윤곽선을 자르므로 안쪽에 그린다 */
+.btn.label:focus-visible .pk-n{text-decoration:underline;text-underline-offset:3px}
 .btn.tk-ghost{background:transparent;color:var(--ticket-ink);border:1px solid var(--ticket-ink);min-height:46px}
 .btn.tk-ghost:hover{background:rgba(255,255,255,.08)}
 .ticket :focus-visible{outline:2px solid var(--ticket-ink);outline-offset:3px}
@@ -1366,7 +1369,7 @@ el('progMoreBtn').onclick=()=>{progLim=Math.min(BARS,progLim+PROG_STEP);renderPr
 el('prog').addEventListener('click',e=>{const c=e.target.closest('.cell');if(!c)return;if(song.id!=='user'){el('cedNote').textContent='코드 고치기는 내 곡을 올린 뒤에 쓸 수 있습니다. 데모와 연습곡은 코드가 고정돼 있습니다.';return}openCed(+c.dataset.i)});
 el('ced').addEventListener('change',e=>{const c=CH[edBar];if(e.target.id==='cedRoot')setChord(edBar,cedName(+e.target.value,c.q,c.bass));else if(e.target.id==='cedBass')setChord(edBar,cedName(c.root,c.q,+e.target.value))});
 el('ced').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='cedClose'){edBar=-1;renderCed();renderProg()}else if(b.id==='cedReset')setChord(edBar,song.auto[edBar]);else if(b.dataset.q!==undefined){const c=CH[edBar];setChord(edBar,cedName(c.root,b.dataset.q,c.bass))}});
-function syncUserUi(){const u=song.id==='user';el('styleRow').hidden=!u;el('expMp3').hidden=u||!song.audio;document.querySelectorAll('#styleSel button').forEach(b=>b.setAttribute('aria-pressed',u&&b.dataset.st===song.style))}
+function syncUserUi(){const u=song.id==='user';el('styleRow').hidden=!u;{const a=el('expMp3');a.hidden=u||!song.audio;if(!a.hidden){a.setAttribute('href',song.audio);a.setAttribute('download',song.audio.split('/').pop())}} /* 링크는 지금 곡의 음원(고정 주소면 다른 곡에서 One Dream 음원을 받게 된다) */document.querySelectorAll('#styleSel button').forEach(b=>b.setAttribute('aria-pressed',u&&b.dataset.st===song.style))}
 el('styleSel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||song.id!=='user'||b.dataset.st===song.style)return;song.style=b.dataset.st;U.style=song.style;regenBars(song,[...Array(BARS).keys()],song.style);syncUserUi();afterSongEdit();persist()});
 const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
 function renderRoles(){const nb=BARS,P=song.parts,cards=[];
@@ -1869,6 +1872,7 @@ el('tabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','
 /* 테마: 시스템 설정이 기본, 수동 선택은 localStorage 에 저장(실패해도 동작) */
 const themeNow=()=>document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
 function updThemeBtn(){const d=themeNow()==='dark';el('themeBtn').innerHTML=(d?'☀':'☾')+'<span class="tl"> '+(d?'밝게':'어둡게')+'</span>';el('themeBtn').setAttribute('aria-label',d?'밝은 테마로 바꾸기':'어두운 테마로 바꾸기')}
+{const mq=matchMedia('(prefers-color-scheme: dark)'),f=()=>{updThemeBtn();draw();if(window.singDraw)window.singDraw()};/* 시스템 테마가 바뀌면 캔버스도 새 색으로 다시 그린다 */try{mq.addEventListener('change',f)}catch(_){try{mq.addListener(f)}catch(__){}}}
 el('themeBtn').onclick=()=>{const t=themeNow()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('pr-theme',t)}catch(e){}updThemeBtn();draw();if(window.singDraw)window.singDraw()};
 
 /* 단축키 시트, 내보내기 메뉴, 하단 바 높이 */
@@ -1887,6 +1891,7 @@ function setTp(min,save){el('transport').classList.toggle('min',min);const b=el(
 el('tpToggle').onclick=()=>setTp(!el('transport').classList.contains('min'),true);
 if(window.ResizeObserver)new ResizeObserver(()=>document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px')).observe(el('transport'));
 document.documentElement.style.setProperty('--tpH',el('transport').offsetHeight+'px');
+{const dk=document.querySelector('.dock'),setD=()=>document.documentElement.style.setProperty('--dockH',dk.offsetHeight+'px');setD();if(window.ResizeObserver)new ResizeObserver(setD).observe(dk)}
 
 /* ---------- 시창·청음 탭 (sing.js). 마이크 소리는 음높이로만 계산하고 저장·전송하지 않는다. 신호 기반 판정 ---------- */
 Object.assign(sing,{lat:0,bars:4,genBars:4,src:'gen',rangeSong:null,range:[52,67],level:1,keyMode:'song',ex:[],track:[],t0:0,spb:.5,head:null,res:null,iv:0,liv:0,abort:null});
