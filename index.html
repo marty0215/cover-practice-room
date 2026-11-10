@@ -32,6 +32,7 @@
 <style>
 /* 연습 도구형 앱 화면: 상단 바 · 짧은 히어로 · 코드 띠(고정) · 탭 · 하단 고정 트랜스포트. 토큰은 :root(라이트) / 다크(시스템·수동). 파트 색은 모든 화면에서 같다 */
 :root{
+  --grain-light:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .12 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"); --grain-dark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .86 0 0 0 0 .66 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"); --grain-url:var(--grain-light); --grain-blend:multiply;
   --bg:#EEE9DA; --surface:#FAF7EE; --surface-2:#E5DFCB; --border:#D4CCB2; --control-border:#7A7257;
   --text:#23280B; --text-muted:#585741; --accent:#465016; --on-accent:#F3F0E2; --loop:#8A3B12;
   --accent-soft:rgba(70,80,22,.10); --loop-soft:rgba(138,59,18,.12);
@@ -46,14 +47,14 @@
   --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
   --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
   --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
-  --ticket:#465016; --ticket-back:#5A6624; --ticket-ink:#E9E6D3; --grain:.05;
+  --ticket:#333A10; --ticket-back:#4A5518; --ticket-ink:#E9E6D3; --grain:.05; --grain-url:var(--grain-dark); --grain-blend:screen;
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2; --vocal:#FF7AC2; --edit:#5FE0E8;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#1C1610; --surface:#261E16; --surface-2:#30261C; --border:#45392B; --control-border:#8E8268;
   --text:#ECE7D3; --text-muted:#B4AB91; --accent:#BCC873; --on-accent:#1C2008; --loop:#F0A85A;
   --accent-soft:rgba(188,200,115,.14); --loop-soft:rgba(240,168,90,.16);
-  --ticket:#465016; --ticket-back:#5A6624; --ticket-ink:#E9E6D3; --grain:.05;
+  --ticket:#333A10; --ticket-back:#4A5518; --ticket-ink:#E9E6D3; --grain:.05; --grain-url:var(--grain-dark); --grain-blend:screen;
   --bass:#5B8CFF; --drums:#FF8A4C; --keys:#B48CFF; --guitar:#4ED6A0; --score:#A7ADC2; --vocal:#FF7AC2; --edit:#5FE0E8;
   --ok:#4FC77F; --warn:#E0A24A; color-scheme:dark }
 @media(max-width:700px){:root{--hit:44px}.hero .tk-sm,.hero .tk-more{display:none}.hero .in{padding-block:.7rem .6rem}.hero .big{font-size:1.02rem}.top .in{padding-block:.35rem}}
@@ -116,7 +117,9 @@ input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-s
 /* 상단 바 */
 .top{border-bottom:1px solid var(--border)}
 .top .in{display:flex;align-items:center;gap:.5rem .8rem;flex-wrap:wrap;padding-block:.5rem}
-.brand{font-weight:700;font-size:1.05rem;margin-right:auto}
+.brand{font-weight:700;font-size:1.05rem}
+/* 머리띠 DOM 순서 = 보이는 순서(UX 5차): 제목 · (마이크/업데이트 칩) · 테마 · 도움말 · 곡 고르기 · 다른 곡 · 곡 정보. 모든 너비에서 같은 순서로 흐른다 */
+.top #songsel{margin-left:.6rem}.top .chips{margin-left:auto}
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
 .chip{font-size:.78rem;border:1px solid var(--border);border-radius:999px;padding:.05rem .65rem;color:var(--text-muted);background:var(--surface);white-space:nowrap}
 
@@ -346,10 +349,12 @@ footer{padding-block:1.6rem;color:var(--text-muted);font-size:.85rem;border-top:
  .tp-in{gap:0;padding-inline:max(10px,env(safe-area-inset-left,0px)) max(10px,env(safe-area-inset-right,0px))}
  .chips{display:none}.brand{font-size:.95rem}.top .in{gap:.4rem}.top .seg button{padding:0 .5rem;font-size:.8rem}.top .seg .lg{display:none}.top .seg .sm{display:inline}.top .ibtn{min-width:40px}
 /* 좁은 화면: 곡 선택을 둘째 줄 전체 폭으로, 테마·도움말은 제목 줄 오른쪽에 */
-@media (max-width:560px){.top .brand{flex:1}#songsel{order:5;width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}#songsel button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
+@media (max-width:560px){.top .brand{flex:1}.top #songsel{margin-left:0;flex:1 1 calc(100% - 5.9rem);min-width:0;display:flex}#songsel button{flex:1 1 auto;min-width:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .songmore{width:5.4rem;max-width:5.4rem;font-size:.8rem}}.tl{display:none}.lclr{min-width:34px;padding:0 .4rem;margin-left:.2rem}
  .tp-r2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:.4rem .7rem;padding-bottom:2px}
  /* 좁은 화면의 시창·청음 탭: 자체 재생 버튼이 있으므로 하단 둘째 줄(속도·키·반복)을 접어 화면을 덜 가린다(UX 점검 #3) */
  body[data-tab=sing] .tp-r2{display:none}
+ /* 올리기 탭: 파일 고르는 화면이라 속도·키·반복 둘째 줄은 접어 한 줄(약 56px)만 남긴다(UX 5차). 가린 칸은 body 아래 여백(--tpH)이 막는다 */
+ body[data-tab=upload] .tp-r2{display:none}
  .play{width:48px;height:48px}
  .now{min-width:3.2rem}
  .tp-r2{flex-wrap:nowrap;overflow:visible;gap:.3rem;justify-content:space-between}
@@ -485,7 +490,7 @@ details.flow[open]>summary{margin-bottom:var(--s2)}
 @media(max-width:700px){.onb-in{display:grid;grid-template-columns:1fr auto;gap:var(--s1) var(--s2);padding-block:var(--s2)}.onb-steps{grid-column:1/-1;flex-direction:column;gap:var(--s1)}.onb-steps li>div{flex-wrap:nowrap;justify-content:space-between;flex:1}.onb-steps li>div .btn{min-height:36px}.onb-steps li>div b{font-size:.88rem}.onb .btn.ghost{grid-row:1;grid-column:2}}
 
 /* ── 디자인: 빈티지 티켓·종이 결 (올리브·크림·갈색) ── */
-body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .25 0 0 0 0 .12 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");background-blend-mode:multiply}
+body{background-image:var(--grain-url);background-blend-mode:var(--grain-blend)}
 .brand{display:flex;align-items:center;gap:.5rem;letter-spacing:-.01em}
 .brand::before{content:"";width:22px;height:16px;border-radius:3px;background:var(--accent);-webkit-mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat;mask:radial-gradient(4px at 0 50%,#0000 96%,#000) left/51% 100% no-repeat,radial-gradient(4px at 100% 50%,#0000 96%,#000) right/51% 100% no-repeat}
 .hero .in{padding-block:1.4rem 1.2rem}
@@ -526,7 +531,7 @@ body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/20
 /* UX 4차(2026-11-11): 안내는 연습 탭에서만, 좁은 화면 탭·버튼 44px, 320px 머리띠, 바닥 글 접기 */
 body:not([data-tab=practice]) #onb{display:none}
 @media(max-width:700px){.seg button{min-height:var(--hit)}.tabrow .tab{min-height:var(--hit)}.top .ibtn{min-width:var(--hit)}.onb-steps li>div .btn{min-height:var(--hit)}.onb-steps{gap:0}.seg button{min-width:var(--hit)}.sc{height:var(--hit)}.ms button{min-width:40px;min-height:var(--hit)}}
-@media(max-width:380px){.brand{white-space:nowrap;font-size:.9rem;gap:.35rem}.brand::before{width:18px;height:13px}.songmore{max-width:5.2rem;padding:0 .3rem}.top .ibtn{min-width:42px;padding:0 .3rem}.top .seg button{padding:0 .2rem;font-size:.74rem}.top .in{gap:.3rem}}
+@media(max-width:380px){.brand{white-space:nowrap;font-size:.9rem;gap:.35rem}.brand::before{width:18px;height:13px}.top .songmore{width:4.8rem;max-width:4.8rem;padding:0 .2rem}.top #songsel{flex-basis:calc(100% - 5.3rem)}.top .ibtn{min-width:42px;padding:0 .3rem}.top .seg button{padding:0 .2rem;font-size:.74rem}.top .in{gap:.3rem}}
 .fdet>summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;width:max-content;max-width:100%;color:var(--accent);font-weight:500}
 .fdet p{margin:.2rem 0 .8rem}
 </style>
@@ -535,12 +540,12 @@ body:not([data-tab=practice]) #onb{display:none}
 
 <header class="top"><div class="in">
   <h1 class="brand">커버 연습실</h1>
-  <div class="seg" id="songsel" role="group" aria-label="샘플 곡 선택"></div><select class="songmore" id="songMore" aria-label="다른 곡 (원작 연습곡 등)"></select>
-  <div class="chips" aria-label="곡 정보"><span class="chip mono" id="chipKey"></span><span class="chip mono" id="chipBpm"></span><span class="chip mono" id="chipBars"></span></div>
   <span class="chip mono" id="micPath" hidden></span><button class="chip upd" id="micChip" type="button" hidden aria-label="마이크 사용 중. 누르면 모두 끕니다"><span aria-hidden="true">●</span> 마이크 사용 중 · 끄기</button>
   <button class="chip upd" id="updChip" type="button" hidden>업데이트 있음 · 새로 고침</button>
   <button class="ibtn" id="themeBtn" type="button" aria-label="테마 바꾸기" title="테마 바꾸기"></button>
   <button class="ibtn" id="helpBtn" type="button" aria-label="단축키 보기" title="단축키 (?)">?</button>
+  <div class="seg" id="songsel" role="group" aria-label="샘플 곡 선택"></div><select class="songmore" id="songMore" aria-label="다른 곡 (원작 연습곡 등)"></select>
+  <div class="chips" aria-label="곡 정보"><span class="chip mono" id="chipKey"></span><span class="chip mono" id="chipBpm"></span><span class="chip mono" id="chipBars"></span></div>
 </div></header>
 
 <section class="hero" id="hero" aria-label="소개"><div class="in"><div class="tkwrap"><div class="ticket">
@@ -557,7 +562,7 @@ body:not([data-tab=practice]) #onb{display:none}
 </div></div></div></section>
 
 <section class="onb" id="onb" aria-labelledby="onbT" hidden><div class="in"><div class="onb-in"><h2 id="onbT">처음 오셨나요?</h2>
-  <ol class="onb-steps"><li><span class="num">1</span><div><b>데모 듣기</b><button class="btn primary sm" type="button" id="onbPlay">▶ 데모 재생</button></div></li>
+  <ol class="onb-steps"><li><span class="num">1</span><div><b>데모 듣기</b><button class="btn primary sm" type="button" id="onbPlay">곡 고르기 ▲</button></div></li>
   <li><span class="num">2</span><div><b>파트 끄기</b><button class="btn sm" type="button" id="onbMute">M 눌러 보기</button></div></li>
   <li><span class="num">3</span><div><b>내 곡 올리기</b><a class="btn sm" href="#upload">올리기 열기</a></div></li>
   <li><span class="num">4</span><div><b>귀·목소리 연습</b><a class="btn sm" href="#sing">시창·청음 열기</a></div></li></ol>
@@ -2620,7 +2625,8 @@ for(const id of FEAT){const sg=SONGS[id],b=document.createElement('button');b.ty
 /* 처음 안내: 첫 방문에만(localStorage 실패 시에는 매번 보이되 닫을 수 있음) */
 (function(){const o=el('onb');let seen=false;try{seen=localStorage.getItem('pr-onb')==='1';if(!seen)localStorage.setItem('pr-onb','1')}catch(e){}
  if(seen)return;o.hidden=false;el('onbClose').onclick=()=>{o.hidden=true};
- el('onbPlay').onclick=()=>{showTab('practice');if(location.hash!=='#practice'){tabClick=true;location.hash='practice'}if(!S.playing)play()};
+ /* 곡 고르기 입구는 머리띠(항상 있음)와 소개 티켓 두 곳만 둔다. 안내 1단계는 자체 재생 버튼 대신 그쪽으로 데려간다(UX 5차) */
+ el('onbPlay').onclick=()=>{/* 안내는 연습 탭에서만 보이므로 탭을 바꾸지 않는다(탭 전환은 소개 티켓을 접어 버린다) */const vis=q=>[...document.querySelectorAll(q)].find(b=>b.offsetParent),t=vis('#tkPicks .pick')||vis('#songsel button');if(t){t.scrollIntoView({block:'center'});t.focus()}};
  el('onbMute').onclick=()=>{showTab('practice');if(mode==='real'&&!song.stems&&!el('modesel').querySelector('[data-m=synth]').disabled)el('modesel').querySelector('[data-m=synth]').click(); /* 파트 끄기는 합성 반주에서만 된다 */const b=document.querySelector('#stems .mute');if(b){b.scrollIntoView({block:'center'});b.focus()}}})();
 el('fuOn').addEventListener('change',()=>{if(el('fuOn').checked)el('fuPanel').open=true});
 if(matchMedia('(min-width:760px)').matches)el('flowHelp').open=true;
