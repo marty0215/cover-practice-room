@@ -336,10 +336,10 @@ function voiceTriad(rootPc,q,prev){let best=null;const pcs=QIV[q].map(i=>(rootPc
  for(let inv=0;inv<3;inv++){const rot=pcs.slice(inv).concat(pcs.slice(0,inv));let n=55;while(n%12!==rot[0])n++;const notes=[n];for(let k=1;k<3;k++){let m=notes[k-1]+1;while(m%12!==rot[k])m++;notes.push(m)}
   const cost=prev?notes.reduce((a,x,i)=>a+Math.abs(x-prev[i]),0):Math.abs(notes.reduce((a,x)=>a+x,0)/3-64);if(!best||cost<best.cost)best={cost,notes}}
  let b=36;while(b%12!==rootPc)b++;return {notes:best.notes,bass:b}}
-/* 코드 진행 문제. level 1: songChords([{root,minor}] 마디별, songKey 기준)에서 모두 다이아토닉인 4마디 창을 무작위로 고름(없으면 무작위로 대체).
+/* 코드 진행 문제. level 1: songChords([{root,minor,bar?}] 코드별, songKey 기준)에서 모두 다이아토닉인 4코드 창을 무작위로 고름(없으면 무작위로 대체). 반마디로 나뉜 마디는 앞·뒤 코드를 각각 한 항목으로 넘기면 된다(bar=마디 번호, 0부터). 결과 bars=[첫 코드의 마디, 끝 코드의 마디](bar 가 있을 때만), from=songChords 안의 창 시작 인덱스.
    level 2: I 로 시작하는 무작위 다이아토닉 4코드(vii° 는 가끔). key 는 연주 키(0–11). degs 는 장음계 도수 0–6 */
 function makeProgression({key=0,level=1,seed=1,songChords=null,songKey=0,degs:fixed=null}={}){const R=rng(seed);let degs=null,source='random';
- const build=from=>{let prev=null;const chords=degs.map(d=>{const rootPc=(key+MAJ[d])%12,v=voiceTriad(rootPc,DEG_Q[d],prev);prev=v.notes;return {deg:d,label:DEG_L[d],root:rootPc,quality:DEG_Q[d],notes:v.notes,bass:v.bass}});return {degs,source,from,chords}};
+ const build=from=>{let prev=null;const chords=degs.map(d=>{const rootPc=(key+MAJ[d])%12,v=voiceTriad(rootPc,DEG_Q[d],prev);prev=v.notes;return {deg:d,label:DEG_L[d],root:rootPc,quality:DEG_Q[d],notes:v.notes,bass:v.bass}});const sc=from>=0&&songChords?songChords:null,bars=sc&&sc[from]&&sc[from+3]&&sc[from].bar!=null&&sc[from+3].bar!=null?[sc[from].bar,sc[from+3].bar]:null;return {degs,source,from,chords,bars}};
  if(fixed&&fixed.length===4){degs=fixed.slice();return build(-1)}
  if(level<2&&songChords&&songChords.length>=4){const dg=songChords.map(c=>{const i=MAJ.indexOf(((c.root-songKey)%12+12)%12);return i>=0&&(DEG_Q[i]==='min')===!!c.minor&&DEG_Q[i]!=='dim'?i:-1});
   const ws=[];for(let i=0;i+4<=dg.length;i++)if(dg.slice(i,i+4).every(d=>d>=0))ws.push(i);
