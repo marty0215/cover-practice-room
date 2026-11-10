@@ -19,6 +19,10 @@
 | 베이스 | Finger Bass YR (FreePats) | Andrea Biasior (Yamaha RBX 베이스), FreePats 정리 Roberto Gordo Saez |
 | 기타 | Emily the Strange 일렉트릭 기타 DI | D. Smolken, Karoryfer Lecolds (CC0, 로열티 없음) |
 
+## 대표 샘플 3곡의 렌더 음원
+
+`audio/nova.mp3`, `audio/summersong.mp3`, `audio/eot.mp3`와 `audio/stems/*.mp3`(파트별로 나눈 소리)는 이 프로젝트에서 직접 설계한 신스로 렌더한 4마디 커버 반주입니다. 원곡 녹음은 들어 있지 않으며, 위 표의 자료는 이 음원이 아니라 `samples/` 폴더의 음색 조각(앱의 합성 반주 「샘플 음색」)에만 쓰였습니다.
+
 ## 만든 방법
 
 `experiments/experiment_j/web_practice_room/samplebuild/build_samples.py` 로 만듭니다. 쓰는 파일만 골라 처리하며 원본 폴더는 수정하지 않습니다.
