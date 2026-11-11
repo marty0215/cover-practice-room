@@ -53,7 +53,7 @@ function build(o){const St=o.Staff||(typeof require!=='undefined'?require('./sta
  const harm=bi=>{const c=ch[bi];if(c==null)return [];const s=spl[bi];return s&&s.a&&s.b?(s.a===s.b?[[0,s.a]]:[[0,s.a],[8,s.b]]):[[0,c]]};
  const parts=[{id:'P1',name:o.melody?o.melody.name:'코드 악보',notes:o.melody?mono(o.melody.notes,false,tM):[],lead:true,trip:tM}];if(o.bass)parts.push({id:'P2',name:o.bass.name||'베이스',notes:mono(o.bass.notes,true,tB),lead:false,trip:tB});
  const kn=(o.keys||[]).filter(n=>Array.isArray(n)).map(n=>[n[0],n[1],n[2]+tr]).filter(n=>isFinite(n[0]+n[1]+n[2])&&n[0]>=0&&n[1]>0&&n[2]>=0&&n[2]<=127);
- if(o.keys&&o.keys.length)parts.push({id:'P'+(parts.length+1),name:'건반',keys:kn,notes:[],lead:false,trip:[]});
+ if(o.keys&&o.keys.length)parts.push({id:'P'+(parts.length+1),name:o.keysName||'건반',keys:kn,notes:[],lead:false,trip:[]});
  let x='<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n<score-partwise version="4.0">\n';
  x+=`<work><work-title>${esc(`${title} (${kname} ${minor?'단조':'장조'}${tr?`, 키 ${tr>0?'+':''}${tr}`:''})`)}</work-title></work>\n`;
  x+=`<identification><encoding><software>커버 연습실</software><encoding-date>${esc(o.date||new Date().toISOString().slice(0,10))}</encoding-date></encoding><miscellaneous><miscellaneous-field name="note">${esc('신호 기반 추정. 청취 검증 없음. 가사 없음.')}</miscellaneous-field></miscellaneous></identification>\n`;

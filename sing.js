@@ -475,12 +475,12 @@ function makeSession(block,st,{seed=1,key=0,range=[52,67]}={}){const R=rng(seed)
   answer(q,ok,items){log.push({idx:q.idx,kind:q.kind,ok:!!ok,retry:!!q.retry,items:items||q.items||(q.item?[q.item]:[])});
    if(!ok&&(q.tries||0)<2){const gap=2+Math.floor(R()*3);pend.push({due:q.idx+gap+1,q:{...q,tries:(q.tries||0)+1}})}}}}
 /* 한글 받침 판별 조사 */
-const jong=w=>{const t=String(w),l=t.slice(-1),c=t.charCodeAt(t.length-1)-44032;if(/[#♯b♭]/.test(l))return 1;/* 샵·플랫으로 읽으면 받침 있음 */if(/[0-9]/.test(l))return '178'.includes(l)?2:'036'.includes(l)?1:0;/* 일·칠·팔 ㄹ, 영·삼·육 받침 */return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
+const jong=w=>{const t=String(w).replace(/\)+$/,''),l=t.slice(-1),c=t.charCodeAt(t.length-1)-44032;if(/[#♯b♭]/.test(l))return 1;/* 샵·플랫으로 읽으면 받침 있음 */if(/[0-9]/.test(l))return '178'.includes(l)?2:'036'.includes(l)?1:0;/* 일·칠·팔 ㄹ, 영·삼·육 받침 */return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
 const eul=w=>w+(jong(w)?'을':'를'),ro=w=>w+(jong(w)===1?'으로':'로');
 const PM_SAME='동음',PM_HAR='화음',HK_LAB={'3up':'3도 위','3down':'3도 아래','5':'5도 위'},pmLab=(iv,d)=>iv===PM_HAR?`화음 부르기 ${HK_LAB[d]||d}`:d==='same'||iv===PM_SAME?'같은 음 내기':`${iv} ${d==='desc'?'아래로':'위로'} 부르기`;
 const ivLab=(n,d)=>d==='har'?n+' 동시 화음':n+' '+DIR_KO[d],stepKo=s=>+s===0?'같은 음 반복':(s>0?'위로 ':'아래로 ')+Math.abs(s)+'반음 진행';
 /* 항목 id 를 쉬운 한국어 문장으로. 혼동 쌍(conf)에서 가장 자주 고른 오답이 2번 이상이고 오답의 40% 이상이면 "자주 ~로 고릅니다" */
-function explain(id,conf,rate){const p=String(id).split(':'),c=conf&&conf[id]||{},ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),tot=ks.reduce((a,k)=>a+c[k],0),top=ks[0],often=top!=null&&c[top]>=2&&c[top]/tot>=.4,pct=rate!=null?` (오답률 ${Math.round(rate*100)}%)`:'';
+function explain(id,conf,rate){const p=String(id).split(':'),c=p[0]==='mp'?mpConf(conf&&conf[id]):conf&&conf[id]||{},ks=Object.keys(c).sort((a,b)=>c[b]-c[a]),tot=ks.reduce((a,k)=>a+c[k],0),top=ks[0],often=top!=null&&c[top]>=2&&c[top]/tot>=.4,pct=rate!=null?` (오답률 ${Math.round(rate*100)}%)`:'';
  if(p[0]==='iv'){const l=ivLab(p[1],p[2]);return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l}의 정답률이 낮습니다${pct}.`}
  if(p[0]==='tr'){const l=p[1]+' 3화음';return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l} 정답률이 낮습니다${pct}.`}
  if(p[0]==='sv'){const l=p[1]+' 7화음';return often?`${eul(l)} 자주 ${ro(top)} 고릅니다.`:`${l} 정답률이 낮습니다${pct}.`}
@@ -576,12 +576,37 @@ function dictStemSpan(win,bpm,{dur=Infinity,rate=1}={}){const {t0,t1:e}=dictSpan
 /* ---------- 청음 「빠진 파트 찾기」(mp:): 대표 샘플(스템 4개: score·keys·bass·drums)의 1–2마디 창을 전체 소리로 들은 뒤, 같은 창에서 한 파트(3난이도는 두 파트)를 뺀 소리를 듣고 빠진 파트를 고른다.
    난이도 1: 2마디 창, 멜로디·베이스·드럼 중 하나(보기 3개, 코드 스탭은 늘 들어 있음) / 2: 1마디 창, 4파트 중 하나(보기 4개) / 3: 1마디 창, 두 파트(보기 4개, 짝 이름). 통계 id mp:<파트> · mp:<파트>-<파트>(파트 순서 score,keys,bass,drums).
    빠지는 파트는 창 안에서 실제로 소리가 있는 파트(악보 음 기준, 앱은 스템 RMS 로 한 번 더 확인)만, 남는 파트도 2개 이상 소리가 있어야 한다. 순수 함수 ---------- */
-const MP_PARTS=['score','keys','bass','drums'],MP_L1=['score','bass','drums'],MP_GEN={score:'멜로디',keys:'코드 스탭',bass:'베이스',drums:'드럼·킥'};
-const MP_LAB={nova:{score:'리드',keys:'스탭',bass:'베이스',drums:'킥'},summersong:{score:'리드',keys:'스탭',bass:'베이스',drums:'킥'},eot:{score:'플럭',keys:'스탭',bass:'베이스',drums:'드럼'}};
+/* ---------- 파트 이름표 partLabel(곡, 파트, 형식) — 화면의 파트 이름은 전부 여기서 나온다 (용어 점검 2차) ----------
+   같은 파트를 화면마다 달리 부르지 않게 곡별 이름을 이 표 하나로 정한다(오디오 용어표 audioName 과 같은 방식). id·data-*·저장 키(mp:<파트>)·파일 이름은 그대로고 화면 글자만 바뀐다.
+   형식 short = 믹서 줄·보기·칩·aria 처럼 짧은 이름, long = short + 설명 한 줄(도움말·카드 제목·범례). long 은 항상 short 로 시작한다.
+   곡          score(멜로디)    keys(코드 반주)  bass    drums
+   Nova        리드 멜로디     코드(스탭)       베이스  킥
+   Summersong  리드 멜로디     코드(스탭)       베이스  킥
+   End of Time 플럭 멜로디     코드(스탭)       베이스  드럼(킥·클랩·햇)
+   그 밖의 곡(연습곡·원드림·올린 곡): 예전 이름 그대로 — score 는 곡의 melName(없으면 「채보 음」), keys 건반, drums 드럼, vocal 보컬 멜로디, guitar 기타
+   곡을 모를 때(sg 없음: 여러 곡을 합친 통계 문장): 멜로디 · 코드(스탭) · 베이스 · 드럼·킥 */
+const PL_DESC={lead:'곡의 주 선율을 치는 신스',pluck:'박 머리 윗성부(멜로디 가이드 음 포함)',keys:'화음을 짧게 끊어 치는 반주',bass:'낮은 받침음',kick:'박마다 치는 큰북 소리',drums:'박자를 만드는 소리'};
+const PL_SAMPLE={
+ lead:{score:'리드 멜로디',keys:'코드(스탭)',bass:'베이스',drums:'킥',_d:{score:PL_DESC.lead,keys:PL_DESC.keys,bass:PL_DESC.bass,drums:PL_DESC.kick}},
+ pluck:{score:'플럭 멜로디',keys:'코드(스탭)',bass:'베이스',drums:'드럼(킥·클랩·햇)',_d:{score:PL_DESC.pluck,keys:PL_DESC.keys,bass:PL_DESC.bass,drums:PL_DESC.drums}}};
+const PL_OF={nova:'lead',summersong:'lead',eot:'pluck'};
+const PL_DEF={vocal:['보컬 멜로디','보컬 멜로디 (추정)'],score:['채보 음','채보 음 (원곡에서 들린 음)'],bass:['베이스','베이스'],keys:['건반','건반'],drums:['드럼','드럼'],guitar:['기타','기타']};
+const PL_GEN={vocal:'보컬 멜로디',score:'멜로디',keys:'코드(스탭)',bass:'베이스',drums:'드럼·킥',guitar:'기타'};
+function partLabel(sg,p,form){const fam=sg&&PL_OF[sg.id],t=fam&&PL_SAMPLE[fam];
+ if(t&&t[p])return form==='long'?t[p]+' — '+t._d[p]:t[p];
+ if(!sg)return PL_GEN[p]||String(p);
+ if(p==='score'&&typeof sg.melName==='string'&&sg.melName)return sg.melName;
+ const d=PL_DEF[p];return d?d[form==='long'?1:0]:String(p)}
+const partSample=sg=>!!(sg&&PL_OF[sg.id]);
+const MP_PARTS=['score','keys','bass','drums'],MP_L1=['score','bass','drums'],MP_GEN=Object.fromEntries(MP_PARTS.map(p=>[p,partLabel(null,p)]));
+const MP_LAB=Object.fromEntries(Object.keys(PL_OF).map(id=>[id,Object.fromEntries(MP_PARTS.map(p=>[p,partLabel({id},p)]))]));
+/* 예전 버전이 저장한 혼동 기록(고른 보기의 글자)을 새 이름으로 읽는다. 저장값은 건드리지 않고 explain 에서만 바꿔 읽는다 */
+const MP_OLD={'리드':'리드 멜로디','플럭':'플럭 멜로디','스탭':'코드(스탭)','코드 스탭':'코드(스탭)','드럼':'드럼(킥·클랩·햇)'};
+const mpConf=c=>{const o={};for(const k of Object.keys(c||{})){const n=k.split(' + ').map(t=>MP_OLD[t]||t).join(' + ');o[n]=(o[n]||0)+c[k]}return o};
 const MP_PAIRS=[];for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)MP_PAIRS.push(MP_PARTS[i]+'-'+MP_PARTS[j]);
 const MP_ITEMS=MP_PARTS.concat(MP_PAIRS).map(x=>'mp:'+x);
 /* 곡별 파트 이름 {score,keys,bass,drums}. 모르는 곡은 melName(첫 낱말)·일반 이름 */
-function mpLabels(sg){const t=sg&&MP_LAB[sg.id];if(t)return {...t};const mn=sg&&typeof sg.melName==='string'&&sg.melName?sg.melName.split(/\s+/)[0]:'';return {score:mn||'멜로디',keys:'코드',bass:'베이스',drums:'드럼'}}
+function mpLabels(sg){if(partSample(sg))return Object.fromEntries(MP_PARTS.map(p=>[p,partLabel(sg,p)]));const mn=sg&&typeof sg.melName==='string'&&sg.melName?sg.melName.split(/\s+/)[0]:'';return {score:mn||'멜로디',keys:'코드',bass:'베이스',drums:'드럼'}}
 const mpName=(items,lab)=>items.map(p=>lab[p]).join(' + ');
 /* 창 [a,b) 마디 안에서 이 파트의 음이 시작하거나(킥처럼 짧은 음) 0.5박 이상 걸쳐 있는가(악보 층 기준) */
 function mpHas(sg,p,a,b){const ns=sg&&sg.parts&&sg.parts[p];if(!Array.isArray(ns))return false;const x=a*4,y=b*4;return ns.some(n=>(n[0]>=x-1e-9&&n[0]<y-1e-9)||Math.min(n[0]+(n[1]>0?n[1]:0),y)-Math.max(n[0],x)>=.5)}
@@ -843,14 +868,14 @@ function lessonPlan(sg,env={}){const bars=sg&&sg.bars|0,id=sg&&sg.id,lab=typeof 
  const quizOk=!!missingQuiz({level:1,seed:1,songs:[{...sg,id}]});
  const steps=[
   {id:'listen',title:LESSON_TITLE.listen,text:`먼저 전체 소리를 처음부터 끝까지 들어 보세요. ${bars}마디가 한 바퀴입니다.`,go:'전체 듣기',solo:null,loop:null,skip:null},
-  {id:'bass',title:LESSON_TITLE.bass,text:'베이스만 솔로로 들으며, 마디마다 코드의 근음(코드 이름의 첫 글자)을 따라 불러 보세요.',go:'베이스만 듣기',solo:'bass',loop:[1,bars],skip:!hasBass?'이 곡에는 베이스 파트가 없습니다.':why(env.soloWhy),roots},
+  {id:'bass',title:LESSON_TITLE.bass,text:`${partLabel(sg,'bass')}만 솔로로 들으며, 마디마다 코드의 근음(코드 이름의 첫 글자)을 따라 불러 보세요.`,go:`${partLabel(sg,'bass')}만 듣기`,solo:'bass',loop:[1,bars],skip:!hasBass?'이 곡에는 베이스 파트가 없습니다.':why(env.soloWhy),roots},
   {id:'chords',title:LESSON_TITLE.chords,text:sb>=0?`코드 띠에서 진행을 읽어 보세요: ${prog}. ${sb+1}마디는 한 마디 안에서 코드가 둘로 나뉩니다(${lab(sb)}).`:`코드 띠에서 진행을 읽어 보세요: ${prog}. 앞 두 마디를 반복해 들으며 코드가 바뀌는 곳을 찾아 보세요.`,go:`${cl[0]}–${cl[1]}마디 반복해 듣기`,solo:null,loop:cl,split:sb,skip:null},
   {id:'quiz',title:LESSON_TITLE.quiz,text:'이 샘플에서 한 파트가 빠진 소리를 듣고, 어떤 파트가 빠졌는지 1문제를 골라 보세요.',go:'문제 풀러 가기',solo:null,loop:null,quiz:{only:id,level:1},skip:!quizOk?'이 곡에서 낼 수 있는 문제가 없습니다.':why(env.quizWhy)},
-  {id:'dict',title:LESSON_TITLE.dict,text:dp?`${dp.layer==='bass'?'베이스':'멜로디(채보 음)'} ${dp.size}마디를 ${dp.part?'「이 파트만」으로':'들리는 대로'} 듣고, 나머지 음을 건반으로 입력해 보세요.${dp.layer!=='bass'?' 이 곡의 베이스는 음이 너무 적어 받아쓰기 구간이 되지 않아 멜로디로 대신합니다.':dp.size>1?' 이 곡의 베이스는 1마디에 음이 적어 2마디 구간으로 합니다.':''}`:'받아쓸 구간이 없습니다.',go:'받아쓰기 열기',solo:null,loop:null,dict:dp,skip:dp?null:'이 곡에는 받아쓸 구간이 없습니다.',note:dp&&!dp.part?'파트 음원을 쓸 수 없어 다른 소리로 들려 드립니다.':''}];
+  {id:'dict',title:LESSON_TITLE.dict,text:dp?`${partLabel(sg,dp.layer)} ${dp.size}마디를 ${dp.part?'「이 파트만」으로':'들리는 대로'} 듣고, 나머지 음을 건반으로 입력해 보세요.${dp.layer!=='bass'?` 이 곡의 베이스는 음이 너무 적어 받아쓰기 구간이 되지 않아 ${ro(partLabel(sg,'score'))} 대신합니다.`:dp.size>1?' 이 곡의 베이스는 1마디에 음이 적어 2마디 구간으로 합니다.':''}`:'받아쓸 구간이 없습니다.',go:'받아쓰기 열기',solo:null,loop:null,dict:dp,skip:dp?null:'이 곡에는 받아쓸 구간이 없습니다.',note:dp&&!dp.part?'파트 음원을 쓸 수 없어 다른 소리로 들려 드립니다.':''}];
  if(steps[4].note===''&&dp&&dp.part&&env.partWhy)steps[4].note=String(env.partWhy);
  return {id,bars,steps,roots,splitBar:sb}}
 /* 저장된 진행(localStorage) 정리: {step:0..n-1, done:[고유 정수], finished}. 이상한 값은 처음부터 */
 function lessonNorm(raw,n){n=n|0||5;const r=raw&&typeof raw==='object'?raw:{},st=Number.isInteger(r.step)?Math.max(0,Math.min(n-1,r.step)):0,done=[...new Set((Array.isArray(r.done)?r.done:[]).filter(x=>Number.isInteger(x)&&x>=0&&x<n))].sort((a,b)=>a-b);return {step:st,done,finished:r.finished===true&&done.length===n}}
 function lessonProgLabel(st,n){n=n|0||5;if(st.finished)return '완료';return st.done.length||st.step>0?`${Math.min(n,st.step+1)}/${n}단계에서 이어서`:'시작'}
-const api={LESSON_IDS,LESSON_TITLE,lessonRoot,lessonSplitBar,lessonDictPlan,lessonPlan,lessonNorm,lessonProgLabel,MP_PARTS,MP_L1,MP_GEN,MP_LAB,MP_PAIRS,MP_ITEMS,mpLabels,mpHas,mpParts,missingQuiz,LAD_DIRS,LAD_DIR_KO,ladDir,IV_FEEL,ivFeel,loadCtl,LOAD,jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,dictStemFor,dictStemSpan,DICT_STEM,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
+const api={LESSON_IDS,LESSON_TITLE,lessonRoot,lessonSplitBar,lessonDictPlan,lessonPlan,lessonNorm,lessonProgLabel,partLabel,partSample,MP_OLD,MP_PARTS,MP_L1,MP_GEN,MP_LAB,MP_PAIRS,MP_ITEMS,mpLabels,mpHas,mpParts,missingQuiz,LAD_DIRS,LAD_DIR_KO,ladDir,IV_FEEL,ivFeel,loadCtl,LOAD,jong,hopFor,frameCentre,workletAllowed,iosVersion,frameScale,PRIMERS,PRIMER_KO,PRIMER_DEFAULT,PRIMER_CH,PRIMER_SC,PRIMER_GAP,PRIMER_WIN,normPrimer,primerPlan,primerNew,primerClean,primerRec,primerSuggest,MIX_VOICES,MIX_KO,MIX_LO,MIX_HI,MIX_TYPES,octaveShifts,mixPlan,qPitches,LAD_TYPES,LAD_ORDER,LAD_N0,ladNew,ladClean,ladSet,ladOn,ladItems,ladRec,ladStatus,MODES,MODE_ALL,MODE_L1,MD2_ITEMS,modeQuiz,modeSpell,modeAlts,modeAltText,CONTRAST_FIXED,CONTRAST_N,confusedPair,contrastPair,contrastQuiz,contrastOrder,dictDiag,dictHints,readingQuiz,rdHint,rdName,RD_ITEMS,cadenceQuiz,funcQuiz,inversionQuiz,CD_T,FN_KO,INV_KO,FN_POOL,KEYN,pcName,bassName,chordLabel,romanOf,scaleNames,noteNmK,dayKey,shiftKey,newLog,pruneLog,addAnswer,streak,week,BK_KEYS,buildBackup,parseBackup,mergeBackup,backupSummary,rangeFromTake,voicedMask,octaveGuard,suppressOctave,TOL_LEVELS,TOL_DEFAULT,normTol,tolTier,takeDrift,latencyStats,latencyAdvice,rangeResult,rangeLabel,voiceHint,rangeWithMargin,noteNm,yin,tracker,LOW,lowWin,LOW_FLOOR,lowModeAdvice,BEG_BPM,REF_TONIC,REF_TRIAD,refPlan,makeExercise,scoreTake,pmQuestion,pmJudge,pmJudgeQ,pmLeak,pmHarmTarget,pmChordOf,pmDegOf,scMidi,HK_LAB,pmStatItems,INTERVALS,kindOf,smoothNotes,estimateLatency,earQuiz,tonicQuiz,tapBpm,tapRatio,TK_ITEMS,makeProgression,topLine,recStat,lastAcc,newStats,migrateStats,recItem,weakness,pickWeighted,weightFor,makeRoutine,makeSession,genQuestion,explain,DICT_LAB,DICT_LAYERS,dictMono,dictWindows,dictLayers,dictRef,dictNext,dictGrade,dictSpan,dictStemFor,dictStemSpan,DICT_STEM,itemLabel,topWeak,summary,exItems,RCELLS,RC_ORDER,RCAT_LAB,makeRhythmSlots,makeRhythm,rhythmToSlots,slotsToRhythm,rhythmCat,rhythmOnsets,rhythmSigs,gradeRhythm,scoreTaps,tapStatItems,NAMES,DEG_L,SOLF,DIR_KO,IV_ITEMS,SV_ITEMS,DG_ITEMS,KIND_LAB,rng};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.SingLab=api})(typeof window!=='undefined'?window:globalThis);
