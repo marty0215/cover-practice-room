@@ -567,6 +567,8 @@ body:not([data-tab=practice]) #onb{display:none}
 @media(max-width:380px){.brand{white-space:nowrap;font-size:.9rem;gap:.35rem}.brand::before{width:18px;height:13px}.top .songmore{width:4.8rem;max-width:4.8rem;padding:0 .2rem}.top #songsel{flex-basis:calc(100% - 5.3rem)}.top .ibtn{min-width:42px;padding:0 .3rem}.top .seg button{padding:0 .2rem;font-size:.74rem}.top .in{gap:.3rem}}
 .fdet>summary{cursor:pointer;min-height:var(--hit);display:flex;align-items:center;width:max-content;max-width:100%;color:var(--accent);font-weight:500}
 .fdet p{margin:.2rem 0 .8rem}
+/* iOS Safari 는 글자 16px 미만 입력칸·선택칸에 초점을 주면 화면을 확대한다(되돌리려면 손으로 줄여야 함). 터치 기기에서만 16px 로 맞춘다 */
+@media (pointer:coarse){select,input[type=text],input[type=email],input[type=number],input[type=search],textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -1182,6 +1184,11 @@ function clickAt(t,accent){const o=ctx.createOscillator();S.cl.push(o);if(S.cl.l
 /* ---------- transport ---------- */
 const S={playing:false,anchorT:0,anchorB:0,spb:.5,idx:{},click:0,timer:null,loop:false,a:0,b:16,pending:null,cl:[]};
 const real=el('real');
+/* iOS Safari 는 HTMLMediaElement.volume 쓰기를 무시한다(항상 1). 그런 기기에서만 두 <audio>(real, realVcr)의 volume 을 「거의 0이면 muted, 아니면 소리 남김」으로 근사한다:
+   원곡/보컬 줄임/합성 A/B 처럼 하나만 들리게 하는 전환은 맞고, 중간 음량(원곡 섞기 슬라이더 등)은 세기가 아니라 켜고 끄기만 된다. 쓰기가 되는 브라우저(Chromium·데스크톱 Safari)에서는 아무것도 하지 않는다.
+   (MediaElementSource→GainNode 로 돌려 세기까지 맞추는 안은 데스크톱 WebKit 시험에서 속도·구간 반복 뒤 currentTime 이 멈추는 경우가 있어 쓰지 않았다. window.__prForceVolRO 는 시험용.) */
+const VOLRO=(()=>{try{if(window.__prForceVolRO)return true;const a=new Audio();a.volume=.5;return a.volume!==.5}catch(e){return false}})();
+if(VOLRO)for(const e of [real,vcrEl]){let v=1;Object.defineProperty(e,'volume',{configurable:true,get(){return v},set(x){v=Math.max(0,Math.min(1,+x||0));e.muted=v<.02}})}
 const rate=()=>{const t=el('tempo'),v=+t.value;return Math.max(+t.min,Math.min(+t.max,v||100))/100};
 /* ---------- 파트별 스템 재생: song.stems(파트 → 우리 렌더를 파트별로 나눈 mp3). 모두 디코드해 Web Audio 한 시각에 start(샘플 단위로 맞음), 기존 파트 끄기·솔로·볼륨 UI 를 그대로 쓴다.
    구간 반복은 소스의 loopStart/loopEnd. 속도 100%에서만: 버퍼 재생은 음정을 유지한 채 늦추지 못하므로 속도를 바꾸면 한 파일(<audio>) 재생으로 돌아가고 파트 끄기는 잠긴다.
@@ -1244,7 +1251,7 @@ function tick(){const horizon=ctx.currentTime+.18;let guard=0;
   for(const p of PARTS){const n=song.parts[p];let i=S.idx[p];while(i<n.length&&n[i][0]<lim){const [s,d,pitch,vel]=n[i];const t=S.anchorT+(s-S.anchorB)*S.spb;if(t>=ctx.currentTime-.02){p==='drums'?drum(t,pitch,vel):tone(p,t,Math.max(.05,d*S.spb),pitch,vel)}i++}S.idx[p]=i}
   if(el('click').checked){while(S.click<lim){clickAt(S.anchorT+(S.click-S.anchorB)*S.spb,S.click%4===0);S.click++}}else S.click=Math.ceil(lim);
   if(hB>=end){if(S.loop){S.anchorT+=(end-S.anchorB)*S.spb;S.anchorB=S.a;stepUp();seekIdx(S.a);if(S.withAudio){const wrapAt=S.anchorT;setTimeout(()=>{if(S.playing)real.currentTime=S.a*spb0()},Math.max(0,(wrapAt-ctx.currentTime)*1000))}continue}if(ctx.currentTime>=S.anchorT+(end-S.anchorB)*S.spb+.3){stop();S.anchorB=0}}break}}
-function play(o){if(sing&&sing.busy)return;sdStop();mpStop();/* 받아쓰기 원곡 구간 재생이 공유 real 요소를 쥔 채 남으면 낡은 timeupdate·타이머가 연습 재생을 멈춘다 */pmDroneStop();/* 「기준음 듣기」 반주가 재생 위에 겹치지 않게 */if(window.heroOff)heroOff();ensureCtx();if(ctx.state==='suspended')ctx.resume();SAMP.hat=null;if(mode!=='real')loadSamples(PARTS);S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
+function play(o){if(sing&&sing.busy)return;sdStop();mpStop();/* 받아쓰기 원곡 구간 재생이 공유 real 요소를 쥔 채 남으면 낡은 timeupdate·타이머가 연습 재생을 멈춘다 */pmDroneStop();/* 「기준음 듣기」 반주가 재생 위에 겹치지 않게 */if(window.heroOff)heroOff();ensureCtx();if(ctx.state!=='running')ctx.resume();SAMP.hat=null;if(mode!=='real')loadSamples(PARTS);S.spb=spb0()/rate();let start=S.anchorB;if(S.loop&&(start<S.a||start>=S.b))start=S.a;if(start>=TOTAL-1e-6)start=0;const now=ctx.currentTime+.05;const ci=o&&o.noCount?0:el('countIn').checked?4:0;for(let i=0;i<ci;i++)clickAt(now+i*S.spb,i===0);
  S.anchorT=now+ci*S.spb;S.anchorB=start;S.startB=start;S.playing=true;el('play').textContent='■';el('play').setAttribute('aria-label','정지');
  real.playbackRate=rate();S.withAudio=mode==='real'||(origLevel()>0&&!!song.audio)||(AB.on&&!!song.audio);real.volume=mode==='real'?masterLevel():masterLevel()*origLevel();if(AB.on)applyBack();
  S.stOn=false;if(stUsable()){stGraph();S.stOn=true;S.withAudio=false;stStart(start*spb0(),S.anchorT)}else if(stWant()){if(ST.fail&&ST.song===song.id){ST.fail=false;ST.song=null}stLoad(true)} /* 불러오기에 실패했어도 재생을 누를 때마다 다시 시도. 파트별 소리가 준비됐으면 그것으로, 아니면 한 파일로 재생하고 받아 둔다 */
@@ -1387,7 +1394,7 @@ const neSelTxt=()=>{const n=neNotes()[ne.sel];return n?`선택: ${noteName(n[2])
 function neCommit(msg,l){l=l||ne.layer;ne.dc={};if(song.id==='user'){const d=neDiff(l);U.nedit=U.nedit||{};if(d.count>0)U.nedit[l]={n:d.count,notes:NoteEdit.toSec(song.parts[l],song.bpm,U.off)};else delete U.nedit[l];if(!Object.keys(U.nedit).length)U.nedit=null;persist()}
  afterSongEdit();try{if(sing&&sing.src==='song'&&!sing.busy)singNew()}catch(_){}neHear(l);neUi((msg||'')+(ne.sel>=0?' '+neSelTxt():''));draw()}
 /* 고친 음 미리 듣기: 정지 중일 때만 고른 음을 0.35초 울린다(재생 중엔 곡과 겹치므로 생략) */
-function neHear(l){try{const n=ne.sel>=0&&song.parts[l][ne.sel];if(!n||S.playing)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();tone(l,ctx.currentTime+.02,.35,n[2],100)}catch(_){}}
+function neHear(l){try{const n=ne.sel>=0&&song.parts[l][ne.sel];if(!n||S.playing)return;ensureCtx();if(ctx.state!=='running')ctx.resume();tone(l,ctx.currentTime+.02,.35,n[2],100)}catch(_){}}
 function neEnsureAudible(l){if(mute[l]){mute[l]=false;syncMS();applyAllGains();updExp();return true}return false}
 function neToggle(on){if(on&&!ne.layer)return;ne.on=on;ne.sel=-1;ne.cur=null;ne.drag=null;if(on){neOrig(ne.layer);const u=neEnsureAudible(ne.layer);neUi(`음 고치기를 켰습니다(${neName(ne.layer)}). 빈 칸을 누르면 음을 넣고, 음을 누르면 고릅니다.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`)}else neUi('음 고치기를 껐습니다.');draw()}
 function neSetLayer(l){if(!neLayers().includes(l)||l===ne.layer)return;ne.layer=l;ne.sel=-1;ne.cur=null;neOrig(l);const u=ne.on&&neEnsureAudible(l);neUi(`고칠 층: ${neName(l)}.${u?' 들으며 고치도록 이 층을 켰습니다.':''}`);draw()}
@@ -2216,12 +2223,17 @@ function recBegin(){clearTimeout(rec.tm);rec.tm=0;if(!rec.st||rec.pb)return;if(r
   try{mr.start();rec.mr=mr;recM('녹음 중입니다. 정지를 누르면 끝납니다.')}catch(e){recM('녹음을 시작하지 못했습니다: '+e.message)}},Math.max(0,(S.anchorT-ctx.currentTime)*1000))}
 function recStop(){clearTimeout(rec.tm);rec.tm=0;if(rec.mr){const m=rec.mr;rec.mr=null;if(m.state==='recording')try{m.stop()}catch(e){}}
  if(rec.pb){const p=rec.pb;rec.pb=null;try{p.src.stop()}catch(e){}p.g.disconnect();applyBack();recRender()}}
+function recElem(url){return new Promise((ok,no)=>{const a=new Audio();a.preload='auto';const to=setTimeout(()=>no(new Error('timeout')),4000);a.onloadedmetadata=()=>{clearTimeout(to);ok(a)};a.onerror=()=>{clearTimeout(to);no(new Error('audio'))};a.src=url})}
+function recElemSrc(a){const ms=ctx.createMediaElementSource(a);let tm=0;return {connect(n){ms.connect(n);return n},start(when,off){clearTimeout(tm);tm=setTimeout(()=>{try{a.currentTime=off||0;const q=a.play();if(q&&q.catch)q.catch(()=>{})}catch(_){}},Math.max(0,(when-ctx.currentTime)*1000))},stop(){clearTimeout(tm);try{a.pause()}catch(_){}try{ms.disconnect()}catch(_){}}}}
 async function recPlay(id){const t=rec.tk.find(x=>x.id===id);if(!t||(sing&&sing.busy))return;if(t.sg!==song){recM('이 녹음은 다른 곡 반주 위에서 녹음했습니다. 그 곡으로 돌아가면 반주와 함께 들을 수 있습니다(받기는 됩니다).');return}const again=rec.pb&&rec.pb.id===id;if(S.playing)stop();if(again)return;
- ensureCtx();let buf;try{if(ctx.state==='suspended')await ctx.resume();buf=await ctx.decodeAudioData(await t.blob.arrayBuffer())}catch(e){recM('이 녹음을 재생하지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}
+ ensureCtx();let buf=null,au=null;try{if(ctx.state==='suspended')await ctx.resume();buf=await ctx.decodeAudioData(await t.blob.arrayBuffer())}catch(e){
+  /* Safari 는 자기 MediaRecorder 의 audio/mp4(조각난 MP4)를 decodeAudioData 로 읽지 못한다(<audio> 로는 재생됨). 그때만 <audio>→MediaElementSource 로 돌려 듣는다. 시작 시각은 타이머라 샘플 단위로는 맞지 않는다 */
+  if(/mp4|aac/i.test(t.blob.type)){try{au=await recElem(t.url)}catch(_){}}
+  if(!au){recM('이 녹음을 재생하지 못했습니다'+(e&&e.message?': '+e.message:'')+'.');return}}
  if(!rec.tk.includes(t))return;
  el('tempo').value=Math.round(t.rate*100);el('tempo').oninput();if(t.tr!==transpose){el('transpose').value=t.tr;el('transpose').oninput()}
  if(t.lp.on)setLoopBars(Math.floor(t.lp.a/4+1e-6)+1,Math.round(t.lp.b/4));else{S.loop=false;el('loopOn').checked=false;draw()}
- S.anchorB=t.startB;const g=ctx.createGain(),src=ctx.createBufferSource();g.gain.value=el('recVol').value/100;src.buffer=buf;src.connect(g).connect(ctx.destination);rec.pb={id,src,g};
+ S.anchorB=t.startB;const g=ctx.createGain(),src=buf?ctx.createBufferSource():recElemSrc(au);g.gain.value=el('recVol').value/100;if(buf)src.buffer=buf;src.connect(g).connect(ctx.destination);rec.pb={id,src,g};
  play({noCount:true});if(!S.playing){rec.pb=null;g.disconnect();return}
  const d=t.lead-(sing.lat||0);d>=0?src.start(S.anchorT+d):src.start(S.anchorT,-d);recRender();recM(`녹음 ${id}을 반주와 함께 듣는 중입니다. 지연 ${Math.round((sing.lat||0)*1000)} ms를 뺐습니다.`)}
 const mmss=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -2236,7 +2248,7 @@ function sightFine(res){const ids=[];for(const x of res.notes){if(x.verdict==='�
  const n=res.notes.filter(x=>x.verdict!=='소리 없음');fine('sg:v:hi',1-n.filter(x=>x.verdict==='높음').length/n.length);fine('sg:v:lo',1-n.filter(x=>x.verdict==='낮음').length/n.length);return ids.concat('sg:v:hi','sg:v:lo')}
 function singSetBusy(b){sing.busy=b;for(const id of ['sListen','sRec','sNew','sCal'])el(id).disabled=b&&id!=='sStop';el('sStop').hidden=!b}
 const cS=n=>(n>0?'+':n<0?'−':'')+Math.abs(n);
-function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
+function singListen(){if(sing.busy||!sing.ex.length)return;ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);
  const spb=singSpb(),t=ctx.currentTime+.1,tot=sing.bars*4;sing.spb=spb;sing.track=[];sing.res=null;el('sResult').innerHTML='';
  for(const [s,d,p] of sing.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92);
  sing.liv=setInterval(()=>{const b=(ctx.currentTime-t)/spb;sing.head=b<0?null:b;if(b>tot+.3){clearInterval(sing.liv);sing.head=null}singDraw()},40)}
@@ -2305,7 +2317,7 @@ function pmQText(q){el('pmHeadph').hidden=q.mode!=='har';return q.mode==='har'?`
 function pmReset(){const nd=el('pmNeedle');el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='마이크가 꺼져 있습니다.'}
 function pmNew(){if(sing.busy||!window.SingLab)return;pm.q=SingLab.pmQuestion({mode:pm.mode,range:pm.range,seed:seed(),key:singKeyPc(),hk:pm.hk==='mix'?null:pm.hk,iv:pm.iv||null,dir:pm.dir==='mix'?null:pm.dir,wk:pm.weak&&STAT2?SingLab.weakness(STAT2):null});
  el('pmQ').textContent=pmQText(pm.q);el('pmResult').innerHTML='';el('pmMsg').textContent='「기준음 듣기」로 들어 보고, 준비되면 「부르기」(마이크)를 누르세요.';pmReset()}
-function pmListen(){if(sing.busy||!pm.q)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);const t=ctx.currentTime+.1;if(pm.q.mode==='har')pmDroneStart(pm.q,t,2.2);tone('sing',t,1.2,pm.q.ref,92)}
+function pmListen(){if(sing.busy||!pm.q)return;ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();clearInterval(sing.liv);const t=ctx.currentTime+.1;if(pm.q.mode==='har')pmDroneStart(pm.q,t,2.2);tone('sing',t,1.2,pm.q.ref,92)}
 function pmLive(f,q){const m=f[1],nd=el('pmNeedle');if(m==null||f[2]<.5){el('pmNote').textContent='–';nd.style.left='50%';nd.className='';el('pmTxt').textContent='소리가 없거나 음높이를 잡지 못했습니다';return}
  const c=(m-q.target)*100,k=Math.round(c/1200),cf=c-1200*k;el('pmNote').textContent=fuNm(m);nd.style.left=(50+Math.max(-100,Math.min(100,cf))/2)+'%';nd.className=!k&&Math.abs(cf)<=50?'ok':'bad';
  el('pmTxt').textContent=`목표 ${sn(Math.round(q.target))} 기준 ${cf>0?'+':''}${Math.round(cf)} cent${k?' · 옥타브 다름':''}`}
@@ -2421,7 +2433,7 @@ function ctDir(){return ear.ct&&ear.ct.pair.dir||(ear.dir==='desc'||ear.dir==='h
 function ctNew(){if(!ear.ct||ear.ct.idx>=SingLab.CONTRAST_N)ear.ct={pair:SingLab.contrastPair(STAT2,el('eCPair').value),idx:0,n:0,ok:0,fresh:true,sess:seed()};
  const c=ear.ct,q=SingLab.earQuiz({type:'contrast',pair:[c.pair.a,c.pair.b],idx:c.idx,seed:seed(),dir:ctDir(),sess:c.sess});c.idx++;earSet(q);ctInfo()}
 function ctInfo(t){const c=ear.ct;if(!c)return;const i=el('eCtInfo');i.hidden=false;i.textContent=t||`쌍 대조 ${c.pair.a} vs ${c.pair.b}${c.pair.src==='conf'?'(내 혼동 쌍)':''} · ${Math.min(c.idx,SingLab.CONTRAST_N)}/${SingLab.CONTRAST_N}번째 문제`}
-function ctCompare(){const c=ear.ct;if(!c)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();const d=ctDir(),t=ctx.currentTime+.1,base=60;ear.cmpLog=[];
+function ctCompare(){const c=ear.ct;if(!c)return;ensureCtx();if(ctx.state!=='running')ctx.resume();const d=ctDir(),t=ctx.currentTime+.1,base=60;ear.cmpLog=[];
  [c.pair.a,c.pair.b].forEach((nm,k)=>{const semi=SingLab.INTERVALS.find(x=>x[0]===nm)[1];ivTones(t+k*1.9,[base,base+semi],d);ear.cmpLog.push(nm)});
  clearTimeout(ear.tm);ctInfo(`비교 듣기(같은 시작 음): ① ${c.pair.a}(먼저) → ② ${c.pair.b}(나중)`);ear.tm=setTimeout(()=>{if(ear.type==='contrast')ctInfo()},4300)}
 function ctAuto(){if(ear.type==='contrast'&&ear.ct&&ear.ct.fresh){ear.ct.fresh=false;ctCompare();return true}return false}
@@ -2438,7 +2450,7 @@ function earSet(q){clearTimeout(ear.tm);pmDroneStop(true);mpStop();ear.q=q;ear.d
 /* 악보 읽기: 오선보는 staff.js 를 처음 쓸 때만 불러온다. 보기 전에 소리가 정답을 알려 주지 않게 답하기 전엔 재생하지 않는다. aria-label 에 음 이름 없음 */
 function readStaff(q){const box=el('eStaff');box.hidden=q.type!=='reading';if(q.type!=='reading'){box.innerHTML='';return}box.innerHTML='<p class="muted small msg">오선보를 불러오는 중…</p>';
  loadLib('staff').then(()=>{if(ear.q!==q)return;box.innerHTML=Staff.svg(Staff.layout([[0,4,q.midi]],{key:0,clef:q.clef,bars:1}),{width:290,label:'악보: 음표 1개'});box.dataset.step=q.step}).catch(()=>{if(ear.q===q)box.innerHTML='<p class="msg">오선보 모듈(staff.js)을 불러오지 못했습니다.</p>'})}
-function earPlay(){if(!ear.q)earNew();if(ear.q.type==='reading'&&!ear.done)return;if(ear.once&&ear.plays>=1&&!ear.done)return;if(ear.q.type==='missing'){ear.plays++;mpPlay('seq');earLock();return}ensureCtx();if(ctx.state==='suspended')ctx.resume();pmDroneStop(true);const n=ear.q.notes,t=ctx.currentTime+.1,T=mixTone(ear.q.mix);
+function earPlay(){if(!ear.q)earNew();if(ear.q.type==='reading'&&!ear.done)return;if(ear.once&&ear.plays>=1&&!ear.done)return;if(ear.q.type==='missing'){ear.plays++;mpPlay('seq');earLock();return}ensureCtx();if(ctx.state!=='running')ctx.resume();pmDroneStop(true);const n=ear.q.notes,t=ctx.currentTime+.1,T=mixTone(ear.q.mix);
  ear.plays++;
  if(ear.q.type==='interval'){ivTones(t,n,ear.q.dir||'asc',T)}
  else if(ear.q.type==='mode'){const sc=ear.q.scale;sc.forEach((p,i)=>tone('sing',t+i*.28,.3,p,84));const t1=t+sc.length*.28+.5;ear.q.melody.forEach((p,i)=>tone('sing',t1+i*.42,.4,p,90))}
@@ -2464,7 +2476,7 @@ fine(ear.q.item,ok?1:0,ok?null:b.dataset.c);try{localStorage.setItem('pr-ear',JS
  if(RT.on)rtAnswer(ok,[ear.q.item]);
  el('ePlay').disabled=false;el('ePlay').textContent='▶ 들어보기';if(ear.q.type==='reading')earPlay()
  document.querySelectorAll('#eChoices button').forEach(x=>{if(x.dataset.c===ear.q.answer){x.classList.add('ok');x.textContent='✓ '+x.dataset.c}else if(x===b){x.classList.add('bad');x.textContent='✗ '+x.dataset.c}});
- if(ear.q.type==='tonic'){ensureCtx();if(ctx.state==='suspended')ctx.resume();const t0=ctx.currentTime+.5,c=ear.q.tonic;for(const p of c.notes)tone('sing',t0,1.6,p,80);tone('sing',t0,1.6,c.bass,100)} /* 정답 공개: 으뜸화음 I 을 들려준다 */
+ if(ear.q.type==='tonic'){ensureCtx();if(ctx.state!=='running')ctx.resume();const t0=ctx.currentTime+.5,c=ear.q.tonic;for(const p of c.notes)tone('sing',t0,1.6,p,80);tone('sing',t0,1.6,c.bass,100)} /* 정답 공개: 으뜸화음 I 을 들려준다 */
  document.querySelectorAll('#eChoices button').forEach(x=>{const r=ear.q.reveal&&ear.q.reveal[x.dataset.c];if(r)x.textContent+=' '+r});
  {const fl=ear.type==='interval'&&!ear.q.contrast&&SingLab.ivFeel(ear.q.answer);if(fl)extra+=' '+fl+'.'}
  el('eFb').textContent=ear.q.info?(ok?`정답입니다. ${ear.q.info}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다. ${ear.q.info}.`):ear.q.type==='tonic'?(ok?`정답입니다. 으뜸음은 ${ear.q.answer}(${ear.q.label}). 으뜸화음을 들려드립니다.`:`아쉽습니다. 으뜸음은 ${ear.q.answer}(${ear.q.label})입니다. 으뜸화음을 들려드립니다.`):ear.q.type==='degree'?(ok?`정답입니다. ${ear.q.label}에서 「${ear.q.answer}」.`:`아쉽습니다. ${ear.q.label}에서 정답은 「${ear.q.answer}」입니다.`):ok?`정답입니다. ${ear.q.label}에서 시작한 ${ear.q.answer}.`:`아쉽습니다. 정답은 「${ear.q.answer}」입니다(${ear.q.label}에서 시작).`;if(ear.q.type==='missing')extra+=' 「빠진 파트만 듣기」로 그 소리를 따로 들어 보세요.';el('eFb').textContent+=extra;el('eNext').disabled=false;earShowAcc();if(ear.q.type==='missing')mpUi()});
@@ -2501,7 +2513,7 @@ function mpUi(){const q=ear.q,on=!!q&&q.type==='missing'&&ear.type==='missing'&&
 /* mode: seq(전체 -> 빠진 소리) | mix(전체만) | minus(뺀 소리만) | solo(빠진 파트만, 답한 뒤) */
 async function mpPlay(mode){mpStop();const my=MP.seq;let q=null;
  for(let k=0;k<8&&!q;k++){const c=ear.q;if(!c||c.type!=='missing')return;const ok=await c.pp;if(my!==MP.seq)return;if(ear.q!==c)continue;if(!ok)return;q=c}
- if(!q||(mode==='solo'&&!ear.done))return;if(S.playing)stop();sdStop();pmDroneStop(true);ensureCtx();if(ctx.state==='suspended')ctx.resume();stGraph();
+ if(!q||(mode==='solo'&&!ear.done))return;if(S.playing)stop();sdStop();pmDroneStop(true);ensureCtx();if(ctx.state!=='running')ctx.resume();stGraph();
  const sp=SingLab.dictStemSpan({a:q.a,b:q.b},q.bpm,{dur:ST.dur});if(!(sp.len>.1))return;const all=SingLab.MP_PARTS,two=q.mutes.length>1,
   nMix='① 전체 소리',nMin=`② ${two?'두 파트가':'한 파트가'} 빠진 소리`,segs=mode==='mix'?[[nMix,all]]:mode==='minus'?[[nMin,q.present]]:mode==='solo'?[['빠진 파트만: '+q.answer,q.mutes]]:[[nMix,all],[nMin,q.present]];
  let t=ctx.currentTime+.08;const m=el('mpMsg');MP.pl=true;
@@ -2524,7 +2536,7 @@ function progSet(q){prog.q=q;prog.ans=[null,null,null,null];prog.cur=0;prog.done
 function progSlots(){el('pSlots').innerHTML=prog.q.chords.map((c,i)=>{const a=prog.ans[i],L=SingLab.DEG_L;let cls='btn',t=a==null?'?':L[a];
   if(prog.done||prog.rev){const ok=a===c.deg;if(prog.rev&&!prog.chk){cls+=' ok';t=L[c.deg]}else if(ok){cls+=' ok';t='✓ '+t}else{cls+=' bad';t=`✗ ${a==null?'?':L[a]} → ${L[c.deg]}`}}else if(i===prog.cur)cls+=' cur';
   return `<button class="${cls}" type="button" data-i="${i}" aria-label="${i+1}번째 코드 ${a==null?'비어 있음':L[a]}">${t}</button>`}).join('')}
-function progPlay(){if(!prog.q)progNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();const t=ctx.currentTime+.1;
+function progPlay(){if(!prog.q)progNew();ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();const t=ctx.currentTime+.1;
  prog.q.chords.forEach((c,i)=>{for(const p of c.notes)tone('sing',t+i*1.4,1.25,p,72);tone('sing',t+i*1.4,1.25,c.bass,100)})}
 function progFine(){const L=SingLab.DEG_L,ids=prog.q.chords.map((c,i)=>{const a=prog.ans[i],id='pg:'+L[c.deg]+':'+i;fine(id,a===c.deg?1:0,a===c.deg||a==null?null:L[a]);return id});return ids}
 function progFinish(rec){prog.done=true;const n=prog.q.chords.filter((c,i)=>prog.ans[i]===c.deg).length;if(rec)statRec('prog',n/4);return n}
@@ -2548,8 +2560,8 @@ function mdSet(ex){md.src='gen';sdStop();sdUi();md.ex=ex;md.ans=md.ex.length?[md
 function mdSlots(){if(!md.done&&el('mdHint').firstChild)el('mdHint').innerHTML='';document.querySelectorAll('#mdKeys [data-p]').forEach(b=>b.setAttribute('aria-label',sn(+b.dataset.p,md.src)));el('mdSlots').innerHTML=md.ex.map((n,i)=>{const a=md.ans[i];let cls='vc',t=a==null?'·':sn(a,md.src);if(i===0)t+=' (주어짐)';
   if(md.done&&i>0){const ok=a===n[2];cls+=ok?' ok':' lo';t=ok?'✓ '+sn(a,md.src):`✗ ${a==null?'—':sn(a,md.src)} → ${sn(n[2],md.src)}`}return `<span class="${cls}"><b>${i+1}</b> ${t}</span>`}).join('');mdStaff()}
 function mdHints(){const u=el('mdHint');u.innerHTML=md.done?SingLab.dictHints(SingLab.dictDiag(md.ex,md.ans),{max:2}).map(t=>`<li>${t}</li>`).join(''):''}
-function mdPlay(){if(md.src==='song')return sdPlay();if(!md.ex.length)mdNew();ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();const spb=60/84,t=ctx.currentTime+.1;for(const [s,d,p] of md.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92)}
-function mdAdd(p){if(md.done||!md.ex.length||md.ans.length>=md.ex.length)return;md.ans.push(p);ensureCtx();if(ctx.state==='suspended')ctx.resume();tone('sing',ctx.currentTime+.01,.4,p,88);mdSlots()}
+function mdPlay(){if(md.src==='song')return sdPlay();if(!md.ex.length)mdNew();ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();const spb=60/84,t=ctx.currentTime+.1;for(const [s,d,p] of md.ex)tone('sing',t+s*spb,Math.max(.1,d*spb*.92),p,92)}
+function mdAdd(p){if(md.done||!md.ex.length||md.ans.length>=md.ex.length)return;md.ans.push(p);ensureCtx();if(ctx.state!=='running')ctx.resume();tone('sing',ctx.currentTime+.01,.4,p,88);mdSlots()}
 function mdUndo(){if(md.done||md.ans.length<=1)return;md.ans.pop();mdSlots()}
 el('mdKeys').addEventListener('click',e=>{const b=e.target.closest('button');if(b)mdAdd(+b.dataset.p)});
 el('mdPlay').onclick=mdPlay;el('mdUndo').onclick=mdUndo;el('mdNext').onclick=()=>{if(RT.on)return rtNext();if(md.src==='song'){sdNew();return}mdNew();mdPlay()};
@@ -2605,7 +2617,7 @@ async function sdPart(w,r){const seq=sd.seq,sg=song,stem=sdStem(),msg=el('sdMsg'
  const url=sg.stems[stem];if(!sd.au||sd.auCtx!==ctx){if(sd.au)try{sd.au.pause()}catch(_){}sd.au=new Audio();sd.au.preload='auto';sd.ms=ctx.createMediaElementSource(sd.au);sd.auCtx=ctx;sd.auUrl=''}
  const au=sd.au;if(sd.auUrl!==url){au.src=url;sd.auUrl=url}sd.ms.connect(g);au.playbackRate=r;au.preservesPitch=true;au.webkitPreservesPitch=true;sd.el=au;sd.aud=true;sd.t1=sp.t1;
  try{au.currentTime=sp.t0}catch(_){}au.addEventListener('timeupdate',sdTU);au.addEventListener('playing',sdPl);const pr=au.play();if(pr&&pr.catch)pr.catch(()=>{sdStop();msg.textContent='파트 음원을 재생하지 못했습니다. 「합성 반주」로 들어 보세요.'});sd.tm=setTimeout(sdStop,(sp.wall+4)*1000)}
-function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();pmDroneStop();sdStop();
+function sdPlay(){if(!md.ex.length||sd.i<0)return;ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();pmDroneStop();sdStop();
  const w=sd.wins[sd.i],r=sd.slow?.75:1,hm=sdMode();
  if(hm==='part'){sdPart(w,r);return}
  if(hm==='real'){const {t0,t1}=SingLab.dictSpan(w,song.bpm);real.playbackRate=r;real.preservesPitch=true;real.webkitPreservesPitch=true;real.volume=masterLevel();sd.aud=true;sd.el=real;sd.t1=t1;
@@ -2642,7 +2654,7 @@ function rhyAbort(msg){const run=rhy.phase==='count'||rhy.phase==='tap';rhyStopA
 function rhyBtns(){const tap=rhy.mode==='tap',run=rhy.phase==='count'||rhy.phase==='tap';el('rhGo').hidden=!tap||run;el('rhStop').hidden=!tap||!run;el('rhCheck').hidden=tap;el('rhReveal').hidden=tap;el('rhDict').hidden=tap;el('rhTapBox').hidden=!tap;
  el('rhPlay').textContent=tap?'▶ 모범 듣기':'▶ 들어보기';el('rhPad').classList.toggle('on',run);el('rhPad').textContent=run?'치세요 (Space 또는 탭)':'여기를 탭하거나 Space 키로 치기 시작'}
 /* 카운트인 4박(첫 박 강조) 후 리듬. kind 'model' = 리듬 소리, 'tap' = 박 소리만(치는 쪽이 소리를 냄) */
-function rhySchedule(kind){ensureCtx();if(ctx.state==='suspended')ctx.resume();if(S.playing)stop();rhyStopAudio();const spb=60/rhy.tempo,t0=ctx.currentTime+.2,tr=t0+4*spb,nb=rhNb(),pulse=el('rhPulse').checked;
+function rhySchedule(kind){ensureCtx();if(ctx.state!=='running')ctx.resume();if(S.playing)stop();rhyStopAudio();const spb=60/rhy.tempo,t0=ctx.currentTime+.2,tr=t0+4*spb,nb=rhNb(),pulse=el('rhPulse').checked;
  rhy.spb=spb;for(let i=0;i<4;i++)rhyWood(t0+i*spb,i===0?'tickA':'tick',1);
  if(pulse||kind==='tap')for(let i=0;i<nb;i++)rhyWood(tr+i*spb,i%4===0?'tickA':'tick',kind==='tap'||pulse?.55:0);
  const rh=SingLab.slotsToRhythm(rhy.target);if(kind==='model')for(const e of rh)if(!e.rest)rhyWood(tr+e.beat*spb,'m',e.dur>=1?.9:.8);
@@ -2809,6 +2821,8 @@ function lsNav(d){if(!LS.on)return;LS.busy++;lsQuiet();LS.msg='';
  if(d>0){if(!LS.done.includes(LS.step))LS.done.push(LS.step);LS.done.sort((a,b)=>a-b);if(LS.step>=4){lsSave(LS.done.length===5);lsExit();return}LS.step++}else LS.step=Math.max(0,LS.step-1);
  lsSave(false);lsRender()}
 async function lsGo(){if(!LS.on)return;const my=++LS.busy,pl=lsPlan(),s=pl.steps[LS.step];if(s.skip)return;const gone=()=>my!==LS.busy||!LS.on;LS.msg='';
+ /* iOS Safari 는 소리 문맥을 탭 핸들러 안에서 시작·재개해야 한다. 「베이스 솔로」 단계는 스템 불러오기를 await 한 뒤 재생하므로, 그 전에(탭 동기 구간) 미리 연다 */
+ try{ensureCtx();if(ctx.state!=='running')ctx.resume().catch(()=>{})}catch(_){}
  if(s.id==='listen'){lsSolo(null);lsLoop(null);lsTab('practice');lsPlay()}
  else if(s.id==='bass'){await lsStems();if(gone())return;const w=lsSoloWhy();if(w){LS.dyn.bass=w;lsRender();return}lsTab('practice');lsSolo('bass');lsLoop(s.loop);lsPlay()}
  else if(s.id==='chords'){lsSolo(null);lsLoop(s.loop);lsTab('practice');lsPlay()}
