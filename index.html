@@ -1075,7 +1075,8 @@ function loadSong(id){if(S.playing)stop();if(window.lsLeave)lsLeave(id);swMsg=''
  document.querySelectorAll('#songsel button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===id));{const m=el('songMore');if(m)m.value=[...m.options].some(o=>o.value===id)?id:''}
  el('songdesc').textContent=song.desc;el('inventory').textContent=song.inventory||'';el('cedNote').textContent='';
  el('kbParts').textContent=['bass','keys','drums','guitar'].map(p=>pn(p)).join('·')+' 끄기/켜기';el('legend').innerHTML=PARTS.map(p=>`<span style="--c:var(--${p})">${pn(p,'long')}${p==='drums'&&!isSamp()?' (킥·스네어·하이햇)':''}</span>`).join('');
- try{sdStop()}catch(_){} /* 곡을 바꾸면 받아쓰기 소리(옛 곡 스템 포함)를 끊는다. 처음 불러올 때는 sd 가 아직 없다 */if(song.stems){ST.m={};ST.s={};ST.v={};if(ST.song!==id){ST.song=null;ST.ready=false;ST.loading=false;ST.fail=false}}neReset();recRender();buildStems();applyMode();if(ctx)applyAllGains();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderRecipe();if(window.lsRender)lsRender();renderTips();renderArr();renderBar();syncUserUi();updExp();draw();try{if(window.SingLab&&typeof RT!=='undefined'&&!RT.on&&prog.q)progNew()}catch(_){}}
+ try{sdStop()}catch(_){} /* 곡을 바꾸면 받아쓰기 소리(옛 곡 스템 포함)를 끊는다. 처음 불러올 때는 sd 가 아직 없다 */if(song.stems){ST.m={};ST.s={};ST.v={};if(ST.song!==id&&!(ST.loading&&ST.fg)){ST.song=null;ST.ready=false;ST.loading=false;ST.fail=false}} /* 청음이 다른 샘플 스템을 받는 중이면 끊지 않는다(끝난 뒤 연습 탭에서 다시 받는다) */neReset();recRender();buildStems();applyMode();if(ctx)applyAllGains();updateTempoLabel();el('transVal').textContent=tvLabel();renderProg();renderCed();renderRoles();renderRecipe();if(window.lsRender)lsRender();renderTips();renderArr();renderBar();syncUserUi();updExp();draw();try{if(window.SingLab&&typeof RT!=='undefined'&&!RT.on&&prog.q)progNew()}catch(_){}
+ try{if(ready&&document.body.dataset.tab==='sing'&&window.onTabShown)onTabShown('sing')}catch(_){} /* 시창 탭에서 머리띠로 곡을 바꾸면 곡 받아쓰기·현재 곡 시창을 새 곡으로 다시 만든다(예전엔 옛 곡 구간·정답이 남은 채 새 곡 소리로 재생) */}
 
 /* ---------- 반주 생성 (스타일 프리셋: 같은 베이스·건반·드럼 3파트 안에서만 패턴을 바꾼다. 기타 없음) ---------- */
 const STYLES={ballad:'발라드',pop:'팝',rock:'록',acoustic:'어쿠스틱'};
@@ -1222,13 +1223,14 @@ let stBoot=true;const stLater=()=>{if(stBoot&&ready)stBoot=false;if(!stBoot)stLo
 function stBootDone(){if(!stBoot)return;stBoot=false;stLoad()}
 async function stLoad(force,sg0){if(!sg0&&!stWant()&&!(force==='dict'&&song.stems))return; /* 'dict': 받아쓰기 「이 파트만」이 합성 반주 모드에서도 같은 디코드 캐시(ST.buf)를 쓰게 한다 */const sg=sg0||song,id=sg.id;if(ST.song===id&&(ST.ready||ST.loading||ST.fail))return; /* sg0: 청음 「빠진 파트 찾기」처럼 지금 곡이 아닌 샘플의 스템을 같은 캐시로 받을 때({id,stems}) */
  const c=navigator.connection;if(!force&&c&&c.saveData)return; /* 데이터 절약 모드: 재생을 누를 때까지 받지 않는다 */
- const tk=++ST.tok;ST.song=id;ST.ready=false;ST.loading=true;ST.fail=false;ST.buf=null;stUi();if(S.playing&&S.stOn)stEngine(); /* 연습이 스템으로 재생 중일 때 캐시를 다른 곡으로 바꾸면(청음) 버퍼가 비는 동안 stStart 가 죽지 않게 먼저 한 파일 재생으로 넘긴다 */
+ if(!force&&ST.loading&&ST.fg&&ST.song!==id)return; /* 청음 「빠진 파트 찾기」가 다른 샘플 스템을 받는 중이면 배경 선받기(첫 로드·탭 복귀)가 그것을 끊지 않는다. 끝난 뒤 연습 탭이면 아래 finally 가 다시 받는다 */
+ const tk=++ST.tok;ST.song=id;ST.ready=false;ST.loading=true;ST.fail=false;ST.buf=null;ST.fg=!!sg0&&id!==song.id;stUi();if(S.playing&&S.stOn)stEngine(); /* 연습이 스템으로 재생 중일 때 캐시를 다른 곡으로 바꾸면(청음) 버퍼가 비는 동안 stStart 가 죽지 않게 먼저 한 파일 재생으로 넘긴다 */
  try{const OC=window.OfflineAudioContext||window.webkitOfflineAudioContext,oc=new OC(2,1,44100),ent=Object.entries(sg.stems);
   const bs=await Promise.all(ent.map(async([,u])=>{const r=await fetch(u);if(!r.ok)throw new Error(u);return oc.decodeAudioData(await r.arrayBuffer())}));
   if(tk!==ST.tok)return;if(bs.some(x=>x.length!==bs[0].length))throw new Error('stem length');
   const b={};ent.forEach(([p],i)=>b[p]=bs[i]);ST.buf=b;ST.dur=bs[0].duration;ST.ready=true}
  catch(e){if(tk===ST.tok)ST.fail=true}
- finally{if(tk===ST.tok){ST.loading=false;stUi();if(ST.ready&&S.playing)stEngine()}}}
+ finally{if(tk===ST.tok){ST.loading=false;const fg=ST.fg;ST.fg=false;stUi();if(ST.ready&&S.playing)stEngine();if(window.lsRender)lsRender();if(fg&&ST.song!==song.id&&document.body.dataset.tab==='practice'&&stWant())stLater()}}}
 function stGraph(){if(!ctx||ST.gc===ctx)return;ST.gc=ctx;ST.bus=ctx.createGain();ST.bus.gain.value=masterLevel();ST.bus.connect(ctx.destination);ST.gn={};for(const p of ORDER){const g=ctx.createGain();g.gain.value=stEff(p);g.connect(ST.bus);ST.gn[p]=g}}
 function stHalt(){ST.run=0;for(const x of ST.srcs){try{x.onended=null;x.stop()}catch(_){}try{x.disconnect()}catch(_){}}ST.srcs=[]}
 function stStart(off,when){stHalt();const a=S.a*spb0(),e=Math.min(S.b*spb0(),ST.dur),lp=!!S.loop&&e>a;if(lp&&(off<a||off>=e))off=a;
@@ -1273,7 +1275,7 @@ el('origVol').oninput=()=>{el('origVal').textContent=el('origVol').value+'%';if(
 el('play').onclick=()=>S.playing?stop():play();
 function updateTempoLabel(){el('tempoVal').textContent=`${Math.round(song.bpm*rate())} BPM`;if(window.trUi)trUi();document.querySelectorAll('#transport .chipb').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.t===+el('tempo').value))}
 const tempoOk=()=>{const t=el('tempo'),v=+t.value;return t.value!==''&&v>=+t.min&&v<=+t.max};
-el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();const r=rate();if(S.playing&&mode==='synth'&&ctx.currentTime>=S.anchorT){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r;stEngine()};
+el('tempo').oninput=()=>{if(!tempoOk())return;updateTempoLabel();if(lsReady&&LS.on)lsRender(); /* 5분 수업의 베이스 솔로 단계는 속도 100%에서만 된다: 속도를 바꾸면 단계 안내·버튼을 바로 다시 그린다 */const r=rate();if(S.playing&&mode==='synth'&&ctx.currentTime>=S.anchorT){const b=nowBeat();S.anchorB=b;S.anchorT=ctx.currentTime;S.spb=spb0()/r}else S.spb=spb0()/r;real.playbackRate=r;stEngine()};
 el('transpose').oninput=()=>{transpose=+el('transpose').value;el('transVal').textContent=tvLabel();renderProg();renderCed();renderBar();renderTips();renderRoles();renderArr();draw()};
 el('loopOn').onchange=()=>{S.loop=el('loopOn').checked;draw()};
 for(const id of ['loopA','loopB']){el(id).onchange=()=>{let a=+el('loopA').value,b=+el('loopB').value;if(b<a){if(id==='loopA')b=a;else a=b;el('loopA').value=a;el('loopB').value=b}S.a=(a-1)*4;S.b=b*4;if(!S.loop){el('loopOn').checked=true;S.loop=true}}}
@@ -1316,7 +1318,7 @@ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||typin
 document.addEventListener('keyup',e=>{if(e.code==='Space'&&!typing(e.target)&&!el('keysheet').open&&!ownBtn(e.target))e.preventDefault()}); // 포커스된 버튼이 Space로 또 눌리는 것을 막는다
 
 /* mode + stems */
-el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();if(AB.on)abOff();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode()});
+el('modesel').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;if(S.playing)stop();if(AB.on)abOff();mode=b.dataset.m;document.querySelectorAll('#modesel button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));applyMode();if(lsReady&&LS.on)lsRender()});
 function applyMode(){const r=mode==='real';stLockUi();el('origVol').closest('.ch').hidden=r||!song.audio; /* 파트별 소리·한 파일 재생 중에는 이 슬라이더가 안 듣기므로 숨긴다 */document.querySelector('#modesel [data-m=real]').disabled=!song.audio;if(stView()!==ST.vw)buildStems();stOff(r&&!(song.stems&&stUsable()));el('transpose').disabled=r;el('keyDn').disabled=r;el('keyUp').disabled=r;el('click').disabled=r;el('origVol').disabled=r||!song.audio||AB.on;const nm=audioName('src');applyAudioNames();el('modeNote').textContent=r&&song.stems?stNote():r?`${nm}은 한 파일이라 파트 끄기·키 변경·메트로놈은 합성 반주에서만 됩니다. 템포는 음정을 유지한 채 바뀝니다.`:`합성 반주는 채보 데이터를 즉석에서 소리로 만든 것입니다(음색은 아래에서 샘플 또는 합성으로 고릅니다). 파트·키·메트로놈을 자유롭게 바꿀 수 있고, "${nm} 볼륨"을 올리면 ${nm}이 함께 재생됩니다(키 변경은 ${nm}에 적용되지 않습니다).`;stLater()}
 function buildStems(){const w=el('stems');w.innerHTML='';ST.vw=stView();const M_=msM(),S_=msS(),V_=msV();for(const p of PARTS){const d=document.createElement('div');d.className='ch';d.style.setProperty('--c',`var(--${p})`);const nm=pn(p);
  d.innerHTML=`<span class="name">${nm}</span><span class="ms"><button class="mute" type="button" aria-pressed="${!!M_[p]}" data-p="${p}" title="${nm} 끄기">M</button><button class="solo" type="button" aria-pressed="${!!S_[p]}" data-p="${p}" title="${nm}만 듣기">S</button></span><input type="range" min="0" max="100" value="${Math.round((V_[p]??1)*100)}" aria-label="${nm} 볼륨" data-v="${p}"><span class="val" data-val="${p}">${Math.round((V_[p]??1)*100)}%</span>`+(p==='drums'?`<div class="sub"><label class="chk"><input type="checkbox" ${drumOn[36]?'checked':''} data-d="36"> 킥</label><label class="chk"><input type="checkbox" ${drumOn[38]?'checked':''} data-d="38"> 스네어</label><label class="chk"><input type="checkbox" ${drumOn[42]?'checked':''} data-d="42"> 하이햇</label></div>`:`<div class="sub hint">${partHint(p)}</div>`);w.appendChild(d)}if(ST.vw)w.querySelectorAll('[data-d]').forEach(c=>{c.disabled=true;c.title='파트별 소리에서는 드럼을 킥·스네어·하이햇으로 나눠 끄지 못합니다'})}
@@ -2829,11 +2831,11 @@ function lsFocus(){lsScroll();try{const b=el('lessonBar');b.tabIndex=-1;b.focus(
 function lsNav(d){if(!LS.on)return;LS.busy++;lsQuiet();LS.msg='';
  if(d>0){if(!LS.done.includes(LS.step))LS.done.push(LS.step);LS.done.sort((a,b)=>a-b);if(LS.step>=4){lsSave(LS.done.length===5);lsExit();return}LS.step++}else LS.step=Math.max(0,LS.step-1);
  lsSave(false);lsRender()}
-async function lsGo(){if(!LS.on)return;const my=++LS.busy,pl=lsPlan(),s=pl.steps[LS.step];if(s.skip)return;const gone=()=>my!==LS.busy||!LS.on;LS.msg='';
+async function lsGo(){if(!LS.on)return;const my=++LS.busy,pl=lsPlan(),s=pl.steps[LS.step];if(s.skip){lsRender();return} /* 그린 뒤 속도·스템 상태가 바뀌어 건너뛸 단계가 됐으면 말없이 끝내지 말고 이유를 보여 준다 */const gone=()=>my!==LS.busy||!LS.on;LS.msg='';
  /* iOS Safari 는 소리 문맥을 탭 핸들러 안에서 시작·재개해야 한다. 「베이스 솔로」 단계는 스템 불러오기를 await 한 뒤 재생하므로, 그 전에(탭 동기 구간) 미리 연다 */
  try{ensureCtx();if(ctx.state!=='running')ctx.resume().catch(()=>{})}catch(_){}
  if(s.id==='listen'){lsSolo(null);lsLoop(null);lsTab('practice');lsPlay()}
- else if(s.id==='bass'){await lsStems();if(gone())return;const w=lsSoloWhy();if(w){LS.dyn.bass=w;lsRender();return}lsTab('practice');lsSolo('bass');lsLoop(s.loop);lsPlay()}
+ else if(s.id==='bass'){await lsStems();if(gone())return;const w=lsSoloWhy();if(w){lsRender();return} /* 이유는 lsSoloWhy 가 그때그때 다시 판단한다(예전엔 LS.dyn 에 굳어 속도를 100%로 돌려도 이 단계가 계속 잠겼다) */lsTab('practice');lsSolo('bass');lsLoop(s.loop);lsPlay()}
  else if(s.id==='chords'){lsSolo(null);lsLoop(s.loop);lsTab('practice');lsPlay()}
  else if(s.id==='quiz'){if(RT.on){LS.msg='「오늘의 10분 연습」 중에는 열 수 없습니다. 끝낸 뒤 다시 눌러 주세요.';lsRender();return}
   if(MP.off){LS.dyn.quiz=MP.why;lsRender();return}
