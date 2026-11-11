@@ -528,11 +528,11 @@ function dictMono(notes,{from=0,to=Infinity}={}){return topLine(Array.isArray(no
 function dictWindows(notes,bars,{size=2,min=3,max=12}={}){const out=[];size=size===1?1:2;for(let a=0;a<(bars|0);a+=size){const b=Math.min(bars,a+size),m=dictMono(notes,{from:a*4,to:b*4});if(m.length>=min&&m.length<=max)out.push({a,b,n:m.length,notes:m})}return out}
 /* 층마다 쓸 수 있는 창 수 {vocal:n,…} (창이 0이면 그 층은 못 씀) */
 function dictLayers(parts,bars,size=2){const o={};for(const l of DICT_LAYERS){const ns=parts&&parts[l];if(ns&&ns.length){const w=dictWindows(ns,bars,{size});if(w.length)o[l]=w.length}}return o}
-/* 입력 건반(C4–C5) 안으로: 접지 않고 들어가는 옥타브가 있으면 그쪽으로, 없으면 가장 낮은 음이 lo..lo+11 에 오도록 옮기고 hi 를 넘는 음은 한 옥타브씩 접는다. 시작은 창 첫 마디 = 0. 반환 {ex:[시작박,길이박,midi],folded} */
-function dictRef(win,{lo=60,hi=72}={}){const ns=win&&win.notes||[];if(!ns.length)return {ex:[],folded:false};const from=win.a*4,ps=ns.map(n=>n[2]),mn=Math.min(...ps),mx=Math.max(...ps);let sh=12*Math.ceil((lo-mn)/12),folded=false;
+/* 입력 건반(C4–C5) 안으로: 접지 않고 들어가는 옥타브가 있으면 그쪽으로, 없으면 가장 낮은 음이 lo..lo+11 에 오도록 옮기고 hi 를 넘는 음은 한 옥타브씩 접는다. 시작은 창 첫 마디 = 0. 반환 {ex:[시작박,길이박,midi],folded,shift(창 전체를 옮긴 반음 수, 12의 배수. 접은 음은 여기서 한 옥타브씩 더 내려감)} */
+function dictRef(win,{lo=60,hi=72}={}){const ns=win&&win.notes||[];if(!ns.length)return {ex:[],folded:false,shift:0};const from=win.a*4,ps=ns.map(n=>n[2]),mn=Math.min(...ps),mx=Math.max(...ps);let sh=12*Math.ceil((lo-mn)/12),folded=false;
  for(let k=-6;k<=6;k++)if(mn+12*k>=lo&&mx+12*k<=hi&&(!(mn+sh>=lo&&mx+sh<=hi)||Math.abs(12*k-(60-mn))<Math.abs(sh-(60-mn))))sh=12*k; /* 접지 않고 들어가는 옥타브가 있으면 그것(여럿이면 60 에 가까운 쪽) */
 
- const ex=ns.map(n=>{let p=n[2]+sh;while(p>hi){p-=12;folded=true}return [Math.round((n[0]-from)*1e4)/1e4,n[1],p]});return {ex,folded}}
+ const ex=ns.map(n=>{let p=n[2]+sh;while(p>hi){p-=12;folded=true}return [Math.round((n[0]-from)*1e4)/1e4,n[1],p]});return {ex,folded,shift:sh}}
 /* 다음 창 위치. done: 이미 푼 창의 a 집합(Set). dir>0 뒤로, <0 앞으로, 끝에서 돌아온다. skip 이 참이면 안 푼 창만, 전부 풀었으면 바로 옆 */
 function dictNext(wins,done,cur,dir=1,skip=true){const n=wins.length;if(!n)return -1;const d=dir<0?-1:1,c=cur==null||cur<0?(d>0?-1:n):cur;
  if(skip)for(let k=1;k<=n;k++){const i=(((c+d*k)%n)+n)%n;if(!done||!done.has(wins[i].a))return i}
@@ -574,7 +574,7 @@ function dictStemFor(layer,stems){const k=DICT_STEM[layer];return k&&stems&&type
 function dictStemSpan(win,bpm,{dur=Infinity,rate=1}={}){const {t0,t1:e}=dictSpan(win,bpm),t1=Math.min(e,dur),len=Math.max(0,t1-t0);return {t0,t1,len,wall:len/(rate>0?rate:1)}}
 
 /* ---------- 청음 「빠진 파트 찾기」(mp:): 대표 샘플(스템 4개: score·keys·bass·drums)의 1–2마디 창을 전체 소리로 들은 뒤, 같은 창에서 한 파트(3난이도는 두 파트)를 뺀 소리를 듣고 빠진 파트를 고른다.
-   난이도 1: 2마디 창, 멜로디·베이스·드럼 중 하나(보기 3개, 건반은 늘 들어 있음) / 2: 1마디 창, 4파트 중 하나(보기 4개) / 3: 1마디 창, 두 파트(보기 4개, 짝 이름). 통계 id mp:<파트> · mp:<파트>-<파트>(파트 순서 score,keys,bass,drums).
+   난이도 1: 2마디 창, 멜로디·베이스·드럼 중 하나(보기 3개, 코드 스탭은 늘 들어 있음) / 2: 1마디 창, 4파트 중 하나(보기 4개) / 3: 1마디 창, 두 파트(보기 4개, 짝 이름). 통계 id mp:<파트> · mp:<파트>-<파트>(파트 순서 score,keys,bass,drums).
    빠지는 파트는 창 안에서 실제로 소리가 있는 파트(악보 음 기준, 앱은 스템 RMS 로 한 번 더 확인)만, 남는 파트도 2개 이상 소리가 있어야 한다. 순수 함수 ---------- */
 const MP_PARTS=['score','keys','bass','drums'],MP_L1=['score','bass','drums'],MP_GEN={score:'멜로디',keys:'코드 스탭',bass:'베이스',drums:'드럼·킥'};
 const MP_LAB={nova:{score:'리드',keys:'스탭',bass:'베이스',drums:'킥'},summersong:{score:'리드',keys:'스탭',bass:'베이스',drums:'킥'},eot:{score:'플럭',keys:'스탭',bass:'베이스',drums:'드럼'}};
