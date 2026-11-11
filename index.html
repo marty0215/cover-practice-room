@@ -1248,6 +1248,10 @@ function stTick(){if(!ctx)return;const a=S.a*spb0(),e=Math.min(S.b*spb0(),ST.dur
  if(w>ST.w){const n=w-ST.w;ST.w=w;for(let i=0;i<n;i++)stepUp();stEngine()}} /* 반복이 한 바퀴 돌 때마다 단계 연습(stepUp)이 한 번 */
 /* <audio> 재생. pause() 로 play() 약속이 끊기는 AbortError(스템↔한 파일을 빠르게 오갈 때)는 재생 실패가 아니라 정상이라 멈추지 않는다 */
 const realPlay=()=>real.play().catch(e=>{if(mode==='real'&&!(e&&e.name==='AbortError'))stop()});
+/* 한 파일 재생 멈춤 감시: WebKit 에서 스템→한 파일로 넘어갈 때(되감기+play+속도 변경) 가끔 paused=false·readyState 4 인데 currentTime 이 멈춘 채 남는다(소리·재생선이 멈춤, 이벤트도 오지 않음). 재생 중인데 0.8초 넘게 시간이 그대로면 같은 자리에서 pause→play 로 한 번 다시 건다(2초에 한 번까지). RW.n 은 시험용 횟수 */
+const RW={t:-1,at:0,pf:0,last:0,n:0};function realWatch(){const now=performance.now();if(!(S.withAudio&&!S.stOn&&!S.pending&&!real.paused&&!real.seeking&&real.readyState>=3&&!real.ended&&real.currentTime<(real.duration||0)-.15)){RW.t=-1;RW.pf=now;return}
+ const t=real.currentTime,gap=now-RW.pf;RW.pf=now;if(t!==RW.t||gap>500){RW.t=t;RW.at=now;return} /* 화면 갱신이 0.5초 넘게 끊겼으면(탭 숨김 등) 새로 잰다 */
+ if(now-RW.at>800&&now-RW.last>2000){RW.last=now;RW.n++;RW.t=-1;real.pause();try{real.currentTime=t}catch(_){}real.playbackRate=rate();realPlay()}}
 /* 카운트인이 끝난 뒤 <audio> 를 시작한다. 그 사이 스템이 준비됐거나 속도가 100%로 돌아왔으면 한 파일 대신 스템으로 시작 */
 function stPend(ms){clearTimeout(S.pending);S.pending=setTimeout(()=>{S.pending=null;if(S.playing&&mode==='real'&&stUsable()){stEngine();return}realPlay()},ms)}
 function stEngine(){if(S.playing&&mode==='real'){const want=stUsable();
@@ -1378,7 +1382,7 @@ function draw(){const W=cv.width,H=cv.height,top=34,drumH=70,melH=H-top-drumH-8;
  if(b>=v0&&b<=v0+vb){cx.strokeStyle=css('--accent');cx.lineWidth=2;cx.beginPath();cx.moveTo(x(b),0);cx.lineTo(x(b),H);cx.stroke()}
  const bar=Math.min(BARS-1,Math.floor(b/4)),beat=Math.floor(b%4);el('nowChord').textContent=chordAt(bar,b-bar*4);el('nowPos').textContent=`${bar+1}:${beat+1}`;el('nowPos').title=`마디 ${bar+1} · 박 ${beat+1}`;el('scrub').setAttribute('aria-valuetext',`마디 ${bar+1} 박 ${beat+1}, ${chordAt(bar,beat)}`);updScrub(b);updStrip(bar);if(window.lsHook)window.lsHook(bar,b-bar*4);document.querySelectorAll('.prog .cell').forEach((c,i)=>c.classList.toggle('cur',i===bar&&S.playing));
  scStaffDraw();
- if(S.playing){if(S.stOn)stTick();if(mode==='real'&&!S.stOn&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
+ if(S.playing){if(S.stOn)stTick();if(mode==='real'&&!S.stOn&&S.loop&&real.currentTime>=S.b*spb0()-.02){real.currentTime=S.a*spb0();stepUp()}realWatch();if(!rafId)rafId=requestAnimationFrame(()=>{rafId=0;draw()})}}
 const barAt=e=>{const r=cv.getBoundingClientRect();return Math.max(0,Math.min(BARS-1,view.start+Math.floor((e.clientX-r.left)/r.width*view.len)))};
 cv.addEventListener('pointerdown',e=>{if(e.button||ne.on)return;drag={x:e.clientX,a:barAt(e),b:barAt(e),moved:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(!drag||ne.on)return;if(Math.abs(e.clientX-drag.x)>6)drag.moved=true;drag.b=barAt(e);if(drag.moved&&!S.playing)draw()});
