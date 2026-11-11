@@ -475,7 +475,7 @@ function makeSession(block,st,{seed=1,key=0,range=[52,67]}={}){const R=rng(seed)
   answer(q,ok,items){log.push({idx:q.idx,kind:q.kind,ok:!!ok,retry:!!q.retry,items:items||q.items||(q.item?[q.item]:[])});
    if(!ok&&(q.tries||0)<2){const gap=2+Math.floor(R()*3);pend.push({due:q.idx+gap+1,q:{...q,tries:(q.tries||0)+1}})}}}}
 /* 한글 받침 판별 조사 */
-const jong=w=>{const t=String(w).replace(/\)+$/,''),l=t.slice(-1),c=t.charCodeAt(t.length-1)-44032;if(/[#♯b♭]/.test(l))return 1;/* 샵·플랫으로 읽으면 받침 있음 */if(/[0-9]/.test(l))return '178'.includes(l)?2:'036'.includes(l)?1:0;/* 일·칠·팔 ㄹ, 영·삼·육 받침 */return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
+const jong=w=>{const s0=String(w),t=s0.replace(/\s*\([^()]*\)$/,'')||s0.replace(/\)+$/,'')/* 괄호 앞말에 조사를 맞춘다: 코드(스탭)가 */,l=t.slice(-1),c=t.charCodeAt(t.length-1)-44032;if(/[#♯b♭]/.test(l))return 1;/* 샵·플랫으로 읽으면 받침 있음 */if(/[0-9]/.test(l))return '178'.includes(l)?2:'036'.includes(l)?1:0;/* 일·칠·팔 ㄹ, 영·삼·육 받침 */return c>=0&&c<11172?(c%28===0?0:c%28===8?2:1):0};
 const eul=w=>w+(jong(w)?'을':'를'),ro=w=>w+(jong(w)===1?'으로':'로');
 const PM_SAME='동음',PM_HAR='화음',HK_LAB={'3up':'3도 위','3down':'3도 아래','5':'5도 위'},pmLab=(iv,d)=>iv===PM_HAR?`화음 부르기 ${HK_LAB[d]||d}`:d==='same'||iv===PM_SAME?'같은 음 내기':`${iv} ${d==='desc'?'아래로':'위로'} 부르기`;
 const ivLab=(n,d)=>d==='har'?n+' 동시 화음':n+' '+DIR_KO[d],stepKo=s=>+s===0?'같은 음 반복':(s>0?'위로 ':'아래로 ')+Math.abs(s)+'반음 진행';
